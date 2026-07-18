@@ -4,14 +4,17 @@ import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { useSessionStore, useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import characterIcon from "../../../assets/menus/game/character.png";
+import inventoryIcon from "../../../assets/menus/game/inventory.png";
+import clanIcon from "../../../assets/menus/game/clan.png";
 
-const GRID_ITEMS: { id: string; icon: string; title: string }[] = [
-  { id: "character", icon: "👨", title: "Character" },
-  { id: "inventory", icon: "🎒", title: "Inventory" },
+const GRID_ITEMS: { id: string; icon?: string; image?: string; title: string }[] = [
+  { id: "character", image: characterIcon, title: "Character" },
+  { id: "inventory", image: inventoryIcon, title: "Inventory" },
   { id: "actions", icon: "🤜", title: "Actions" },
   { id: "skills-list", icon: "📖", title: "Skills" },
   { id: "quests", icon: "🗞️", title: "Quests" },
-  { id: "clan", icon: "🚩", title: "Clan" },
+  { id: "clan", image: clanIcon, title: "Clan" },
   { id: "map", icon: "🗺️", title: "Map" },
 ];
 
@@ -28,6 +31,17 @@ const iconButtonStyle: CSSProperties = {
   fontSize: 18,
   cursor: "pointer",
   padding: 0,
+};
+
+const imageButtonStyle: CSSProperties = {
+  width: 40,
+  height: 40,
+  background: "transparent",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
 };
 
 export const GameMenu = observer(function GameMenu() {
@@ -77,9 +91,15 @@ export const GameMenu = observer(function GameMenu() {
       }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 40px)", gridAutoRows: "40px", gap: 4 }}>
-        {GRID_ITEMS.map(({ id, icon, title }) => (
-          <button key={id} type="button" style={iconButtonStyle} onClick={() => windowManager.toggle(id)}>
-            <div title={title}>{icon}</div>
+        {GRID_ITEMS.map(({ id, icon, image, title }) => (
+          <button
+            key={id}
+            type="button"
+            title={title}
+            style={image ? { ...imageButtonStyle, backgroundImage: `url(${image})` } : iconButtonStyle}
+            onClick={() => windowManager.toggle(id)}
+          >
+            {!image && <div title={title}>{icon}</div>}
           </button>
         ))}
         <button type="button" style={iconButtonStyle} onClick={() => setIsMenuOpen((open) => !open)}>
