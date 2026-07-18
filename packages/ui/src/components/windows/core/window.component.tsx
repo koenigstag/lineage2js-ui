@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useWindowManagerStore } from "../../../stores/StoreContext";
 
 export interface WindowProps {
@@ -25,10 +25,62 @@ const closeButtonStyle: CSSProperties = {
   padding: "0 2px",
 };
 
+const SNAP_THRESHOLD = 15;
+
+interface Edges {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+function snapPosition(selfId: string, x: number, y: number, width: number, height: number) {
+  const targets: Edges[] = [{ left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight }];
+
+  document.querySelectorAll<HTMLElement>(".window").forEach((el) => {
+    if (el.id !== selfId) {
+      const rect = el.getBoundingClientRect();
+      targets.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
+    }
+  });
+
+  let snappedX = x;
+  let snappedY = y;
+  const left = x;
+  const right = x + width;
+  const top = y;
+  const bottom = y + height;
+
+  for (const target of targets) {
+    if (Math.abs(left - target.right) < SNAP_THRESHOLD) {
+      snappedX = target.right;
+    } else if (Math.abs(left - target.left) < SNAP_THRESHOLD) {
+      snappedX = target.left;
+    } else if (Math.abs(right - target.left) < SNAP_THRESHOLD) {
+      snappedX = target.left - width;
+    } else if (Math.abs(right - target.right) < SNAP_THRESHOLD) {
+      snappedX = target.right - width;
+    }
+
+    if (Math.abs(top - target.bottom) < SNAP_THRESHOLD) {
+      snappedY = target.bottom;
+    } else if (Math.abs(top - target.top) < SNAP_THRESHOLD) {
+      snappedY = target.top;
+    } else if (Math.abs(bottom - target.top) < SNAP_THRESHOLD) {
+      snappedY = target.top - height;
+    } else if (Math.abs(bottom - target.bottom) < SNAP_THRESHOLD) {
+      snappedY = target.bottom - height;
+    }
+  }
+
+  return { x: snappedX, y: snappedY };
+}
+
 export const Window = observer(function Window({ id, children }: WindowProps) {
   const windowManager = useWindowManagerStore();
   const config = windowManager.getConfig(id);
   const state = windowManager.getState(id);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   if (!config || !state.open) {
     return null;
@@ -46,13 +98,19 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
     event.preventDefault();
     windowManager.focus(id);
 
+    const rect = containerRef.current!.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
     const startX = event.clientX;
     const startY = event.clientY;
     const originX = state!.x;
     const originY = state!.y;
 
     function handlePointerMove(moveEvent: PointerEvent) {
-      windowManager.move(id, originX + (moveEvent.clientX - startX), originY + (moveEvent.clientY - startY));
+      const rawX = originX + (moveEvent.clientX - startX);
+      const rawY = originY + (moveEvent.clientY - startY);
+      const snapped = snapPosition(id, rawX, rawY, width, height);
+      windowManager.move(id, snapped.x, snapped.y);
     }
 
     function handlePointerUp() {
@@ -74,7 +132,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
 
   if (config.type === "titlebar") {
     return (
-      <div id={id} className="window window--titlebar" style={containerStyle} onPointerDown={handleFocus}>
+      <div ref={containerRef} id={id} className="window window--titlebar" style={containerStyle} onPointerDown={handleFocus}>
         <div
           className="window__titlebar"
           style={{
@@ -105,6 +163,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
   if (config.type === "sidebar") {
     return (
       <div
+        ref={containerRef}
         id={id}
         className="window window--sidebar"
         style={{ ...containerStyle, display: "flex" }}
@@ -123,6 +182,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
 
   return (
     <div
+      ref={containerRef}
       id={id}
       className="window window--only-body"
       style={{ ...containerStyle, cursor: config.draggable ? "move" : "default" }}

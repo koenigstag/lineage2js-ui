@@ -37,9 +37,11 @@ export const GameMenu = observer(function GameMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { confirm, modal } = useConfirmation();
 
-  function handleSelectCharacter() {
+  async function handleSelectCharacter() {
     setIsMenuOpen(false);
-    ui.setScreen("select-char");
+    if (await confirm("Return to character selection?")) {
+      ui.setScreen("select-char");
+    }
   }
 
   function handleMacrosPanel() {
