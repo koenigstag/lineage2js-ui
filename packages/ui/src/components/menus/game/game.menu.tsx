@@ -6,11 +6,11 @@ import { useSessionStore, useUiStore, useWindowManagerStore } from "../../../sto
 import { MENU_Z_INDEX } from "../../../config/z-index";
 
 const GRID_ITEMS: { id: string; icon: string; title: string }[] = [
-  { id: "character", icon: "🧍", title: "Character" },
+  { id: "character", icon: "👨", title: "Character" },
   { id: "inventory", icon: "🎒", title: "Inventory" },
-  { id: "actions", icon: "✋", title: "Actions" },
+  { id: "actions", icon: "🤜", title: "Actions" },
   { id: "skills-list", icon: "📖", title: "Skills" },
-  { id: "quests", icon: "📜", title: "Quests" },
+  { id: "quests", icon: "🗞️", title: "Quests" },
   { id: "clan", icon: "🚩", title: "Clan" },
   { id: "map", icon: "🗺️", title: "Map" },
 ];

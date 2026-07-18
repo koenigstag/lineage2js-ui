@@ -22,7 +22,7 @@ export const TitleMenu = observer(function TitleMenu() {
         padding: 12,
       }}
     >
-      <BaseButton href={import.meta.env.VITE_REGISTER_URL}>Register</BaseButton>
+      <BaseButton href={import.meta.env.VITE_REGISTER_URL}>New Account</BaseButton>
       <BaseButton href={import.meta.env.VITE_RESTORE_PASSWORD_URL}>Restore password</BaseButton>
       <BaseButton href={import.meta.env.VITE_WIKI_URL}>Wiki portal</BaseButton>
       <BaseButton onClick={() => windowManager.toggle("settings")}>Settings</BaseButton>

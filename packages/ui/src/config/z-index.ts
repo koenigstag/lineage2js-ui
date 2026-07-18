@@ -1,2 +1,3 @@
-export const MENU_Z_INDEX = 10000;
+// Stacking order: modals > windows > menus.
+export const MENU_Z_INDEX = 1;
 export const MODAL_Z_INDEX = 100000;

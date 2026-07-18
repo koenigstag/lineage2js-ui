@@ -32,7 +32,7 @@ const HOTBAR_WIDTH = 12 * SLOT_SIZE + 11 * SLOT_GAP;
 
 export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
   settings: { id: "settings", type: "titlebar", title: "Settings", icon: "⚙️", closable: true, draggable: true },
-  character: { id: "character", type: "titlebar", title: "Character", icon: "🧍", closable: true, draggable: true },
+  character: { id: "character", type: "titlebar", title: "Character", icon: "👨", closable: true, draggable: true },
   inventory: { id: "inventory", type: "titlebar", title: "Inventory", icon: "🎒", closable: true, draggable: true },
   "skills-list": {
     id: "skills-list",
@@ -43,17 +43,17 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     draggable: true,
   },
   skill: { id: "skill", type: "titlebar", title: "Skill Info", icon: "📖", closable: true, draggable: true },
-  quests: { id: "quests", type: "titlebar", title: "Quests", icon: "📜", closable: true, draggable: true },
+  quests: { id: "quests", type: "titlebar", title: "Quests", icon: "🗞️", closable: true, draggable: true },
   "quest-info": {
     id: "quest-info",
     type: "titlebar",
     title: "Quest Info",
-    icon: "📜",
+    icon: "🗞️",
     closable: false,
     draggable: false,
   },
   clan: { id: "clan", type: "titlebar", title: "Clan", icon: "🚩", closable: true, draggable: true },
-  actions: { id: "actions", type: "titlebar", title: "Actions", icon: "✋", closable: true, draggable: true },
+  actions: { id: "actions", type: "titlebar", title: "Actions", icon: "🤜", closable: true, draggable: true },
   macroses: {
     id: "macroses",
     type: "titlebar",
@@ -87,7 +87,14 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     defaultOpen: true,
     defaultPosition: (viewport) => ({ x: 10, y: viewport.height - 410 }),
   },
-  effects: { id: "effects", type: "sidebar", closable: false, draggable: true, defaultOpen: true },
+  effects: {
+    id: "effects",
+    type: "sidebar",
+    closable: false,
+    draggable: true,
+    defaultOpen: true,
+    defaultPosition: () => ({ x: 220, y: 10 }),
+  },
   radar: {
     id: "radar",
     type: "only-body",
