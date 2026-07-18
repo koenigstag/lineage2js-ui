@@ -2,6 +2,7 @@ import { makeAutoObservable } from "mobx";
 
 export class RootStore {
   connectionStatus: "disconnected" | "connecting" | "connected" = "disconnected";
+  screen: "login" | "game" = "login";
 
   constructor() {
     makeAutoObservable(this);
@@ -9,6 +10,10 @@ export class RootStore {
 
   setConnectionStatus(status: RootStore["connectionStatus"]) {
     this.connectionStatus = status;
+  }
+
+  setScreen(screen: RootStore["screen"]) {
+    this.screen = screen;
   }
 }
 
