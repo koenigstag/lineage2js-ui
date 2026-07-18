@@ -3,6 +3,7 @@ import { BaseInput } from "../../core/inputs/base.input";
 import { SelectInput, type SelectOption } from "../../core/inputs/select.input";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useGameStore, useUiStore } from "../../../stores/StoreContext";
+import { MENU_Z_INDEX } from "../../../config/z-index";
 
 const RACE_OPTIONS: SelectOption[] = [
   { value: "human", label: "Human" },
@@ -63,6 +64,7 @@ export function CharCreateMenu() {
         position: "absolute",
         top: 10,
         left: 10,
+        zIndex: MENU_Z_INDEX,
         display: "flex",
         flexDirection: "column",
         gap: 8,

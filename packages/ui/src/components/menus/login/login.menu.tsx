@@ -2,7 +2,9 @@ import { forwardRef, useImperativeHandle, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { BaseButton } from "../../core/buttons/base.button";
+import { useConfirmation } from "../../core/confirmation-modal";
 import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
+import { MENU_Z_INDEX } from "../../../config/z-index";
 
 export interface LoginMenuHandle {
   fillAccount: (login: string) => void;
@@ -14,6 +16,7 @@ export const LoginMenu = observer(
     const ui = useUiStore();
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
+    const { confirm, modal } = useConfirmation();
 
     useImperativeHandle(ref, () => ({
       fillAccount: setAccount,
@@ -31,8 +34,10 @@ export const LoginMenu = observer(
       ui.setScreen("select-char");
     }
 
-    function handleExit() {
-      window.close();
+    async function handleExit() {
+      if (await confirm("Exit the game?")) {
+        window.close();
+      }
     }
 
     return (
@@ -42,6 +47,7 @@ export const LoginMenu = observer(
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
+          zIndex: MENU_Z_INDEX,
           display: "flex",
           flexDirection: "column",
           gap: 8,
@@ -58,6 +64,7 @@ export const LoginMenu = observer(
           <BaseButton onClick={handleLogin}>Login</BaseButton>
           <BaseButton onClick={handleExit}>Exit</BaseButton>
         </div>
+        {modal}
       </div>
     );
   })

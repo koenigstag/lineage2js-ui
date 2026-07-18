@@ -1,14 +1,13 @@
-import { Window } from "../core/window.component";
+import { Slot } from "../core/slot.component";
 
-export interface HotbarWindowProps {
-  open: boolean;
-  onClose?: () => void;
-}
+const HOTBAR_SLOT_COUNT = 12;
 
-export function HotbarWindow({ open, onClose }: HotbarWindowProps) {
+export function HotbarContent() {
   return (
-    <Window id="hotbar" open={open} onClose={onClose}>
-      {() => null}
-    </Window>
+    <div style={{ display: "flex", gap: 2 }}>
+      {Array.from({ length: HOTBAR_SLOT_COUNT }).map((_, index) => (
+        <Slot key={index} type="hotbar" />
+      ))}
+    </div>
   );
 }

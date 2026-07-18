@@ -2,6 +2,8 @@ import { useMemo, useRef } from "react";
 import { TitleMenu } from "../../menus/title/title.menu";
 import { LoginMenu, type LoginMenuHandle } from "../../menus/login/login.menu";
 import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
+import { WindowsRoot } from "../../windows/core/windows-root";
+import { LOGIN_WINDOW_IDS } from "../../../config/windows.registry";
 import { getRandomLoginBackground } from "../../../assets/login/backgrounds";
 
 export function LoginScreen() {
@@ -22,6 +24,8 @@ export function LoginScreen() {
         backgroundRepeat: "no-repeat",
       }}
     >
+      <WindowsRoot ids={LOGIN_WINDOW_IDS} />
+
       <LoginMenu ref={loginMenuRef} />
       <TitleMenu />
       <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />

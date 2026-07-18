@@ -1,26 +1,31 @@
 import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
+import { useConfirmation } from "../../core/confirmation-modal";
 import { useGameStore, useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { MAX_CHARACTERS } from "../../../stores/GameStore";
+import { MENU_Z_INDEX } from "../../../config/z-index";
 
 export const CharSelectMenu = observer(function CharSelectMenu() {
   const game = useGameStore();
   const session = useSessionStore();
   const ui = useUiStore();
+  const { confirm, modal } = useConfirmation();
 
   function handleCreateCharacter() {
     ui.setScreen("create-char");
   }
 
-  function handleDeleteCharacter() {
-    if (game.selectedCharacterId) {
+  async function handleDeleteCharacter() {
+    if (game.selectedCharacterId && (await confirm("Delete this character? This cannot be undone."))) {
       game.deleteCharacter(game.selectedCharacterId);
     }
   }
 
-  function handleLogout() {
-    session.logout();
-    ui.setScreen("login");
+  async function handleLogout() {
+    if (await confirm("Logout to the login screen?")) {
+      session.logout();
+      ui.setScreen("login");
+    }
   }
 
   return (
@@ -29,6 +34,7 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
         position: "absolute",
         bottom: 10,
         right: 10,
+        zIndex: MENU_Z_INDEX,
         display: "flex",
         flexDirection: "column",
         gap: 8,
@@ -46,6 +52,7 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
         Delete character
       </BaseButton>
       <BaseButton onClick={handleLogout}>Logout</BaseButton>
+      {modal}
     </div>
   );
 });

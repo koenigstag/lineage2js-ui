@@ -22,3 +22,7 @@ export function useSessionStore() {
 export function useGameStore() {
   return useContext(StoreContext).game;
 }
+
+export function useWindowManagerStore() {
+  return useContext(StoreContext).windowManager;
+}
