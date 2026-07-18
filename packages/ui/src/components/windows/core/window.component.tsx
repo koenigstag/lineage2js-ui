@@ -221,17 +221,13 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ref={containerRef}
         id={id}
         className="window window--sidebar"
-        style={{
-          ...containerStyle,
-          background: SIDEBAR_BACKGROUND,
-          display: "flex",
-          border: `1px solid ${SIDEBAR_BORDER_COLOR}`,
-        }}
+        style={{ ...containerStyle, display: "flex", border: `1px solid ${SIDEBAR_BORDER_COLOR}` }}
         onPointerDown={handleFocus}
       >
         <div
           style={{
             width: 12,
+            background: SIDEBAR_BACKGROUND,
             border: `1px solid ${SIDEBAR_STRIP_BORDER_COLOR}`,
             borderRight: "none",
             cursor: config.draggable ? "move" : "default",
