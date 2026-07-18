@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useStore } from "../../../stores/StoreContext";
+import { addKnownAccount, setSession } from "../../../lib/session";
 
 export const LoginMenu = observer(function LoginMenu() {
   const store = useStore();
@@ -10,7 +11,15 @@ export const LoginMenu = observer(function LoginMenu() {
   const [password, setPassword] = useState("");
 
   async function handleLogin() {
+    if (!account.trim() || !password.trim()) {
+      return;
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const token = crypto.randomUUID();
+    addKnownAccount(account);
+    setSession({ login: account, token });
     store.setScreen("game");
   }
 
