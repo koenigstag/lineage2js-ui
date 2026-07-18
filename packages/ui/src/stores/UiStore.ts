@@ -1,17 +1,20 @@
 import { makeAutoObservable } from "mobx";
 import { getSession } from "../lib/session";
 
-function getInitialScreen(): "login" | "game" {
-  if (getSession()) {
-    return "game";
+export type Screen = "login" | "select-char" | "create-char" | "game";
+
+function getInitialScreen(): Screen {
+  if (!getSession()) {
+    return "login";
   }
 
-  return window.location.hash.slice(1) === "game" ? "game" : "login";
+  const hashScreen = window.location.hash.slice(1);
+  return hashScreen === "create-char" || hashScreen === "game" ? hashScreen : "select-char";
 }
 
 export class UiStore {
   connectionStatus: "disconnected" | "connecting" | "connected" = "disconnected";
-  screen: "login" | "game" = getInitialScreen();
+  screen: Screen = getInitialScreen();
 
   constructor() {
     makeAutoObservable(this);

@@ -18,3 +18,7 @@ export function useUiStore() {
 export function useSessionStore() {
   return useContext(StoreContext).session;
 }
+
+export function useGameStore() {
+  return useContext(StoreContext).game;
+}

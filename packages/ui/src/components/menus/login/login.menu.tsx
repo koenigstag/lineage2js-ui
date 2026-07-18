@@ -28,7 +28,7 @@ export const LoginMenu = observer(
 
       const token = crypto.randomUUID();
       session.login(account, token);
-      ui.setScreen("game");
+      ui.setScreen("select-char");
     }
 
     function handleExit() {
