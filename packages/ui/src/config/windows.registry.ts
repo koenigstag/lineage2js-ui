@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 export type WindowType = "titlebar" | "sidebar" | "only-body";
 
+export type WindowOrigin = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
 export interface WindowPosition {
   x: number;
   y: number;
@@ -22,7 +24,9 @@ export interface WindowConfig {
   draggable: boolean;
   /** Windows that are part of the persistent HUD (hotbar, chat, ...) rather than opened on demand. */
   defaultOpen?: boolean;
-  /** Defaults to screen-center (via DEFAULT_WINDOW_SIZE) when omitted. */
+  /** Corner the persisted x/y is measured from. Defaults to "top-left". */
+  origin?: WindowOrigin;
+  /** x/y are distances from the origin corner. Defaults to screen-center when omitted. */
   defaultPosition?: (viewport: Viewport) => WindowPosition;
 }
 
@@ -62,14 +66,23 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     closable: true,
     draggable: true,
   },
-  map: { id: "map", type: "titlebar", title: "Map", icon: "🗺️", closable: true, draggable: true },
+  map: {
+    id: "map",
+    type: "titlebar",
+    title: "Map",
+    icon: "🗺️",
+    closable: true,
+    draggable: true,
+    origin: "top-right",
+  },
   hotbar: {
     id: "hotbar",
     type: "sidebar",
     closable: false,
     draggable: true,
     defaultOpen: true,
-    defaultPosition: (viewport) => ({ x: (viewport.width - HOTBAR_WIDTH) / 2, y: viewport.height - 70 }),
+    origin: "bottom-left",
+    defaultPosition: (viewport) => ({ x: (viewport.width - HOTBAR_WIDTH) / 2, y: 10 }),
   },
   chat: {
     id: "chat",
@@ -77,7 +90,8 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     closable: false,
     draggable: false,
     defaultOpen: true,
-    defaultPosition: (viewport) => ({ x: 10, y: viewport.height - 210 }),
+    origin: "bottom-left",
+    defaultPosition: () => ({ x: 10, y: 10 }),
   },
   battlelog: {
     id: "battlelog",
@@ -85,7 +99,8 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     closable: false,
     draggable: true,
     defaultOpen: true,
-    defaultPosition: (viewport) => ({ x: 10, y: viewport.height - 410 }),
+    origin: "bottom-left",
+    defaultPosition: () => ({ x: 10, y: 70 }),
   },
   effects: {
     id: "effects",

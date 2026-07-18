@@ -8,7 +8,10 @@ interface WindowRuntimeState {
   zIndex: number;
 }
 
-const POSITIONS_KEY = "windowPositions";
+// Bumped: x/y are now stored relative to each window's origin corner (see
+// WindowConfig.origin) instead of always top-left, so stale v1 entries must
+// not be reinterpreted under the new scheme.
+const POSITIONS_KEY = "windowPositions.v2";
 const BASE_Z_INDEX = 100;
 const DEFAULT_WINDOW_SIZE = { width: 240, height: 160 };
 

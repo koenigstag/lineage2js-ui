@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useWindowManagerStore } from "../../../stores/StoreContext";
+import type { WindowOrigin, WindowPosition } from "../../../config/windows.registry";
 
 export interface WindowProps {
   id: string;
@@ -76,6 +77,30 @@ function snapPosition(selfId: string, x: number, y: number, width: number, heigh
   return { x: snappedX, y: snappedY };
 }
 
+function isRightOrigin(origin: WindowOrigin) {
+  return origin === "top-right" || origin === "bottom-right";
+}
+
+function isBottomOrigin(origin: WindowOrigin) {
+  return origin === "bottom-left" || origin === "bottom-right";
+}
+
+/** Absolute screen-space (left, top) -> distance from the window's origin corner, for persisting. */
+function toOriginRelative(origin: WindowOrigin, left: number, top: number, width: number, height: number): WindowPosition {
+  return {
+    x: isRightOrigin(origin) ? window.innerWidth - left - width : left,
+    y: isBottomOrigin(origin) ? window.innerHeight - top - height : top,
+  };
+}
+
+/** Persisted origin-relative x/y -> the CSS properties that place it there. */
+function getOriginStyle(origin: WindowOrigin, x: number, y: number): CSSProperties {
+  return {
+    [isRightOrigin(origin) ? "right" : "left"]: x,
+    [isBottomOrigin(origin) ? "bottom" : "top"]: y,
+  };
+}
+
 export const Window = observer(function Window({ id, children }: WindowProps) {
   const windowManager = useWindowManagerStore();
   const config = windowManager.getConfig(id);
@@ -85,6 +110,8 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
   if (!config || !state.open) {
     return null;
   }
+
+  const origin = config.origin ?? "top-left";
 
   function handleFocus() {
     windowManager.focus(id);
@@ -103,14 +130,15 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
     const height = rect.height;
     const startX = event.clientX;
     const startY = event.clientY;
-    const originX = state!.x;
-    const originY = state!.y;
+    const originLeft = rect.left;
+    const originTop = rect.top;
 
     function handlePointerMove(moveEvent: PointerEvent) {
-      const rawX = originX + (moveEvent.clientX - startX);
-      const rawY = originY + (moveEvent.clientY - startY);
-      const snapped = snapPosition(id, rawX, rawY, width, height);
-      windowManager.move(id, snapped.x, snapped.y);
+      const rawLeft = originLeft + (moveEvent.clientX - startX);
+      const rawTop = originTop + (moveEvent.clientY - startY);
+      const snapped = snapPosition(id, rawLeft, rawTop, width, height);
+      const relative = toOriginRelative(origin, snapped.x, snapped.y, width, height);
+      windowManager.move(id, relative.x, relative.y);
     }
 
     function handlePointerUp() {
@@ -125,8 +153,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
 
   const containerStyle: CSSProperties = {
     ...containerBaseStyle,
-    left: state.x,
-    top: state.y,
+    ...getOriginStyle(origin, state.x, state.y),
     zIndex: state.zIndex,
   };
 
