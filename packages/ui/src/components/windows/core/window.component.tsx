@@ -27,6 +27,8 @@ const closeButtonStyle: CSSProperties = {
 };
 
 const SNAP_THRESHOLD = 5;
+// Gap left between two windows when they snap to each other (screen edges stay flush).
+const WINDOW_GAP = 5;
 
 interface Edges {
   left: number;
@@ -36,12 +38,13 @@ interface Edges {
 }
 
 function snapPosition(selfId: string, x: number, y: number, width: number, height: number) {
-  const targets: Edges[] = [{ left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight }];
+  const screenTarget: Edges = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+  const windowTargets: Edges[] = [];
 
   document.querySelectorAll<HTMLElement>(".window").forEach((el) => {
     if (el.id !== selfId) {
       const rect = el.getBoundingClientRect();
-      targets.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
+      windowTargets.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
     }
   });
 
@@ -52,26 +55,36 @@ function snapPosition(selfId: string, x: number, y: number, width: number, heigh
   const top = y;
   const bottom = y + height;
 
-  for (const target of targets) {
-    if (Math.abs(left - target.right) < SNAP_THRESHOLD) {
-      snappedX = target.right;
+  function applyHorizontal(target: Edges, gap: number) {
+    if (Math.abs(left - (target.right + gap)) < SNAP_THRESHOLD) {
+      snappedX = target.right + gap;
     } else if (Math.abs(left - target.left) < SNAP_THRESHOLD) {
       snappedX = target.left;
-    } else if (Math.abs(right - target.left) < SNAP_THRESHOLD) {
-      snappedX = target.left - width;
+    } else if (Math.abs(right - (target.left - gap)) < SNAP_THRESHOLD) {
+      snappedX = target.left - gap - width;
     } else if (Math.abs(right - target.right) < SNAP_THRESHOLD) {
       snappedX = target.right - width;
     }
+  }
 
-    if (Math.abs(top - target.bottom) < SNAP_THRESHOLD) {
-      snappedY = target.bottom;
+  function applyVertical(target: Edges, gap: number) {
+    if (Math.abs(top - (target.bottom + gap)) < SNAP_THRESHOLD) {
+      snappedY = target.bottom + gap;
     } else if (Math.abs(top - target.top) < SNAP_THRESHOLD) {
       snappedY = target.top;
-    } else if (Math.abs(bottom - target.top) < SNAP_THRESHOLD) {
-      snappedY = target.top - height;
+    } else if (Math.abs(bottom - (target.top - gap)) < SNAP_THRESHOLD) {
+      snappedY = target.top - gap - height;
     } else if (Math.abs(bottom - target.bottom) < SNAP_THRESHOLD) {
       snappedY = target.bottom - height;
     }
+  }
+
+  applyHorizontal(screenTarget, 0);
+  applyVertical(screenTarget, 0);
+
+  for (const target of windowTargets) {
+    applyHorizontal(target, WINDOW_GAP);
+    applyVertical(target, WINDOW_GAP);
   }
 
   return { x: snappedX, y: snappedY };
