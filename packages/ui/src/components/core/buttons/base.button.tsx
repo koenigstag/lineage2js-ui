@@ -5,6 +5,7 @@ export interface BaseButtonProps {
   onClick?: (event: MouseEvent) => void;
   href?: string;
   disabled?: boolean;
+  style?: CSSProperties;
 }
 
 const baseStyle: CSSProperties = {
@@ -19,10 +20,10 @@ const baseStyle: CSSProperties = {
   cursor: "pointer",
 };
 
-export function BaseButton({ children, onClick, href, disabled }: BaseButtonProps) {
+export function BaseButton({ children, onClick, href, disabled, style }: BaseButtonProps) {
   if (href) {
     return (
-      <a href={href} style={baseStyle} target="_blank" rel="noreferrer">
+      <a href={href} style={{ ...baseStyle, ...style }} target="_blank" rel="noreferrer">
         {children}
       </a>
     );
@@ -33,7 +34,7 @@ export function BaseButton({ children, onClick, href, disabled }: BaseButtonProp
       type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{ ...baseStyle, opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+      style={{ ...baseStyle, opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer", ...style }}
     >
       {children}
     </button>

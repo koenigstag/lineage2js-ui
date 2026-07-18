@@ -32,9 +32,9 @@ export const AccountsMenu = observer(function AccountsMenu({ onSelectAccount }: 
     >
       <span style={{ color: "#999999", fontSize: 12, textTransform: "uppercase" }}>Known accounts</span>
       {session.knownAccounts.map(({ login }) => (
-        <div key={login} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div key={login} style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
           <span style={{ color: "#999999" }}>{login}</span>
-          <BaseButton onClick={() => onSelectAccount(login)}>
+          <BaseButton onClick={() => onSelectAccount(login)} style={{ padding: 0 }}>
             <span style={{ fontSize: 10 }}>➜</span>
           </BaseButton>
         </div>
