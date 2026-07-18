@@ -1,0 +1,17 @@
+{
+  "name": "@lineage2js/network",
+  "version": "0.0.1",
+  "description": "Lineage 2 network protocol layer (login/game packets, encryption, sockets)",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "eslint src/**",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

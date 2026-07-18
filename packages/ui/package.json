@@ -1,0 +1,20 @@
+{
+  "name": "@lineage2js/ui",
+  "version": "0.0.1",
+  "description": "Lineage 2 web UI client",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "eslint src/**",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lineage2js/network": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
