@@ -10,3 +10,11 @@ export function StoreProvider({ children }: PropsWithChildren) {
 export function useStore() {
   return useContext(StoreContext);
 }
+
+export function useUiStore() {
+  return useContext(StoreContext).ui;
+}
+
+export function useSessionStore() {
+  return useContext(StoreContext).session;
+}

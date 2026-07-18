@@ -2,8 +2,7 @@ import { forwardRef, useImperativeHandle, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { BaseButton } from "../../core/buttons/base.button";
-import { useStore } from "../../../stores/StoreContext";
-import { addKnownAccount, setSession } from "../../../lib/session";
+import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
 
 export interface LoginMenuHandle {
   fillAccount: (login: string) => void;
@@ -11,7 +10,8 @@ export interface LoginMenuHandle {
 
 export const LoginMenu = observer(
   forwardRef<LoginMenuHandle>(function LoginMenu(_props, ref) {
-    const store = useStore();
+    const session = useSessionStore();
+    const ui = useUiStore();
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
 
@@ -27,9 +27,8 @@ export const LoginMenu = observer(
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const token = crypto.randomUUID();
-      addKnownAccount(account);
-      setSession({ login: account, token });
-      store.setScreen("game");
+      session.login(account, token);
+      ui.setScreen("game");
     }
 
     function handleExit() {

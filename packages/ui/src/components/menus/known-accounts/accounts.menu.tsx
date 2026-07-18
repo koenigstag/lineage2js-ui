@@ -1,14 +1,15 @@
+import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
-import { getKnownAccounts } from "../../../lib/session";
+import { useSessionStore } from "../../../stores/StoreContext";
 
 export interface AccountsMenuProps {
   onSelectAccount: (login: string) => void;
 }
 
-export function AccountsMenu({ onSelectAccount }: AccountsMenuProps) {
-  const accounts = getKnownAccounts();
+export const AccountsMenu = observer(function AccountsMenu({ onSelectAccount }: AccountsMenuProps) {
+  const session = useSessionStore();
 
-  if (accounts.length === 0) {
+  if (session.knownAccounts.length === 0) {
     return null;
   }
 
@@ -28,7 +29,7 @@ export function AccountsMenu({ onSelectAccount }: AccountsMenuProps) {
       }}
     >
       <span style={{ color: "#999999", fontSize: 12, textTransform: "uppercase" }}>Known accounts</span>
-      {accounts.map(({ login }) => (
+      {session.knownAccounts.map(({ login }) => (
         <div key={login} style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ color: "#999999" }}>{login}</span>
           <BaseButton onClick={() => onSelectAccount(login)}>
@@ -38,4 +39,4 @@ export function AccountsMenu({ onSelectAccount }: AccountsMenuProps) {
       ))}
     </div>
   );
-}
+});

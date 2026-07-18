@@ -1,29 +1,9 @@
-import { makeAutoObservable } from "mobx";
-import { getSession } from "../lib/session";
-
-function getInitialScreen(): "login" | "game" {
-  if (getSession()) {
-    return "game";
-  }
-
-  return window.location.hash.slice(1) === "game" ? "game" : "login";
-}
+import { SessionStore } from "./SessionStore";
+import { UiStore } from "./UiStore";
 
 export class RootStore {
-  connectionStatus: "disconnected" | "connecting" | "connected" = "disconnected";
-  screen: "login" | "game" = getInitialScreen();
-
-  constructor() {
-    makeAutoObservable(this);
-  }
-
-  setConnectionStatus(status: RootStore["connectionStatus"]) {
-    this.connectionStatus = status;
-  }
-
-  setScreen(screen: RootStore["screen"]) {
-    this.screen = screen;
-  }
+  session = new SessionStore();
+  ui = new UiStore();
 }
 
 export const rootStore = new RootStore();

@@ -1,13 +1,13 @@
 import { BaseButton } from "../../core/buttons/base.button";
-import { useStore } from "../../../stores/StoreContext";
-import { clearSession } from "../../../lib/session";
+import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
 
 export function GameScreen() {
-  const store = useStore();
+  const session = useSessionStore();
+  const ui = useUiStore();
 
   function handleLogout() {
-    clearSession();
-    store.setScreen("login");
+    session.logout();
+    ui.setScreen("login");
   }
 
   return (
