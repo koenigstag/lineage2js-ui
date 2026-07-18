@@ -36,7 +36,15 @@ export interface WindowConfig {
   hideStrip?: boolean;
   /** Skip the container's own background/border entirely; content supplies its own chrome. */
   bare?: boolean;
-  windowStyle?: React.CSSProperties;
+  windowStyle?: {
+    root?: React.CSSProperties;
+    content?: React.CSSProperties;
+    sidebar?: React.CSSProperties;
+    titlebar?: React.CSSProperties;
+    titleIcon?: React.CSSProperties;
+    title?: React.CSSProperties;
+    closeButton?: React.CSSProperties;
+  };
 }
 
 const SLOT_SIZE = 34;
@@ -122,7 +130,9 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     defaultPosition: (viewport) => ({ x: (viewport.width - HOTBAR_WIDTH) / 2, y: 10 }),
     contentBackground: "#161513",
     windowStyle: {
-      padding: '5px 20px',
+      content: {
+        padding: '6px 20px',
+      },
     },
   },
   chat: {

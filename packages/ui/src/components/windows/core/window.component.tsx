@@ -1,7 +1,15 @@
 import { observer } from "mobx-react-lite";
-import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import {
+  useRef,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { useWindowManagerStore } from "../../../stores/StoreContext";
-import type { WindowOrigin, WindowPosition } from "../../../config/windows.registry";
+import type {
+  WindowOrigin,
+  WindowPosition,
+} from "../../../config/windows.registry";
 
 export interface WindowProps {
   id: string;
@@ -20,8 +28,10 @@ const TITLEBAR_BORDER_COLOR = "#bdaa8e";
 const SIDEBAR_BORDER_COLOR = "#504f4f";
 const SIDEBAR_STRIP_BORDER_COLOR = "#b5a28c";
 const ONLY_BODY_BORDER_COLOR = "#444444";
-const TITLEBAR_BACKGROUND = "linear-gradient(to bottom, #353328 50%, #251d14 50%)";
-const SIDEBAR_BACKGROUND = "linear-gradient(to right, #353328 50%, #251d14 50%)";
+const TITLEBAR_BACKGROUND =
+  "linear-gradient(to bottom, #353328 50%, #251d14 50%)";
+const SIDEBAR_BACKGROUND =
+  "linear-gradient(to right, #353328 50%, #251d14 50%)";
 const TITLE_TEXT_COLOR = "#c8cfdc";
 
 const closeButtonStyle: CSSProperties = {
@@ -45,14 +55,30 @@ interface Edges {
   bottom: number;
 }
 
-function snapPosition(selfId: string, x: number, y: number, width: number, height: number) {
-  const screenTarget: Edges = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+function snapPosition(
+  selfId: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
+  const screenTarget: Edges = {
+    left: 0,
+    top: 0,
+    right: window.innerWidth,
+    bottom: window.innerHeight,
+  };
   const windowTargets: Edges[] = [];
 
   document.querySelectorAll<HTMLElement>(".window").forEach((el) => {
     if (el.id !== selfId) {
       const rect = el.getBoundingClientRect();
-      windowTargets.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
+      windowTargets.push({
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+      });
     }
   });
 
@@ -107,7 +133,13 @@ function isBottomOrigin(origin: WindowOrigin) {
 }
 
 /** Absolute screen-space (left, top) -> distance from the window's origin corner, for persisting. */
-function toOriginRelative(origin: WindowOrigin, left: number, top: number, width: number, height: number): WindowPosition {
+function toOriginRelative(
+  origin: WindowOrigin,
+  left: number,
+  top: number,
+  width: number,
+  height: number
+): WindowPosition {
   return {
     x: isRightOrigin(origin) ? window.innerWidth - left - width : left,
     y: isBottomOrigin(origin) ? window.innerHeight - top - height : top,
@@ -115,7 +147,11 @@ function toOriginRelative(origin: WindowOrigin, left: number, top: number, width
 }
 
 /** Persisted origin-relative x/y -> the CSS properties that place it there. */
-function getOriginStyle(origin: WindowOrigin, x: number, y: number): CSSProperties {
+function getOriginStyle(
+  origin: WindowOrigin,
+  x: number,
+  y: number
+): CSSProperties {
   return {
     [isRightOrigin(origin) ? "right" : "left"]: x,
     [isBottomOrigin(origin) ? "bottom" : "top"]: y,
@@ -162,7 +198,13 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
       const rawLeft = originLeft + (moveEvent.clientX - startX);
       const rawTop = originTop + (moveEvent.clientY - startY);
       const snapped = snapPosition(id, rawLeft, rawTop, width, height);
-      const relative = toOriginRelative(origin, snapped.x, snapped.y, width, height);
+      const relative = toOriginRelative(
+        origin,
+        snapped.x,
+        snapped.y,
+        width,
+        height
+      );
       windowManager.move(id, relative.x, relative.y);
     }
 
@@ -178,7 +220,9 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
 
   const containerStyle: CSSProperties = {
     ...containerBaseStyle,
-    ...(config.bare ? { backgroundColor: "transparent", minWidth: undefined } : {}),
+    ...(config.bare
+      ? { backgroundColor: "transparent", minWidth: undefined }
+      : {}),
     ...getOriginStyle(origin, state.x, state.y),
     zIndex: state.zIndex,
   };
@@ -189,7 +233,11 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ref={containerRef}
         id={id}
         className="window window--titlebar"
-        style={{ ...containerStyle, border: config.bare ? "none" : `1px solid ${TITLEBAR_BORDER_COLOR}`, ...config.windowStyle }}
+        style={{
+          ...containerStyle,
+          border: config.bare ? "none" : `1px solid ${TITLEBAR_BORDER_COLOR}`,
+          ...config.windowStyle?.root,
+        }}
         onPointerDown={handleFocus}
       >
         <div
@@ -202,18 +250,50 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
             background: TITLEBAR_BACKGROUND,
             borderBottom: `1px solid ${TITLEBAR_BORDER_COLOR}`,
             cursor: config.draggable ? "move" : "default",
+            ...config.windowStyle?.titlebar,
           }}
           onPointerDown={handleDragStart}
         >
-          <span style={{ width: 16, textAlign: "center", fontSize: 12 }}>{config.icon}</span>
-          <span style={{ flex: 1, textAlign: "center", color: TITLE_TEXT_COLOR }}>{config.title}</span>
+          <span
+            style={{
+              width: 16,
+              textAlign: "center",
+              fontSize: 12,
+              ...config.windowStyle?.titleIcon,
+            }}
+          >
+            {config.icon}
+          </span>
+          <span
+            style={{
+              flex: 1,
+              textAlign: "center",
+              color: TITLE_TEXT_COLOR,
+              ...config.windowStyle?.title,
+            }}
+          >
+            {config.title}
+          </span>
           {config.closable && (
-            <button type="button" onClick={() => windowManager.close(id)} style={closeButtonStyle}>
+            <button
+              type="button"
+              onClick={() => windowManager.close(id)}
+              style={{
+                ...closeButtonStyle,
+                ...config.windowStyle?.closeButton,
+              }}
+            >
               ×
             </button>
           )}
         </div>
-        <div className="window__content" style={contentStyle}>
+        <div
+          className="window__content"
+          style={{
+            ...contentStyle,
+            ...config.windowStyle?.content,
+          }}
+        >
           {children?.()}
         </div>
       </div>
@@ -230,6 +310,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
           ...containerStyle,
           display: "flex",
           border: config.bare ? "none" : `1px solid ${SIDEBAR_BORDER_COLOR}`,
+          ...config.windowStyle?.root,
         }}
         onPointerDown={handleFocus}
       >
@@ -241,11 +322,18 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
               border: `1px solid ${SIDEBAR_STRIP_BORDER_COLOR}`,
               borderRight: "none",
               cursor: config.draggable ? "move" : "default",
+              ...config.windowStyle?.sidebar,
             }}
             onPointerDown={handleDragStart}
           />
         )}
-        <div className="window__content" style={contentStyle}>
+        <div
+          className="window__content"
+          style={{
+            ...contentStyle,
+            ...config.windowStyle?.content,
+          }}
+        >
           {children?.()}
         </div>
       </div>
@@ -261,13 +349,20 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ...containerStyle,
         border: config.bare ? "none" : `1px solid ${ONLY_BODY_BORDER_COLOR}`,
         cursor: config.draggable ? "move" : "default",
+        ...config.windowStyle?.root,
       }}
       onPointerDown={(event) => {
         handleFocus();
         handleDragStart(event);
       }}
     >
-      <div className="window__content" style={contentStyle}>
+      <div
+        className="window__content"
+        style={{
+          ...contentStyle,
+          ...config.windowStyle?.content,
+        }}
+      >
         {children?.()}
       </div>
     </div>
