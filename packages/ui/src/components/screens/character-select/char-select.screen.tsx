@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import { Screen } from "../../core/screen.component";
 import { BaseButton } from "../../core/buttons/base.button";
 import { CharSelectMenu } from "../../menus/char-select/char-select.menu";
 import { useGameStore, useUiStore } from "../../../stores/StoreContext";
@@ -15,10 +16,7 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
   const characters = Array.from(game.characters.values());
 
   return (
-    <div
-      className="screen screen--select-char"
-      style={{ position: "relative", width: "100vw", height: "100vh", backgroundColor: "#000000" }}
-    >
+    <Screen className="screen screen--select-char">
       <div
         style={{
           position: "absolute",
@@ -59,6 +57,6 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
       </div>
 
       <CharSelectMenu />
-    </div>
+    </Screen>
   );
 });

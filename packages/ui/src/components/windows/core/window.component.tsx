@@ -25,7 +25,7 @@ const closeButtonStyle: CSSProperties = {
   padding: "0 2px",
 };
 
-const SNAP_THRESHOLD = 15;
+const SNAP_THRESHOLD = 5;
 
 interface Edges {
   left: number;

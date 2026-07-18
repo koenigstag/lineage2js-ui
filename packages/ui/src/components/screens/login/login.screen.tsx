@@ -1,4 +1,5 @@
 import { useMemo, useRef } from "react";
+import { Screen } from "../../core/screen.component";
 import { TitleMenu } from "../../menus/title/title.menu";
 import { LoginMenu, type LoginMenuHandle } from "../../menus/login/login.menu";
 import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
@@ -11,13 +12,9 @@ export function LoginScreen() {
   const loginMenuRef = useRef<LoginMenuHandle>(null);
 
   return (
-    <div
+    <Screen
       className="screen screen--login"
       style={{
-        position: "relative",
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "#000000",
         backgroundImage: background ? `url(${background})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -29,6 +26,6 @@ export function LoginScreen() {
       <LoginMenu ref={loginMenuRef} />
       <TitleMenu />
       <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
-    </div>
+    </Screen>
   );
 }
