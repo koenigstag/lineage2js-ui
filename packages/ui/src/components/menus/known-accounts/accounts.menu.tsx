@@ -27,10 +27,13 @@ export function AccountsMenu({ onSelectAccount }: AccountsMenuProps) {
         padding: 12,
       }}
     >
+      <span style={{ color: "#999999", fontSize: 12, textTransform: "uppercase" }}>Known accounts</span>
       {accounts.map(({ login }) => (
         <div key={login} style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ color: "#999999" }}>{login}</span>
-          <BaseButton onClick={() => onSelectAccount(login)}>➜</BaseButton>
+          <BaseButton onClick={() => onSelectAccount(login)}>
+            <span style={{ fontSize: 10 }}>➜</span>
+          </BaseButton>
         </div>
       ))}
     </div>
