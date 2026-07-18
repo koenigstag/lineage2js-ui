@@ -20,6 +20,7 @@ const SIDEBAR_BORDER_COLOR = "#504f4f";
 const SIDEBAR_STRIP_BORDER_COLOR = "#b5a28c";
 const ONLY_BODY_BORDER_COLOR = "#444444";
 const TITLEBAR_BACKGROUND = "linear-gradient(to bottom, #353328 50%, #251d14 50%)";
+const SIDEBAR_BACKGROUND = "linear-gradient(to right, #353328 50%, #251d14 50%)";
 const TITLE_TEXT_COLOR = "#c8cfdc";
 
 const closeButtonStyle: CSSProperties = {
@@ -220,7 +221,12 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ref={containerRef}
         id={id}
         className="window window--sidebar"
-        style={{ ...containerStyle, display: "flex", border: `1px solid ${SIDEBAR_BORDER_COLOR}` }}
+        style={{
+          ...containerStyle,
+          background: SIDEBAR_BACKGROUND,
+          display: "flex",
+          border: `1px solid ${SIDEBAR_BORDER_COLOR}`,
+        }}
         onPointerDown={handleFocus}
       >
         <div
