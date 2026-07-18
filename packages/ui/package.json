@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:pages": "tsc --noEmit && vite build --base=/lineage2js-ui/",
     "preview": "vite preview",
     "lint": "eslint src/**",
     "clean": "rm -rf dist"
