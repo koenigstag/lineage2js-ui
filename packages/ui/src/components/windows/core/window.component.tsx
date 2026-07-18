@@ -12,6 +12,7 @@ const containerBaseStyle: CSSProperties = {
   position: "absolute",
   backgroundColor: "#1a1a1a",
   borderRadius: 4,
+  overflow: "hidden",
   minWidth: 200,
 };
 
@@ -188,7 +189,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ref={containerRef}
         id={id}
         className="window window--titlebar"
-        style={{ ...containerStyle, border: config.bare ? "none" : `1px solid ${TITLEBAR_BORDER_COLOR}` }}
+        style={{ ...containerStyle, border: config.bare ? "none" : `1px solid ${TITLEBAR_BORDER_COLOR}`, ...config.windowStyle }}
         onPointerDown={handleFocus}
       >
         <div
