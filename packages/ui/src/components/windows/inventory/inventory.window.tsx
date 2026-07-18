@@ -51,6 +51,7 @@ export function InventoryContent() {
             gap: SLOT_GAP,
             maxHeight: SLOT_SIZE * VISIBLE_ROWS + SLOT_GAP * (VISIBLE_ROWS - 1),
             overflowY: "auto",
+            overflowX: "hidden",
           }}
         >
           {Array.from({ length: GRID_COLUMNS * GRID_ROWS }).map((_, index) => (
