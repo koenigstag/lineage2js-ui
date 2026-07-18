@@ -132,7 +132,10 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
   }
 
   const origin = config.origin ?? "top-left";
-  const contentStyle: CSSProperties = { padding: 8, backgroundColor: config.contentBackground };
+  const contentStyle: CSSProperties = {
+    padding: config.contentPadding ?? 8,
+    backgroundColor: config.contentBackground,
+  };
 
   function handleFocus() {
     windowManager.focus(id);
@@ -174,6 +177,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
 
   const containerStyle: CSSProperties = {
     ...containerBaseStyle,
+    ...(config.bare ? { backgroundColor: "transparent", minWidth: undefined } : {}),
     ...getOriginStyle(origin, state.x, state.y),
     zIndex: state.zIndex,
   };
@@ -184,7 +188,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ref={containerRef}
         id={id}
         className="window window--titlebar"
-        style={{ ...containerStyle, border: `1px solid ${TITLEBAR_BORDER_COLOR}` }}
+        style={{ ...containerStyle, border: config.bare ? "none" : `1px solid ${TITLEBAR_BORDER_COLOR}` }}
         onPointerDown={handleFocus}
       >
         <div
@@ -221,19 +225,25 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ref={containerRef}
         id={id}
         className="window window--sidebar"
-        style={{ ...containerStyle, display: "flex", border: `1px solid ${SIDEBAR_BORDER_COLOR}` }}
+        style={{
+          ...containerStyle,
+          display: "flex",
+          border: config.bare ? "none" : `1px solid ${SIDEBAR_BORDER_COLOR}`,
+        }}
         onPointerDown={handleFocus}
       >
-        <div
-          style={{
-            width: 12,
-            background: SIDEBAR_BACKGROUND,
-            border: `1px solid ${SIDEBAR_STRIP_BORDER_COLOR}`,
-            borderRight: "none",
-            cursor: config.draggable ? "move" : "default",
-          }}
-          onPointerDown={handleDragStart}
-        />
+        {!config.hideStrip && (
+          <div
+            style={{
+              width: 12,
+              background: SIDEBAR_BACKGROUND,
+              border: `1px solid ${SIDEBAR_STRIP_BORDER_COLOR}`,
+              borderRight: "none",
+              cursor: config.draggable ? "move" : "default",
+            }}
+            onPointerDown={handleDragStart}
+          />
+        )}
         <div className="window__content" style={contentStyle}>
           {children?.()}
         </div>
@@ -246,7 +256,11 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
       ref={containerRef}
       id={id}
       className="window window--only-body"
-      style={{ ...containerStyle, border: `1px solid ${ONLY_BODY_BORDER_COLOR}`, cursor: config.draggable ? "move" : "default" }}
+      style={{
+        ...containerStyle,
+        border: config.bare ? "none" : `1px solid ${ONLY_BODY_BORDER_COLOR}`,
+        cursor: config.draggable ? "move" : "default",
+      }}
       onPointerDown={(event) => {
         handleFocus();
         handleDragStart(event);

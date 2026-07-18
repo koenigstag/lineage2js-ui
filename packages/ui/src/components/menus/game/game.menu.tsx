@@ -3,7 +3,6 @@ import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
-import { MENU_Z_INDEX } from "../../../config/z-index";
 import characterIcon from "../../../assets/menus/game/character@64.png";
 import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
 import clanIcon from "../../../assets/menus/game/clan@64.png";
@@ -101,7 +100,6 @@ export const GameMenu = observer(function GameMenu() {
       className="menu menu--game"
       style={{
         position: "relative",
-        zIndex: MENU_Z_INDEX,
         backgroundColor: "#181718",
         border: "1px solid #444444",
         borderRadius: 4,

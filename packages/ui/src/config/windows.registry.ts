@@ -30,6 +30,12 @@ export interface WindowConfig {
   defaultPosition?: (viewport: Viewport) => WindowPosition;
   /** Overrides the content area's background color. */
   contentBackground?: string;
+  /** Overrides the content area's padding (default 8). */
+  contentPadding?: number;
+  /** Sidebar-type only: skip rendering the drag-handle strip. */
+  hideStrip?: boolean;
+  /** Skip the container's own background/border entirely; content supplies its own chrome. */
+  bare?: boolean;
 }
 
 const SLOT_SIZE = 34;
@@ -92,6 +98,18 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     closable: true,
     draggable: true,
     origin: "top-right",
+  },
+  "game-menu": {
+    id: "game-menu",
+    type: "sidebar",
+    closable: false,
+    draggable: false,
+    hideStrip: true,
+    bare: true,
+    contentPadding: 0,
+    defaultOpen: true,
+    origin: "bottom-right",
+    defaultPosition: () => ({ x: 10, y: 10 }),
   },
   hotbar: {
     id: "hotbar",
@@ -170,6 +188,7 @@ export const GAME_WINDOW_IDS = [
   "macroses",
   "macro",
   "map",
+  "game-menu",
   "hotbar",
   "chat",
   "battlelog",
