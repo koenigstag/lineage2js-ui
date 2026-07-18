@@ -4,9 +4,9 @@ import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { useSessionStore, useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
-import characterIcon from "../../../assets/menus/game/character.png";
-import inventoryIcon from "../../../assets/menus/game/inventory.png";
-import clanIcon from "../../../assets/menus/game/clan.png";
+import characterIcon from "../../../assets/menus/game/character@64.png";
+import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
+import clanIcon from "../../../assets/menus/game/clan@64.png";
 
 const GRID_ITEMS: { id: string; icon?: string; image?: string; title: string }[] = [
   { id: "character", image: characterIcon, title: "Character" },
