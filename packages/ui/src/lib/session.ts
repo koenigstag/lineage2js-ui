@@ -19,6 +19,10 @@ export function setSession(session: Session): void {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
+export function clearSession(): void {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
 export function getKnownAccounts(): KnownAccount[] {
   const raw = localStorage.getItem(KNOWN_ACCOUNTS_KEY);
   return raw ? (JSON.parse(raw) as KnownAccount[]) : [];
