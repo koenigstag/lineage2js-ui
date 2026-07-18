@@ -112,4 +112,14 @@ export class WindowManagerStore {
     });
     localStorage.setItem(POSITIONS_KEY, JSON.stringify(positions));
   }
+
+  resetPositions() {
+    this.windows.forEach((state, id) => {
+      const config = WINDOW_REGISTRY[id];
+      const position = this.getDefaultPosition(config);
+      state.x = position.x;
+      state.y = position.y;
+    });
+    this.persist();
+  }
 }
