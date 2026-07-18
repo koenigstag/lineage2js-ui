@@ -52,7 +52,7 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
 
       <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)" }}>
         <BaseButton onClick={handleEnterWorld} disabled={!game.selectedCharacterId}>
-          <span style={{ fontSize: 20, padding: "4px 24px", display: "inline-block" }}>Enter world</span>
+          <span style={{ fontSize: 20, padding: "4px 24px", display: "inline-block" }}>Start</span>
         </BaseButton>
       </div>
 

@@ -10,9 +10,9 @@ export interface BaseButtonProps {
 
 const baseStyle: CSSProperties = {
   display: "inline-block",
-  background: "#3c3425",
+  background: "linear-gradient(to bottom, #464132 50%, #2c2417 50%)",
   color: "#b5af9f",
-  border: "1px solid #5d4f48",
+  border: "1px solid #706c61",
   borderRadius: 4,
   padding: "6px 12px",
   textAlign: "center",

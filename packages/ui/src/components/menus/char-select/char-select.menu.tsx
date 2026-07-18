@@ -46,12 +46,12 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
       }}
     >
       <BaseButton onClick={handleCreateCharacter} disabled={game.characters.size >= MAX_CHARACTERS}>
-        Create character
+        Create
       </BaseButton>
       <BaseButton onClick={handleDeleteCharacter} disabled={!game.selectedCharacterId}>
-        Delete character
+        Delete
       </BaseButton>
-      <BaseButton onClick={handleLogout}>Logout</BaseButton>
+      <BaseButton onClick={handleLogout}>Re-Login</BaseButton>
       {modal}
     </div>
   );
