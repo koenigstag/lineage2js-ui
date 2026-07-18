@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { TitleMenu } from "../../menus/title/title.menu";
-import { LoginMenu } from "../../menus/login/login.menu";
+import { LoginMenu, type LoginMenuHandle } from "../../menus/login/login.menu";
+import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
 import { getRandomLoginBackground } from "../../../assets/login/backgrounds";
 
 export function LoginScreen() {
   const background = useMemo(() => getRandomLoginBackground(), []);
+  const loginMenuRef = useRef<LoginMenuHandle>(null);
 
   return (
     <div
@@ -20,8 +22,9 @@ export function LoginScreen() {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <LoginMenu />
+      <LoginMenu ref={loginMenuRef} />
       <TitleMenu />
+      <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
     </div>
   );
 }
