@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, CSSProperties } from "react";
 
 export interface BaseInputProps {
   value: string;
@@ -6,9 +6,10 @@ export interface BaseInputProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   type?: "text" | "password";
+  style?: CSSProperties;
 }
 
-export function BaseInput({ value, placeholder, onChange, disabled, type = "text" }: BaseInputProps) {
+export function BaseInput({ value, placeholder, onChange, disabled, type = "text", style }: BaseInputProps) {
   return (
     <input
       type={type}
@@ -24,6 +25,7 @@ export function BaseInput({ value, placeholder, onChange, disabled, type = "text
         border: "1px solid #666666",
         borderRadius: 4,
         padding: "6px 8px",
+        ...style,
       }}
     />
   );

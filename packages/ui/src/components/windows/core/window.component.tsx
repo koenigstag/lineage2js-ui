@@ -11,15 +11,21 @@ export interface WindowProps {
 const containerBaseStyle: CSSProperties = {
   position: "absolute",
   backgroundColor: "#1a1a1a",
-  border: "1px solid #444444",
   borderRadius: 4,
   minWidth: 200,
 };
 
+const TITLEBAR_BORDER_COLOR = "#bdaa8e";
+const SIDEBAR_BORDER_COLOR = "#504f4f";
+const SIDEBAR_STRIP_BORDER_COLOR = "#b5a28c";
+const ONLY_BODY_BORDER_COLOR = "#444444";
+const TITLEBAR_BACKGROUND = "linear-gradient(to bottom, #353328 50%, #251d14 50%)";
+const TITLE_TEXT_COLOR = "#c8cfdc";
+
 const closeButtonStyle: CSSProperties = {
   background: "transparent",
   border: "none",
-  color: "#cccccc",
+  color: "#a59e84",
   cursor: "pointer",
   fontSize: 14,
   lineHeight: 1,
@@ -125,6 +131,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
   }
 
   const origin = config.origin ?? "top-left";
+  const contentStyle: CSSProperties = { padding: 8, backgroundColor: config.contentBackground };
 
   function handleFocus() {
     windowManager.focus(id);
@@ -172,7 +179,13 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
 
   if (config.type === "titlebar") {
     return (
-      <div ref={containerRef} id={id} className="window window--titlebar" style={containerStyle} onPointerDown={handleFocus}>
+      <div
+        ref={containerRef}
+        id={id}
+        className="window window--titlebar"
+        style={{ ...containerStyle, border: `1px solid ${TITLEBAR_BORDER_COLOR}` }}
+        onPointerDown={handleFocus}
+      >
         <div
           className="window__titlebar"
           style={{
@@ -180,20 +193,21 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
             alignItems: "center",
             gap: 4,
             padding: "4px 8px",
-            borderBottom: "1px solid #444444",
+            background: TITLEBAR_BACKGROUND,
+            borderBottom: `1px solid ${TITLEBAR_BORDER_COLOR}`,
             cursor: config.draggable ? "move" : "default",
           }}
           onPointerDown={handleDragStart}
         >
           <span style={{ width: 16, textAlign: "center", fontSize: 12 }}>{config.icon}</span>
-          <span style={{ flex: 1, textAlign: "center", color: "#cccccc" }}>{config.title}</span>
+          <span style={{ flex: 1, textAlign: "center", color: TITLE_TEXT_COLOR }}>{config.title}</span>
           {config.closable && (
             <button type="button" onClick={() => windowManager.close(id)} style={closeButtonStyle}>
               ×
             </button>
           )}
         </div>
-        <div className="window__content" style={{ padding: 8 }}>
+        <div className="window__content" style={contentStyle}>
           {children?.()}
         </div>
       </div>
@@ -206,14 +220,19 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
         ref={containerRef}
         id={id}
         className="window window--sidebar"
-        style={{ ...containerStyle, display: "flex" }}
+        style={{ ...containerStyle, display: "flex", border: `1px solid ${SIDEBAR_BORDER_COLOR}` }}
         onPointerDown={handleFocus}
       >
         <div
-          style={{ width: 12, borderRight: "1px solid #444444", cursor: config.draggable ? "move" : "default" }}
+          style={{
+            width: 12,
+            border: `1px solid ${SIDEBAR_STRIP_BORDER_COLOR}`,
+            borderRight: "none",
+            cursor: config.draggable ? "move" : "default",
+          }}
           onPointerDown={handleDragStart}
         />
-        <div className="window__content" style={{ padding: 8 }}>
+        <div className="window__content" style={contentStyle}>
           {children?.()}
         </div>
       </div>
@@ -225,13 +244,13 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
       ref={containerRef}
       id={id}
       className="window window--only-body"
-      style={{ ...containerStyle, cursor: config.draggable ? "move" : "default" }}
+      style={{ ...containerStyle, border: `1px solid ${ONLY_BODY_BORDER_COLOR}`, cursor: config.draggable ? "move" : "default" }}
       onPointerDown={(event) => {
         handleFocus();
         handleDragStart(event);
       }}
     >
-      <div className="window__content" style={{ padding: 8 }}>
+      <div className="window__content" style={contentStyle}>
         {children?.()}
       </div>
     </div>

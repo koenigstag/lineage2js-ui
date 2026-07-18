@@ -14,8 +14,9 @@ export function Slot({ content }: SlotProps) {
       style={{
         width: 34,
         height: 34,
-        border: "1px solid #666666",
-        backgroundColor: "#1e1e1e",
+        border: "1px solid #393839",
+        backgroundColor: "#101010",
+        boxShadow: "inset 0 0 6px 1px #080808",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

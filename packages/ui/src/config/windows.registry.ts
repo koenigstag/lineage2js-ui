@@ -28,6 +28,8 @@ export interface WindowConfig {
   origin?: WindowOrigin;
   /** x/y are distances from the origin corner. Defaults to screen-center when omitted. */
   defaultPosition?: (viewport: Viewport) => WindowPosition;
+  /** Overrides the content area's background color. */
+  contentBackground?: string;
 }
 
 const SLOT_SIZE = 34;
@@ -37,7 +39,15 @@ const HOTBAR_WIDTH = 12 * SLOT_SIZE + 11 * SLOT_GAP;
 export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
   settings: { id: "settings", type: "titlebar", title: "Settings", icon: "⚙️", closable: true, draggable: true },
   character: { id: "character", type: "titlebar", title: "Character", icon: "👨", closable: true, draggable: true },
-  inventory: { id: "inventory", type: "titlebar", title: "Inventory", icon: "🎒", closable: true, draggable: true },
+  inventory: {
+    id: "inventory",
+    type: "titlebar",
+    title: "Inventory",
+    icon: "🎒",
+    closable: true,
+    draggable: true,
+    contentBackground: "#141313",
+  },
   "skills-list": {
     id: "skills-list",
     type: "titlebar",
@@ -83,6 +93,7 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     defaultOpen: true,
     origin: "bottom-left",
     defaultPosition: (viewport) => ({ x: (viewport.width - HOTBAR_WIDTH) / 2, y: 10 }),
+    contentBackground: "#161513",
   },
   chat: {
     id: "chat",

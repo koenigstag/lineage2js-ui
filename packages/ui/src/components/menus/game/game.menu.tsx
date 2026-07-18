@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
-import { useSessionStore, useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
+import { useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 import characterIcon from "../../../assets/menus/game/character@64.png";
 import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
@@ -24,7 +24,7 @@ const iconButtonStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  background: "#2a2a2a",
+  background: "#211818",
   color: "#cccccc",
   border: "1px solid #666666",
   borderRadius: 4,
@@ -44,8 +44,34 @@ const imageButtonStyle: CSSProperties = {
   backgroundPosition: "center",
 };
 
+const submenuRowStyle: CSSProperties = {
+  background: "transparent",
+  border: "none",
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: 4,
+  textAlign: "left",
+};
+
+const submenuIconStyle: CSSProperties = {
+  width: 40,
+  height: 40,
+  minWidth: 40,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#180c08",
+  border: "1px solid #9c927b",
+  borderRadius: 4,
+  fontSize: 18,
+};
+
+// Odd rows (1st, 3rd, ...) vs even rows (2nd, 4th, ...).
+const SUBMENU_ROW_COLORS = ["#10100f", "#171717"];
+
 export const GameMenu = observer(function GameMenu() {
-  const session = useSessionStore();
   const ui = useUiStore();
   const windowManager = useWindowManagerStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -63,14 +89,6 @@ export const GameMenu = observer(function GameMenu() {
     windowManager.toggle("macroses");
   }
 
-  async function handleLogout() {
-    setIsMenuOpen(false);
-    if (await confirm("Logout to the login screen?")) {
-      session.logout();
-      ui.setScreen("login");
-    }
-  }
-
   async function handleExit() {
     setIsMenuOpen(false);
     if (await confirm("Exit the game?")) {
@@ -84,7 +102,7 @@ export const GameMenu = observer(function GameMenu() {
       style={{
         position: "relative",
         zIndex: MENU_Z_INDEX,
-        backgroundColor: "#1a1a1a",
+        backgroundColor: "#181718",
         border: "1px solid #444444",
         borderRadius: 4,
         padding: 8,
@@ -112,37 +130,38 @@ export const GameMenu = observer(function GameMenu() {
           style={{
             position: "absolute",
             bottom: "100%",
+            left: 0,
             right: 0,
             marginBottom: 4,
             display: "flex",
             flexDirection: "column",
-            gap: 8,
-            backgroundColor: "#1a1a1a",
             border: "1px solid #444444",
             borderRadius: 4,
-            padding: 12,
+            overflow: "hidden",
           }}
         >
-          <BaseButton onClick={handleSelectCharacter}>
-            <div title="Select character">🧑 Select character</div>
-          </BaseButton>
-          <BaseButton onClick={handleMacrosPanel}>
-            <div title="Macros Panel">⚙️ Macros Panel</div>
-          </BaseButton>
-          <BaseButton onClick={handleLogout}>
-            <div title="Logout">🚪 Logout</div>
-          </BaseButton>
-          <BaseButton
-            onClick={() => {
-              setIsMenuOpen(false);
-              windowManager.toggle("settings");
-            }}
-          >
-            <div title="Settings">⚙️ Settings</div>
-          </BaseButton>
-          <BaseButton onClick={handleExit}>
-            <div title="Exit">✖️ Exit</div>
-          </BaseButton>
+          {[
+            { label: "Restart", icon: "🔃", onClick: handleSelectCharacter },
+            { label: "Macro", icon: "🪄", onClick: handleMacrosPanel },
+            {
+              label: "Settings",
+              icon: "🖥️",
+              onClick: () => {
+                setIsMenuOpen(false);
+                windowManager.toggle("settings");
+              },
+            },
+            { label: "Exit Game", icon: "🛑", onClick: handleExit },
+          ].map(({ label, icon, onClick }, index) => (
+            <div key={label} style={{ backgroundColor: SUBMENU_ROW_COLORS[index % 2] }}>
+              <BaseButton onClick={onClick} style={submenuRowStyle}>
+                <div title={label} style={submenuIconStyle}>
+                  {icon}
+                </div>
+                <span>{label}</span>
+              </BaseButton>
+            </div>
+          ))}
         </div>
       )}
 
