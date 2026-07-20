@@ -58,7 +58,6 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     id: "inventory",
     type: "titlebar",
     title: "Inventory",
-    icon: "🎒",
     closable: true,
     draggable: true,
     contentBackground: "#141313",
