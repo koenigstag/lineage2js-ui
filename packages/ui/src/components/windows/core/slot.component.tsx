@@ -6,6 +6,8 @@ export interface SlotContent {
   data?: unknown;
   /** Stack size, e.g. item-misc quantity. Displayed capped at "99+". */
   count?: number;
+  /** Real icon image (see config/icon-urls.ts). Falls back to the type's gradient when unset. */
+  iconUrl?: string;
 }
 
 export interface IconBorder {
@@ -71,6 +73,7 @@ export function Slot({ content, slotKey, iconBorder }: SlotProps) {
       {content ? (
         <IconSlot
           type={content.type}
+          iconUrl={content.iconUrl}
           width={SLOT_SIZE}
           height={SLOT_SIZE}
           borderFrom={iconBorder?.from}

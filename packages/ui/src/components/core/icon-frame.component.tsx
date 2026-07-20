@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 
 export interface IconFrameProps {
+  /** Real icon image (skill/item/action/class). Falls back to the gradient background when unset. */
+  iconUrl?: string;
   icon?: ReactNode;
   iconColor?: string;
   shadowColor?: string;
@@ -57,6 +59,7 @@ function darkenColor(hex: string, amount = 0.45) {
  * with a drop-shadow that follows the icon's own silhouette.
  */
 export function IconFrame({
+  iconUrl,
   icon,
   iconColor = "#b4d585",
   shadowColor = "#020d02",
@@ -73,9 +76,13 @@ export function IconFrame({
   width = 34,
   height = 34,
 }: IconFrameProps) {
-  const resolvedBackground = backgroundColor
-    ? `linear-gradient(180deg, ${backgroundColor} 0%, ${darkenColor(backgroundColor, darkenAmount)} 100%)`
-    : background;
+  // A real icon image wins over the gradient; the gradient is the fallback
+  // for whenever iconUrl isn't set (base URL missing, id unknown, ...).
+  const resolvedBackground = iconUrl
+    ? `url("${iconUrl}") center / cover no-repeat`
+    : backgroundColor
+      ? `linear-gradient(180deg, ${backgroundColor} 0%, ${darkenColor(backgroundColor, darkenAmount)} 100%)`
+      : background;
 
   const frame = (
     <div

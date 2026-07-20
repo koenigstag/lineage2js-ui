@@ -5,6 +5,7 @@ import { BaseInput } from "../../core/inputs/base.input";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import type { InventoryItem } from "../../../stores/GameStore";
+import { getItemIconUrl } from "../../../config/icon-urls";
 
 const TABS = ["All", "Equip", "Consume", "Craft", "Etc", "Quest"] as const;
 type Tab = (typeof TABS)[number];
@@ -92,7 +93,11 @@ export const InventoryContent = observer(function InventoryContent() {
               <Slot
                 key={item ? `item-${item.id}` : `empty-${index}`}
                 type="inventory"
-                content={item ? { type: item.type, data: item, count: item.count } : undefined}
+                content={
+                  item
+                    ? { type: item.type, data: item, count: item.count, iconUrl: getItemIconUrl(item.id) }
+                    : undefined
+                }
                 // iconBorder={INVENTORY_ICON_BORDER}
               />
             );

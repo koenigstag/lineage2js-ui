@@ -221,7 +221,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
   const containerStyle: CSSProperties = {
     ...containerBaseStyle,
     ...(config.bare
-      ? { backgroundColor: "transparent", minWidth: undefined }
+      ? { backgroundColor: "transparent", minWidth: undefined, overflow: "visible" }
       : {}),
     ...getOriginStyle(origin, state.x, state.y),
     zIndex: state.zIndex,
