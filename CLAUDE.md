@@ -11,6 +11,14 @@ pitch; this file is for working in the code.
   (packets, encryption, sockets). Plain TypeScript, compiled with `tsc`.
 - `packages/ui` (`@lineage2js/ui`) — the web client. Vite + React + TypeScript
   + MobX (`mobx-react-lite`). This is where almost all UI work happens.
+- `packages/assets-server` (`@lineage2js/assets-server`) — Express static
+  server for game icons (skills/items/actions/classes). Real image files
+  live under `assets/highfive/icons/<kind>/<id>.png` and are gitignored
+  (only the folder structure + `.gitkeep` are tracked) since that art is
+  copyrighted -- don't ever commit real icons here or anywhere else in this
+  repo. Serves with `Cache-Control: max-age + must-revalidate` and an ETag
+  from file size/mtime, so overwriting a file is enough to invalidate
+  clients' caches (no URL versioning needed).
 
 ## Commands
 
@@ -19,6 +27,8 @@ Root-level shortcuts (see package.json):
 - `pnpm dev:ui` / `pnpm build:ui` — run/build only the UI package
 - `pnpm build:ui:pages` — production build with the GitHub Pages base path
 - `pnpm dev:network` / `pnpm build:network` — same for the network package
+- `pnpm dev:assets-server` / `pnpm build:assets-server` /
+  `pnpm start:assets-server` — same for the assets server
 - `pnpm build` / `pnpm dev` / `pnpm lint` / `pnpm clean` — turbo, runs across
   all packages
 
