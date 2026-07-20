@@ -53,7 +53,7 @@ const HOTBAR_WIDTH = 12 * SLOT_SIZE + 11 * SLOT_GAP;
 
 export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
   settings: { id: "settings", type: "titlebar", title: "Settings", icon: "⚙️", closable: true, draggable: true },
-  character: { id: "character", type: "titlebar", title: "Character", icon: "👨", closable: true, draggable: true },
+  character: { id: "character", type: "titlebar", title: "Character", closable: true, draggable: true },
   inventory: {
     id: "inventory",
     type: "titlebar",
@@ -67,7 +67,6 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     id: "skills-list",
     type: "titlebar",
     title: "Skills",
-    icon: "📖",
     closable: true,
     draggable: true,
   },
@@ -81,7 +80,7 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     closable: false,
     draggable: false,
   },
-  clan: { id: "clan", type: "titlebar", title: "Clan", icon: "🚩", closable: true, draggable: true },
+  clan: { id: "clan", type: "titlebar", title: "Clan", closable: true, draggable: true },
   actions: { id: "actions", type: "titlebar", title: "Actions", icon: "🤜", closable: true, draggable: true },
   macroses: {
     id: "macroses",
@@ -103,7 +102,6 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     id: "map",
     type: "titlebar",
     title: "Map",
-    icon: "🗺️",
     closable: true,
     draggable: true,
     origin: "top-right",
