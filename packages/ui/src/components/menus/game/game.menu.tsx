@@ -6,15 +6,18 @@ import { useUiStore, useWindowManagerStore } from "../../../stores/StoreContext"
 import characterIcon from "../../../assets/menus/game/character@64.png";
 import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
 import clanIcon from "../../../assets/menus/game/clan@64.png";
+import skillsIcon from "../../../assets/menus/game/skills@64.png";
+import mapIcon from "../../../assets/menus/game/map@64.png";
+import menuIcon from "../../../assets/menus/game/menu@64.png";
 
 const GRID_ITEMS: { id: string; icon?: string; image?: string; title: string }[] = [
   { id: "character", image: characterIcon, title: "Character" },
   { id: "inventory", image: inventoryIcon, title: "Inventory" },
   { id: "actions", icon: "🤜", title: "Actions" },
-  { id: "skills-list", icon: "📖", title: "Skills" },
+  { id: "skills-list", image: skillsIcon, title: "Skills" },
   { id: "quests", icon: "🗞️", title: "Quests" },
   { id: "clan", image: clanIcon, title: "Clan" },
-  { id: "map", icon: "🗺️", title: "Map" },
+  { id: "map", image: mapIcon, title: "Map" },
 ];
 
 const iconButtonStyle: CSSProperties = {
@@ -118,9 +121,12 @@ export const GameMenu = observer(function GameMenu() {
             {!image && <div title={title}>{icon}</div>}
           </button>
         ))}
-        <button type="button" style={iconButtonStyle} onClick={() => setIsMenuOpen((open) => !open)}>
-          <div title="Menu">⚙️</div>
-        </button>
+        <button
+          type="button"
+          title="Menu"
+          style={{ ...imageButtonStyle, backgroundImage: `url(${menuIcon})` }}
+          onClick={() => setIsMenuOpen((open) => !open)}
+        />
       </div>
 
       {isMenuOpen && (
