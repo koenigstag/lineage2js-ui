@@ -1,31 +1,86 @@
+import type { CSSProperties } from "react";
+import { IconSlot, type IconSlotType } from "../../core/icon-frame.component";
+
 export interface SlotContent {
-  type: string;
-  data: unknown;
+  type: IconSlotType;
+  data?: unknown;
+  /** Stack size, e.g. item-misc quantity. Displayed capped at "99+". */
+  count?: number;
+}
+
+export interface IconBorder {
+  from: string;
+  to: string;
 }
 
 export interface SlotProps {
   type: "hotbar" | "inventory";
   content?: SlotContent;
+  /** Keyboard key label drawn over the icon frame, e.g. "1" or "Kq". */
+  slotKey?: string;
+  /** Icon frame border colors. Not set by IconFrame itself -- each caller opts in. */
+  iconBorder?: IconBorder;
 }
 
-export function Slot({ content }: SlotProps) {
+const SLOT_SIZE = 34;
+
+const emptySlotStyle: CSSProperties = {
+  width: SLOT_SIZE,
+  height: SLOT_SIZE,
+  border: "1px solid #393839",
+  backgroundColor: "#101010",
+  boxShadow: "inset 0 0 6px 1px #080808",
+};
+
+const slotKeyStyle: CSSProperties = {
+  position: "absolute",
+  top: 2,
+  left: 2,
+  fontFamily: "'Courier Prime', monospace",
+  fontSize: 9,
+  lineHeight: 1,
+  color: "#d4d6c6",
+  textShadow: "0 1px 1px rgba(0, 0, 0, 0.9)",
+  zIndex: 2,
+  pointerEvents: "none",
+  userSelect: "none",
+};
+
+const slotCountStyle: CSSProperties = {
+  position: "absolute",
+  bottom: 1,
+  right: 2,
+  textAlign: "right",
+  fontFamily: "'Courier Prime', monospace",
+  fontSize: 11,
+  lineHeight: 1,
+  color: "#ddcdbe",
+  textShadow: "0 1px 1px #6c5e4e",
+  zIndex: 2,
+  pointerEvents: "none",
+  userSelect: "none",
+};
+
+function formatCount(count: number): string {
+  return count > 99 ? "99+" : String(count);
+}
+
+export function Slot({ content, slotKey, iconBorder }: SlotProps) {
   return (
-    <div
-      style={{
-        width: 34,
-        height: 34,
-        border: "1px solid #393839",
-        backgroundColor: "#101010",
-        boxShadow: "inset 0 0 6px 1px #080808",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 10,
-        color: "#999999",
-        overflow: "hidden",
-      }}
-    >
-      {content?.type}
+    <div style={{ position: "relative", width: SLOT_SIZE, height: SLOT_SIZE }}>
+      {content ? (
+        <IconSlot
+          type={content.type}
+          width={SLOT_SIZE}
+          height={SLOT_SIZE}
+          borderFrom={iconBorder?.from}
+          borderTo={iconBorder?.to}
+        />
+      ) : (
+        <div style={emptySlotStyle} />
+      )}
+      {slotKey && <div style={slotKeyStyle}>{slotKey}</div>}
+      {content?.count !== undefined && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
     </div>
   );
 }
