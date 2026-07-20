@@ -1,5 +1,6 @@
-import type { CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
 import { IconSlot, type IconSlotType } from "../../core/icon-frame.component";
+import { Tooltip, useTooltipTarget, type TooltipInfo } from "../../core/tooltip.component";
 
 export interface SlotContent {
   type: IconSlotType;
@@ -8,6 +9,8 @@ export interface SlotContent {
   count?: number;
   /** Real icon image (see config/icon-urls.ts). Falls back to the type's gradient when unset. */
   iconUrl?: string;
+  /** Hover tooltip content. No tooltip is shown when unset. */
+  tooltip?: TooltipInfo;
 }
 
 export interface IconBorder {
@@ -68,8 +71,21 @@ function formatCount(count: number): string {
 }
 
 export function Slot({ content, slotKey, iconBorder }: SlotProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { target, showTooltip, hideTooltip } = useTooltipTarget();
+  const tooltip = content?.tooltip;
+
   return (
-    <div style={{ position: "relative", width: SLOT_SIZE, height: SLOT_SIZE }}>
+    <div
+      ref={rootRef}
+      style={{ position: "relative", width: SLOT_SIZE, height: SLOT_SIZE }}
+      onMouseEnter={() => {
+        if (tooltip && rootRef.current) {
+          showTooltip(rootRef.current, tooltip);
+        }
+      }}
+      onMouseLeave={hideTooltip}
+    >
       {content ? (
         <IconSlot
           type={content.type}
@@ -84,6 +100,7 @@ export function Slot({ content, slotKey, iconBorder }: SlotProps) {
       )}
       {slotKey && <div style={slotKeyStyle}>{slotKey}</div>}
       {content?.count !== undefined && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
+      {tooltip && <Tooltip target={target} />}
     </div>
   );
 }
