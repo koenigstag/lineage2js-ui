@@ -1,18 +1,51 @@
 import { useState } from "react";
-import { Slot } from "../core/slot.component";
+import { observer } from "mobx-react-lite";
+import { Slot, type IconBorder } from "../core/slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
 import { Paperdoll } from "./paperdoll.component";
+import { useGameStore } from "../../../stores/StoreContext";
+import type { InventoryItem } from "../../../stores/GameStore";
+import { getItemIconUrl } from "../../../config/icon-urls";
 
 const TABS = ["All", "Equip", "Consume", "Craft", "Etc", "Quest"] as const;
+type Tab = (typeof TABS)[number];
+
+const EQUIP_TYPES = new Set(["item-weapon", "item-shield", "item-armor", "item-jewelry"]);
+
+function matchesTab(item: InventoryItem, tab: Tab): boolean {
+  switch (tab) {
+    case "All":
+      return true;
+    case "Equip":
+      return EQUIP_TYPES.has(item.type);
+    case "Consume":
+      return item.type === "item-misc" && item.consume === true;
+    case "Craft":
+      return item.type === "item-misc" && item.ingredient === true;
+    case "Etc":
+      return item.type === "item-misc" && !item.consume && !item.ingredient && !item.quest;
+    case "Quest":
+      return item.quest === true;
+  }
+}
+
 const GRID_COLUMNS = 10;
 const GRID_ROWS = 10;
 const VISIBLE_ROWS = 8;
 const SLOT_SIZE = 34;
 const SLOT_GAP = 2;
 
-export function InventoryContent() {
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("All");
+// const INVENTORY_ICON_BORDER: IconBorder = { from: "#2a170c", to: "#2a170c" };
+
+export const InventoryContent = observer(function InventoryContent() {
+  const game = useGameStore();
+  const [activeTab, setActiveTab] = useState<Tab>("All");
   const [search, setSearch] = useState("");
+
+  const query = search.trim().toLowerCase();
+  const filteredItems = game.inventoryItems.filter(
+    (item) => matchesTab(item, activeTab) && (query === "" || item.name.toLowerCase().includes(query))
+  );
 
   return (
     <div style={{ display: "flex", gap: 8 }}>
@@ -54,11 +87,23 @@ export function InventoryContent() {
             overflowX: "hidden",
           }}
         >
-          {Array.from({ length: GRID_COLUMNS * GRID_ROWS }).map((_, index) => (
-            <Slot key={index} type="inventory" />
-          ))}
+          {Array.from({ length: GRID_COLUMNS * GRID_ROWS }).map((_, index) => {
+            const item = filteredItems[index];
+            return (
+              <Slot
+                key={item ? `item-${item.id}` : `empty-${index}`}
+                type="inventory"
+                content={
+                  item
+                    ? { type: item.type, data: item, count: item.count, iconUrl: getItemIconUrl(item.id) }
+                    : undefined
+                }
+                // iconBorder={INVENTORY_ICON_BORDER}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
   );
-}
+});

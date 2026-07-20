@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 import { Screen } from "../../core/screen.component";
+import { LegalFooter } from "../../core/legal-footer.component";
 import { TitleMenu } from "../../menus/title/title.menu";
 import { LoginMenu, type LoginMenuHandle } from "../../menus/login/login.menu";
 import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
@@ -15,17 +16,22 @@ export function LoginScreen() {
     <Screen
       className="screen screen--login"
       style={{
+        display: "flex",
+        flexDirection: "column",
         backgroundImage: background ? `url(${background})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
     >
-      <WindowsRoot ids={LOGIN_WINDOW_IDS} />
+      <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        <WindowsRoot ids={LOGIN_WINDOW_IDS} />
 
-      <LoginMenu ref={loginMenuRef} />
-      <TitleMenu />
-      <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
+        <LoginMenu ref={loginMenuRef} />
+        <TitleMenu />
+        <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
+      </div>
+      <LegalFooter />
     </Screen>
   );
 }

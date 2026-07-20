@@ -34,6 +34,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm --filter @lineage2js/ui build:pages
+        env:
+          VITE_SKILL_ICON_BASE_URL: ${{ vars.VITE_SKILL_ICON_BASE_URL }}
+          VITE_ITEM_ICON_BASE_URL: ${{ vars.VITE_ITEM_ICON_BASE_URL }}
+          VITE_ACTION_ICON_BASE_URL: ${{ vars.VITE_ACTION_ICON_BASE_URL }}
+          VITE_CLASS_ICON_BASE_URL: ${{ vars.VITE_CLASS_ICON_BASE_URL }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

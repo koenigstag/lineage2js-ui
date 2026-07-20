@@ -58,8 +58,8 @@ export const LoginMenu = observer(
           padding: 16,
         }}
       >
-        <BaseInput value={account} placeholder="Account" onChange={setAccount} />
-        <BaseInput value={password} placeholder="Password" onChange={setPassword} type="password" />
+        <BaseInput value={account} placeholder="ID" onChange={setAccount} />
+        <BaseInput value={password} placeholder="PWD" onChange={setPassword} type="password" />
         <div style={{ display: "flex", gap: 8 }}>
           <BaseButton onClick={handleLogin}>Login</BaseButton>
           <BaseButton onClick={handleExit}>Exit</BaseButton>
