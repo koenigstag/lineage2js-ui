@@ -95,7 +95,13 @@ export const InventoryContent = observer(function InventoryContent() {
                 type="inventory"
                 content={
                   item
-                    ? { type: item.type, data: item, count: item.count, iconUrl: getItemIconUrl(item.id) }
+                    ? {
+                        type: item.type,
+                        data: item,
+                        count: item.count,
+                        iconUrl: getItemIconUrl(item.id),
+                        tooltip: { kind: "item", name: item.name, type: item.type, id: item.id, count: item.count },
+                      }
                     : undefined
                 }
                 // iconBorder={INVENTORY_ICON_BORDER}

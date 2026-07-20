@@ -185,7 +185,7 @@ const TYPE_BACKGROUNDS = {
   macro: "linear-gradient(180deg, #030502 0%, #316d5a 100%)",
   "pair-action": "linear-gradient(180deg, #050000 0%, #952959 100%)",
   "item-misc": "linear-gradient(45deg, #180e03 0%, #8a573d 100%)",
-  "item-weapon": "linear-gradient(45deg, #000000 0%, #440c0d 35%, #782421 100%)",
+  "item-weapon": "linear-gradient(45deg, #0a0503 0%, #3d1712 40%, #6b3324 100%)",
   "item-shield": "linear-gradient(45deg, #000000 0%, #440c0d 35%, #782421 100%)",
   "item-armor": "linear-gradient(45deg, #040601 0%, #11261d 35%, #426d63 100%)",
   "item-jewelry": "linear-gradient(45deg, #000105 0%, #0c1f26 35%, #2e475f 100%)",
