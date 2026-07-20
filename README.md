@@ -19,3 +19,25 @@ pnpm install
 pnpm build
 pnpm dev
 ```
+
+## Scripts
+
+Root-level scripts operate across every package via Turborepo:
+
+| Script          | What it does                          |
+| ---------------- | -------------------------------------- |
+| `pnpm build`      | Build every package                    |
+| `pnpm dev`        | Run every package's dev/watch task     |
+| `pnpm lint`       | Lint every package                     |
+| `pnpm test`       | Run every package's tests              |
+| `pnpm clean`      | Remove every package's build output    |
+
+Shortcuts for working on a single package without `--filter`:
+
+| Script                  | What it does                                              |
+| ------------------------ | ----------------------------------------------------------- |
+| `pnpm dev:ui`             | Start the UI package's Vite dev server                     |
+| `pnpm build:ui`           | Typecheck + build the UI package                            |
+| `pnpm build:ui:pages`     | Build the UI package with the GitHub Pages base path        |
+| `pnpm dev:network`        | Watch-build the network package                             |
+| `pnpm build:network`      | Build the network package                                   |

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 export interface IconFrameProps {
   /** Real icon image (skill/item/action/class). Falls back to the gradient background when unset. */
@@ -76,13 +76,20 @@ export function IconFrame({
   width = 34,
   height = 34,
 }: IconFrameProps) {
-  // A real icon image wins over the gradient; the gradient is the fallback
-  // for whenever iconUrl isn't set (base URL missing, id unknown, ...).
-  const resolvedBackground = iconUrl
-    ? `url("${iconUrl}") center / cover no-repeat`
-    : backgroundColor
-      ? `linear-gradient(180deg, ${backgroundColor} 0%, ${darkenColor(backgroundColor, darkenAmount)} 100%)`
-      : background;
+  // The gradient is always computed (it's the fallback), and stays visible
+  // underneath the <img> until that image is confirmed to have loaded --
+  // if it 404s/fails, imageFailed flips and the gradient shows through.
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [iconUrl]);
+
+  const resolvedBackground = backgroundColor
+    ? `linear-gradient(180deg, ${backgroundColor} 0%, ${darkenColor(backgroundColor, darkenAmount)} 100%)`
+    : background;
+
+  const showImage = Boolean(iconUrl) && !imageFailed;
 
   const frame = (
     <div
@@ -95,6 +102,20 @@ export function IconFrame({
         overflow: "hidden",
       }}
     >
+      {showImage && (
+        <img
+          src={iconUrl}
+          alt=""
+          onError={() => setImageFailed(true)}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+        />
+      )}
       {showNoise && noiseOpacity > 0 && (
         <div
           style={{

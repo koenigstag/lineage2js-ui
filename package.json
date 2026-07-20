@@ -17,7 +17,12 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "dev:ui": "pnpm --filter @lineage2js/ui dev",
+    "build:ui": "pnpm --filter @lineage2js/ui build",
+    "build:ui:pages": "pnpm --filter @lineage2js/ui build:pages",
+    "dev:network": "pnpm --filter @lineage2js/network dev",
+    "build:network": "pnpm --filter @lineage2js/network build"
   },
   "devDependencies": {
     "turbo": "^2.3.0",
