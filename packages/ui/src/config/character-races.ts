@@ -1,3 +1,5 @@
+import { t } from "../lang/lang";
+
 // Matches @lineage2js/network's Race/Sex enum key names exactly (L2User.Race
 // and .Sex come back from the server as those key strings, e.g. "HUMAN",
 // "MALE" -- see network-mapping.ts) so no translation layer is needed
@@ -8,14 +10,9 @@ export type Sex = "MALE" | "FEMALE";
 
 export const RACES: Race[] = ["HUMAN", "ELF", "DARK_ELF", "ORC", "DWARF", "KAMAEL"];
 
-export const RACE_LABELS: Record<Race, string> = {
-  HUMAN: "Human",
-  ELF: "Elf",
-  DARK_ELF: "Dark Elf",
-  ORC: "Orc",
-  DWARF: "Dwarf",
-  KAMAEL: "Kamael",
-};
+export function getRaceLabel(race: Race): string {
+  return t(`classes.race.${race}`);
+}
 
 // Dwarves and Kamael have no Mystic subclasses.
 const RACES_WITHOUT_MYSTIC = new Set<Race>(["DWARF", "KAMAEL"]);
@@ -27,9 +24,9 @@ export function getAvailableBaseClasses(race: Race): BaseClass[] {
 // Orc mystics are called Shaman -- same baseClass ("mystic") under the hood, different display name.
 export function getBaseClassLabel(race: Race, baseClass: BaseClass): string {
   if (baseClass === "mystic" && race === "ORC") {
-    return "Shaman";
+    return t("classes.orcMystic");
   }
-  return baseClass === "fighter" ? "Fighter" : "Mystic";
+  return t(`classes.baseClass.${baseClass}`);
 }
 
 const RACE_SKIN_COLORS: Record<Race, string> = {

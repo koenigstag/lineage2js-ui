@@ -7,7 +7,7 @@ import { useAlert } from "../../core/alert-modal";
 import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 import { buildNewCharacter, getAvailableBaseClassesFromTemplates, getAvailableRacesFromTemplates } from "../../../config/network-mapping";
-import { RACE_LABELS, getBaseClassLabel, type Race, type BaseClass, type Sex } from "../../../config/character-races";
+import { getRaceLabel, getBaseClassLabel, type Race, type BaseClass, type Sex } from "../../../config/character-races";
 
 const SEX_OPTIONS: SelectOption[] = [
   { value: "MALE", label: "Male" },
@@ -64,7 +64,7 @@ export const CharCreateMenu = observer(function CharCreateMenu({
 
   const raceOptions: SelectOption[] = getAvailableRacesFromTemplates(session.characterTemplates).map((value) => ({
     value,
-    label: RACE_LABELS[value],
+    label: getRaceLabel(value),
   }));
   const baseClassOptions: SelectOption[] = getAvailableBaseClassesFromTemplates(session.characterTemplates, race).map(
     (value) => ({

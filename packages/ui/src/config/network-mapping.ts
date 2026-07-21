@@ -9,13 +9,15 @@ import {
 import {
   RACES,
   getAvailableBaseClasses,
+  getBaseClassLabel,
   getBaseStats,
+  getRaceLabel,
   type BaseClass,
   type BaseStats,
   type Race,
   type Sex,
 } from "./character-races";
-import classTreeData from "../assets/class_tree.json";
+import { CLASS_TREE } from "./class-tree";
 
 // L2User.Race/Sex come back from the server as the *enum key name* (e.g.
 // "HUMAN", "MALE"), not the numeric value -- the vendored packet parser
@@ -31,45 +33,33 @@ export function toLocalSex(user: L2User): Sex {
   return user.Sex as unknown as Sex;
 }
 
-interface ClassTreeNode {
-  classId: number;
-  name: string;
-  subclasses: ClassTreeNode[];
-}
-
-// classId of every class down each race's "mystic" tree, across all
-// advancement tiers -- derived by walking assets/class_tree.json (a
-// community-maintained class tree) rather than hand-listing class names, so
-// it stays correct if that file is ever updated. A tree root is a mystic
-// root iff its name contains "mystic" (human_mystic/elven_mystic/
-// dark_mystic/orc_mystic); every other root (including Dwarf/Kamael, which
-// have no mystic tree, and the newer-chronicle branches like Ertheia/4th
-// classes that this project's ClassId enum doesn't define) classifies as
-// "fighter" by default, matching the old behavior.
-function collectMysticClassIds(): Set<number> {
-  const mysticIds = new Set<number>();
-
-  function walk(node: ClassTreeNode, isMystic: boolean): void {
-    if (isMystic) mysticIds.add(node.classId);
-    node.subclasses.forEach((child) => walk(child, isMystic));
-  }
-
-  Object.values(classTreeData as Record<string, ClassTreeNode[]>).forEach((roots) => {
-    roots.forEach((root) => walk(root, root.name.includes("mystic")));
-  });
-
-  return mysticIds;
-}
-
-const MYSTIC_CLASS_IDS = collectMysticClassIds();
-
+// Fighter/mystic per classId, straight from CLASS_TREE's isMage (itself
+// ported from lineage2ts's server-side class model) -- classes absent from
+// CLASS_TREE (there are none in this project's ClassId enum, but the lookup
+// is defensive) default to "fighter".
 function classifyBaseClass(classIdName: string): BaseClass {
   const classId = ClassId[classIdName as keyof typeof ClassId];
-  return MYSTIC_CLASS_IDS.has(classId) ? "mystic" : "fighter";
+  return CLASS_TREE[classId]?.isMage ? "mystic" : "fighter";
 }
 
 export function toLocalBaseClass(user: L2User): BaseClass {
   return classifyBaseClass(user.ClassId as unknown as string);
+}
+
+// Root-archetype display label for any class down its tree, independent of
+// how far advanced the character actually is -- CLASS_TREE's race/isMage are
+// the same for every node down a branch, so e.g. Necromancer displays the
+// same as Mage: "Human Mystic". Used where a character's whole class lineage
+// collapses to a single race+archetype label (not a screen for its exact
+// current class).
+export function getRootClassLabel(classIdName: string): string | undefined {
+  const classId = ClassId[classIdName as keyof typeof ClassId];
+  const entry = CLASS_TREE[classId];
+  if (!entry) return undefined;
+
+  const race = NetworkRace[entry.race] as unknown as Race;
+  const baseClass: BaseClass = entry.isMage ? "mystic" : "fighter";
+  return `${getRaceLabel(race)} ${getBaseClassLabel(race, baseClass)}`;
 }
 
 // The tier-0 ClassId a freshly created character starts as. Kamael is the
