@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { CloudLayer } from "./cloud-layer.component";
 import { StarField } from "./star-field.component";
 import { SkyLayer } from "./sky-layer.component";
+import { MoonLayer } from "./moon-layer.component";
 
 /**
  * Fully self-contained fallback scene (sky gradient + stars + drifting fog),
@@ -25,6 +26,7 @@ export function AtmosphereScene() {
         dpr={[1, 1.5]}
       >
         <SkyLayer />
+        <MoonLayer />
         <StarField />
         <CloudLayer />
       </Canvas>

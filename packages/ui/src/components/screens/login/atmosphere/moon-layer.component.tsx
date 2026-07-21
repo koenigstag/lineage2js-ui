@@ -12,7 +12,6 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
   uniform float uTime;
-  uniform float uOpacity;
   varying vec2 vUv;
 
   float hash(vec2 p) {
@@ -42,20 +41,26 @@ const fragmentShader = /* glsl */ `
   }
 
   void main() {
-    vec2 uv = vUv * vec2(3.0, 1.6);
+    vec2 centered = (vUv - 0.5) * 2.0;
+    float dist = length(centered);
 
-    float far = fbm(uv * 1.0 + vec2(uTime * 0.015, uTime * 0.004));
-    float near = fbm(uv * 1.8 + vec2(uTime * 0.03, uTime * 0.006) + 10.0);
+    float glowPulse = 0.9 + 0.1 * sin(uTime * 0.3);
+    float core = smoothstep(0.52, 0.3, dist);
+    float glow = smoothstep(1.0, 0.0, dist) * 0.45 * glowPulse;
 
-    float clouds = far * 0.6 + near * 0.4;
-    float alpha = smoothstep(0.45, 0.85, clouds) * uOpacity;
+    vec3 baseColor = vec3(0.992, 0.965, 0.890);
+    float craters = fbm(vUv * 7.0);
+    float shade = mix(0.78, 1.05, craters);
+    vec3 moonColor = mix(baseColor, baseColor * shade, core);
 
-    vec3 color = vec3(0.85, 0.88, 0.95);
-    gl_FragColor = vec4(color, alpha);
+    float alpha = clamp(core + glow, 0.0, 1.0);
+
+    gl_FragColor = vec4(moonColor, alpha);
   }
 `;
 
-export function CloudLayer() {
+/** Procedural moon (soft disc + glow), positioned near the top-right of the sky. */
+export function MoonLayer() {
   const materialRef = useRef<ShaderMaterial>(null);
   const meshRef = useRef<Mesh>(null);
   const { viewport } = useThree();
@@ -66,14 +71,20 @@ export function CloudLayer() {
     }
   });
 
+  const size = viewport.width * 0.22;
+
   return (
-    <mesh ref={meshRef} position={[0, 0, -2]} scale={[viewport.width, viewport.height, 1]}>
+    <mesh
+      ref={meshRef}
+      position={[viewport.width * 0.3, viewport.height * 0.28, -2.6]}
+      scale={[size, size, 1]}
+    >
       <planeGeometry args={[1, 1]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
-        uniforms={{ uTime: { value: 0 }, uOpacity: { value: 0.22 } }}
+        uniforms={{ uTime: { value: 0 } }}
         transparent
         depthWrite={false}
       />
