@@ -132,6 +132,15 @@ export const LANG_RU_RU: LangDictionary = {
     comingSoon: "Скоро будет доступно",
     searchPlaceholder: "Поиск",
   },
+  actions: {
+    categories: {
+      basic: "Общий",
+      party: "Группа",
+      target: "Указатели цели",
+      social: "Общение",
+      pet: "Питомец",
+    },
+  },
   windows: {
     settings: "Настройки",
     character: "Персонаж",

@@ -132,6 +132,15 @@ export const LANG_EN_US: LangDictionary = {
     comingSoon: "Coming soon",
     searchPlaceholder: "Search",
   },
+  actions: {
+    categories: {
+      basic: "General",
+      party: "Party",
+      target: "Target",
+      social: "Social",
+      pet: "Pet",
+    },
+  },
   windows: {
     settings: "Settings",
     character: "Character",

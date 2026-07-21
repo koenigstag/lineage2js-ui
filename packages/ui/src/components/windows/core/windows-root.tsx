@@ -6,6 +6,7 @@ import { GameMenu } from "../../menus/game/game.menu";
 import { SettingsContent } from "../settings/settings.window";
 import { SkillsContent } from "../skills/skills.window";
 import { EffectsContent } from "../effects/effects.window";
+import { ActionsContent } from "../actions/actions.window";
 
 const CONTENT: Partial<Record<string, () => ReactNode>> = {
   hotbar: () => <HotbarContent />,
@@ -14,6 +15,7 @@ const CONTENT: Partial<Record<string, () => ReactNode>> = {
   settings: () => <SettingsContent />,
   "skills-list": () => <SkillsContent />,
   effects: () => <EffectsContent />,
+  actions: () => <ActionsContent />,
 };
 
 export interface WindowsRootProps {
