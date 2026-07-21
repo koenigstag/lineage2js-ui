@@ -129,6 +129,7 @@ export const LANG_RU_RU: LangDictionary = {
       Learn: "Обучение",
     },
     comingSoon: "Скоро будет доступно",
+    searchPlaceholder: "Поиск",
   },
   windows: {
     settings: "Настройки",

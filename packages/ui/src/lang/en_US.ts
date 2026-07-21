@@ -129,6 +129,7 @@ export const LANG_EN_US: LangDictionary = {
       Learn: "Learn",
     },
     comingSoon: "Coming soon",
+    searchPlaceholder: "Search",
   },
   windows: {
     settings: "Settings",
