@@ -27,10 +27,21 @@ export const LANG_DEFAULT: LANG = "en";
 // Ported from https://github.com/koenigstag/cooking-advisor's script/lang/lang.ts,
 // rewired to read the current language from UiStore (this project's MobX
 // equivalent of that app's `window.__appState()`) instead of a plain global.
+const ITEM_NAME_PREFIX = "item.name.";
+
 export function translate(
   key: string,
   params?: { [key: string]: string | number | boolean | null | undefined }
 ): string {
+  // Special case: item names come from a lazily-fetched id->name table (see
+  // UiStore.loadItemNames()), not the static per-language dictionaries below --
+  // the wire protocol never sends item name strings (only numeric ids), so
+  // there's nothing to look up in LANGS for these keys.
+  if (key.startsWith(ITEM_NAME_PREFIX)) {
+    const itemId = key.slice(ITEM_NAME_PREFIX.length);
+    return rootStore.ui.itemNames[itemId] || key;
+  }
+
   const parts = key.split(".");
 
   const currentLang = rootStore.ui.lang || LANG_DEFAULT;

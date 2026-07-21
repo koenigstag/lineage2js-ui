@@ -6,7 +6,13 @@ import { BaseInput } from "../../core/inputs/base.input";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { getItemIconUrl } from "../../../config/icon-urls";
-import { EQUIPMENT_SLOT_TYPES, getItemSlotType, getItemGradeLabel, getMiscItemCategory } from "../../../config/item-mapping";
+import {
+  EQUIPMENT_SLOT_TYPES,
+  getItemSlotType,
+  getItemGradeLabel,
+  getItemName,
+  getMiscItemCategory,
+} from "../../../config/item-mapping";
 import { t } from "../../../lang/lang";
 
 const TABS = ["All", "Equip", "Consume", "Craft", "Etc", "Quest"] as const;
@@ -45,7 +51,7 @@ export const InventoryContent = observer(function InventoryContent() {
 
   const query = search.trim().toLowerCase();
   const filteredItems = game.inventoryItems.filter(
-    (item) => matchesTab(item, activeTab) && (query === "" || (item.Name ?? "").toLowerCase().includes(query))
+    (item) => matchesTab(item, activeTab) && (query === "" || getItemName(item).toLowerCase().includes(query))
   );
 
   return (
@@ -109,7 +115,7 @@ export const InventoryContent = observer(function InventoryContent() {
                         iconUrl: getItemIconUrl(item.Id),
                         tooltip: {
                           kind: "item",
-                          name: item.Name ?? `#${item.Id}`,
+                          name: getItemName(item),
                           type: slotType,
                           id: item.Id,
                           count: item.Count,

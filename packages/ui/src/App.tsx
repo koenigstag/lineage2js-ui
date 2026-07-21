@@ -18,6 +18,10 @@ export const App = observer(function App() {
     }
   }, [ui.screen]);
 
+  useEffect(() => {
+    ui.loadItemNames();
+  }, [ui]);
+
   useResetShortcut(() => windowManager.resetPositions());
 
   switch (ui.screen) {

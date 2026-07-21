@@ -1,5 +1,14 @@
 import { L2Item, ItemType2, ItemGrade } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
+import { t } from "../lang/lang";
+
+// Reactive read, not a stored field: UiStore.itemNames loads asynchronously
+// (see UiStore.loadItemNames()), so this must be called at render time inside
+// an observer -- baking it into L2Item.Name at construction time would freeze
+// the fallback key forever for any item parsed before the table finishes loading.
+export function getItemName(item: L2Item): string {
+  return t(`item.name.${item.Id}`);
+}
 
 /** Derives the icon-slot/tab category straight from the wire's Type2 + BodyPart, no separate UI type needed. */
 export function getItemSlotType(item: L2Item): IconSlotType {
@@ -29,10 +38,10 @@ export const EQUIPMENT_SLOT_TYPES = new Set<IconSlotType>([
 // fall back to this small id-keyed placeholder, covering only the store's
 // own demo inventory (see GameStore.createDemoInventory).
 const DEMO_MISC_CATEGORY_BY_ITEM_ID: Partial<Record<number, "consume" | "ingredient">> = {
-  1060: "consume",
-  1061: "consume",
-  1867: "ingredient",
-  1025: "ingredient",
+  727: "consume", // Healing Potion
+  728: "consume", // Mana Potion
+  1869: "ingredient", // Iron Ore
+  702: "ingredient", // Wolf Pelt
 };
 
 export function getMiscItemCategory(item: L2Item): "consume" | "ingredient" | undefined {

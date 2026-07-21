@@ -34,7 +34,6 @@ function createDemoHotbar(): (IconSlotType | undefined)[] {
 let nextObjectId = 1;
 interface DemoItemInit {
   id: number;
-  name: string;
   type2: ItemType2;
   bodyPart?: number;
   count?: number;
@@ -42,13 +41,14 @@ interface DemoItemInit {
 }
 
 // Builds a real L2Item, same shape a server ItemList/InventoryUpdate packet
-// would produce -- only ObjectId/ItemId/Name/Type2/BodyPart/Count/IsQuest/Grade
-// are set, everything else stays at its default like an unread wire field would.
-function demoItem({ id, name, type2, bodyPart, count, grade }: DemoItemInit): L2Item {
+// would produce -- only ObjectId/ItemId/Type2/BodyPart/Count/IsQuest/Grade are
+// set, everything else stays at its default like an unread wire field would.
+// No Name: that's resolved from the item-name table via t("item.name.<id>"),
+// same as it would be for real server data (see config/item-mapping.ts).
+function demoItem({ id, type2, bodyPart, count, grade }: DemoItemInit): L2Item {
   const item = new L2Item();
   item.ObjectId = nextObjectId++;
   item.Id = id;
-  item.Name = name;
   item.Type2 = type2;
   item.BodyPart = bodyPart ?? L2Item.SLOT_NONE;
   item.Count = count ?? 1;
@@ -57,22 +57,24 @@ function demoItem({ id, name, type2, bodyPart, count, grade }: DemoItemInit): L2
   return item;
 }
 
+// Real item ids (see the item-name table this pairs with), picked to cover
+// one example of every inventory tab/slot type.
 function createDemoInventory(): L2Item[] {
   return [
-    demoItem({ id: 1060, name: "Healing Potion", type2: ItemType2.Item, count: 25 }),
-    demoItem({ id: 1061, name: "Mana Potion", type2: ItemType2.Item, count: 10 }),
-    demoItem({ id: 1867, name: "Iron Ore", type2: ItemType2.Item, count: 47 }),
-    demoItem({ id: 1025, name: "Wolf Pelt", type2: ItemType2.Item, count: 132 }),
-    demoItem({ id: 7574, name: "Ancient Map Fragment", type2: ItemType2.QuestItem, count: 1 }),
-    demoItem({ id: 57, name: "Adena", type2: ItemType2.Adena, count: 15230 }),
-    demoItem({ id: 5, name: "Leather Helmet", type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_HEAD, grade: ItemGrade.D }),
-    demoItem({ id: 27, name: "Leather Gaiters", type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_LEGS, grade: ItemGrade.D }),
-    demoItem({ id: 12, name: "Leather Boots", type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_FEET, grade: ItemGrade.D }),
-    demoItem({ id: 1, name: "Long Sword", type2: ItemType2.Weapon, bodyPart: L2Item.SLOT_R_HAND, grade: ItemGrade.D }),
-    demoItem({ id: 970, name: "Ring of the Beginner", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_FINGER }),
-    demoItem({ id: 906, name: "Necklace of Knowledge", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_NECK }),
-    demoItem({ id: 872, name: "Earring of Wisdom", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_EAR }),
-    demoItem({ id: 8317, name: "Bracelet of Fortitude", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_BRACELET }),
+    demoItem({ id: 727, type2: ItemType2.Item, count: 25 }), // Healing Potion
+    demoItem({ id: 728, type2: ItemType2.Item, count: 10 }), // Mana Potion
+    demoItem({ id: 1869, type2: ItemType2.Item, count: 47 }), // Iron Ore
+    demoItem({ id: 702, type2: ItemType2.Item, count: 132 }), // Wolf Pelt
+    demoItem({ id: 987, type2: ItemType2.QuestItem, count: 1 }), // Ancient Clay Tablet
+    demoItem({ id: 57, type2: ItemType2.Adena, count: 15230 }), // Adena
+    demoItem({ id: 44, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_HEAD, grade: ItemGrade.D }), // Leather Helmet
+    demoItem({ id: 33, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_LEGS, grade: ItemGrade.D }), // Hard Leather Gaiters
+    demoItem({ id: 40, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_FEET, grade: ItemGrade.D }), // Leather Boots
+    demoItem({ id: 2, type2: ItemType2.Weapon, bodyPart: L2Item.SLOT_R_HAND, grade: ItemGrade.D }), // Long Sword
+    demoItem({ id: 875, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_FINGER }), // Ring of Knowledge
+    demoItem({ id: 906, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_NECK }), // Necklace of Knowledge
+    demoItem({ id: 115, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_EAR }), // Earring of Wisdom
+    demoItem({ id: 9589, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_BRACELET }), // Iron Bracelet
   ];
 }
 
