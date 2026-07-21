@@ -1,5 +1,3 @@
-import defaultBackground from "../default-background.png";
-
 const backgroundModules = import.meta.glob<string>("./*.{webp,png,jpg,jpeg}", {
   eager: true,
   import: "default",
@@ -7,9 +5,10 @@ const backgroundModules = import.meta.glob<string>("./*.{webp,png,jpg,jpeg}", {
 
 const backgrounds = Object.values(backgroundModules);
 
-export function getRandomLoginBackground(): string {
+/** Random background from local dev files dropped in this folder, if any. */
+export function getRandomLoginBackground(): string | undefined {
   if (backgrounds.length === 0) {
-    return defaultBackground;
+    return undefined;
   }
 
   return backgrounds[Math.floor(Math.random() * backgrounds.length)];
