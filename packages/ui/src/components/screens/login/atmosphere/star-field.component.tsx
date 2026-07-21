@@ -44,8 +44,8 @@ export function StarField() {
     const sizes = new Float32Array(STAR_COUNT);
 
     for (let i = 0; i < STAR_COUNT; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * viewport.width * 1.4;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * viewport.height * 1.4;
+      positions[i * 3] = (Math.random() - 0.5) * viewport.width;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * viewport.height;
       positions[i * 3 + 2] = -1.5 - Math.random();
       phases[i] = Math.random() * Math.PI * 2;
       speeds[i] = 0.5 + Math.random() * 1.5;

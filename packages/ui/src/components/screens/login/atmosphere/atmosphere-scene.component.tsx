@@ -13,7 +13,8 @@ export function AtmosphereScene() {
     >
       <Canvas
         gl={{ alpha: true, antialias: true }}
-        camera={{ position: [0, 0, 5], fov: 50 }}
+        orthographic
+        camera={{ position: [0, 0, 5], zoom: 1, near: 0.1, far: 100 }}
         dpr={[1, 1.5]}
       >
         <StarField />
