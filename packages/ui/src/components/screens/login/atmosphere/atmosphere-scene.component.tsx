@@ -3,6 +3,7 @@ import { CloudLayer } from "./cloud-layer.component";
 import { StarField } from "./star-field.component";
 import { SkyLayer } from "./sky-layer.component";
 import { MoonLayer } from "./moon-layer.component";
+import { ShootingStarLayer } from "./shooting-star-layer.component";
 
 /**
  * Fully self-contained fallback scene (sky gradient + stars + drifting fog),
@@ -29,6 +30,7 @@ export function AtmosphereScene() {
         <MoonLayer />
         <StarField />
         <CloudLayer />
+        <ShootingStarLayer />
       </Canvas>
     </div>
   );
