@@ -1,42 +1,64 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { ServerStatus, type L2Server } from "@lineage2js/network";
 import { BaseButton } from "../../core/buttons/base.button";
+import { useAlert } from "../../core/alert-modal";
+import { useNetworkStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 
-interface Server {
-  id: string;
-  name: string;
-  ping: number;
+// The login protocol has no server display name -- only an Id. Real L2
+// clients ship a client-side ServerId -> name mapping; this app only knows
+// the one demo server for now.
+const SERVER_ID_NAMES: Record<number, string> = {
+  1: "Bartz",
+};
+
+function serverName(server: L2Server): string {
+  return SERVER_ID_NAMES[server.Id] ?? `Server ${server.Id}`;
 }
 
-const SERVER_NAMES = ["Bartz"];
-
-function generateServers(): Server[] {
-  return SERVER_NAMES.map((name, index) => ({
-    id: String(index),
-    name,
-    ping: 18 + Math.floor(Math.random() * 90),
-  }));
-}
-
-function pingColor(ping: number): string {
-  if (ping < 50) return "#7a9a5c";
-  if (ping < 100) return "#c2a23e";
-  return "#a0654f";
+function statusColor(status: ServerStatus): string {
+  switch (status) {
+    case ServerStatus.STATUS_GOOD:
+      return "#7a9a5c";
+    case ServerStatus.STATUS_NORMAL:
+      return "#c2a23e";
+    case ServerStatus.STATUS_FULL:
+    case ServerStatus.STATUS_GM_ONLY:
+      return "#a0654f";
+    case ServerStatus.STATUS_DOWN:
+      return "#555555";
+    default:
+      return "#7a9a5c";
+  }
 }
 
 interface ServerSelectMenuProps {
   onConfirm: () => void;
 }
 
-export function ServerSelectMenu({ onConfirm }: ServerSelectMenuProps) {
-  const servers = useMemo(generateServers, []);
-  const [selectedId, setSelectedId] = useState<string | undefined>(servers[0]?.id);
+export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }: ServerSelectMenuProps) {
+  const network = useNetworkStore();
+  const { alert, modal: alertModal } = useAlert();
+  const [selectedId, setSelectedId] = useState<number | undefined>(network.servers[0]?.Id);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  async function handleConfirm() {
+    if (selectedId === undefined) {
+      return;
+    }
+
+    if (await network.selectServer(selectedId)) {
+      onConfirm();
+    } else {
+      await alert(network.error ?? "Could not connect to that server.");
+    }
+  }
 
   return (
     <div
@@ -60,13 +82,13 @@ export function ServerSelectMenu({ onConfirm }: ServerSelectMenuProps) {
       <div style={{ color: "#e8dfc8", fontSize: 16, marginBottom: 8 }}>Select Server</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1, overflowY: "auto" }}>
-        {servers.map((server) => {
-          const isSelected = server.id === selectedId;
+        {network.servers.map((server) => {
+          const isSelected = server.Id === selectedId;
 
           return (
             <div
-              key={server.id}
-              onClick={() => setSelectedId(server.id)}
+              key={server.Id}
+              onClick={() => setSelectedId(server.Id)}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -78,16 +100,30 @@ export function ServerSelectMenu({ onConfirm }: ServerSelectMenuProps) {
                 border: isSelected ? "1px solid #c2a23e" : "1px solid #333333",
               }}
             >
-              <span style={{ color: "#e0e0e0", fontSize: 14 }}>{server.name}</span>
-              <span style={{ color: pingColor(server.ping), fontSize: 12 }}>{server.ping} ms</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#e0e0e0", fontSize: 14 }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: statusColor(server.Status),
+                  }}
+                />
+                {serverName(server)}
+              </span>
+              <span style={{ color: "#999999", fontSize: 12 }}>
+                {server.CurrentPlayers}/{server.MaxPlayers}
+              </span>
             </div>
           );
         })}
       </div>
 
-      <BaseButton onClick={onConfirm} disabled={!selectedId}>
-        Confirm
+      <BaseButton onClick={handleConfirm} disabled={selectedId === undefined || network.isConnecting}>
+        {network.isConnecting ? "Connecting..." : "Confirm"}
       </BaseButton>
+      {alertModal}
     </div>
   );
-}
+});

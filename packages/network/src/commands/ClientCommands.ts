@@ -3,25 +3,46 @@ import L2Character from "../entities/L2Character";
 import L2Creature from "../entities/L2Creature";
 import L2Item from "../entities/L2Item";
 import L2Object from "../entities/L2Object";
+import L2Server from "../entities/L2Server";
+import L2User from "../entities/L2User";
 import { RestartPoint } from "../enums/RestartPoint";
 import { ShotsType } from "../enums/ShotsType";
 import Logger from "../mmocore/Logger";
 import MMOConfig from "../mmocore/MMOConfig";
 import GameClient from "../network/GameClient";
 import LoginClient from "../network/LoginClient";
+import { EnterWorldResult } from "./AbstractEnterWorldCommand";
 import AbstractGameCommand from "./AbstractGameCommand";
+import { LoginResult } from "./CommandLogin";
 import ICommand from "./ICommand";
 import commands from "./index";
 
 export default interface ClientCommands {
   /**
-   * Enter or create character Lineage2 world
+   * Authenticate against the login server. Resolves with its server list --
+   * does not touch the game server yet (see selectServer).
    * @param config
    */
-  enter(
-    config?: MMOConfig | Record<string, unknown>,
-    newCharData?: L2Character
-  ): Promise<{ login: LoginClient; game: GameClient }>;
+  login(config: MMOConfig | Record<string, unknown>): Promise<LoginResult>;
+  /**
+   * Log into one of the servers from login()'s result and hand off to the
+   * game server. Resolves with the account's existing characters there.
+   * @param serverId
+   */
+  selectServer(serverId: number): Promise<L2User[]>;
+  /**
+   * Select one of selectServer()'s characters (by its index in that list)
+   * and enter the world with it.
+   * @param slotIndex
+   */
+  selectCharacter(slotIndex: number): Promise<EnterWorldResult>;
+  /**
+   * Create a character in the given slot (the existing character count from
+   * selectServer()'s result) and enter the world with it.
+   * @param charData
+   * @param newCharSlot
+   */
+  createCharacter(charData: L2Character, newCharSlot: number): Promise<EnterWorldResult>;
 
   say(text: string): void;
   /**

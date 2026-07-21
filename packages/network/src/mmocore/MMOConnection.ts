@@ -21,7 +21,7 @@ export default class MMOConnection implements IConnection {
       })
       .catch(() => {
         this.IsConnected = false;
-        throw new Error("Connection failed to " + this.stream.toString());
+        throw new Error("Failed to connect to " + this.stream.toString());
       });
   }
 

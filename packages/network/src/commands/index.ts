@@ -6,13 +6,14 @@ import CommandCancelBuff from "./CommandCancelBuff";
 import CommandCancelTarget from "./CommandCancelTarget";
 import CommandCast from "./CommandCast";
 import CommandCraft from "./CommandCraft";
+import CommandCreateCharacter from "./CommandCreateCharacter";
 import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
 import CommandDeclineResurrect from "./CommandDeclineResurrect";
 import CommandDropItem from "./CommandDropItem";
 import CommandDwarvenCraftRecipes from "./CommandDwarvenCraftRecipes";
-import CommandEnter from "./CommandEnter";
 import CommandHit from "./CommandHit";
 import CommandInventory from "./CommandInventory";
+import CommandLogin from "./CommandLogin";
 import CommandLogout from "./CommandLogout";
 import CommandMoveTo from "./CommandMoveTo";
 import CommandNextTarget from "./CommandNextTarget";
@@ -25,6 +26,8 @@ import CommandSayToAlly from "./CommandSayToAlly";
 import CommandSayToClan from "./CommandSayToClan";
 import CommandSayToParty from "./CommandSayToParty";
 import CommandSayToTrade from "./CommandSayToTrade";
+import CommandSelectCharacter from "./CommandSelectCharacter";
+import CommandSelectServer from "./CommandSelectServer";
 import CommandShout from "./CommandShout";
 import CommandSitStand from "./CommandSitStand";
 import CommandTell from "./CommandTell";
@@ -41,13 +44,14 @@ import CommandValidatePosition from "./CommandValidatePosition";
   cancelTarget: CommandCancelTarget.prototype,
   cast: CommandCast.prototype,
   craft: CommandCraft.prototype,
+  createCharacter: CommandCreateCharacter.prototype,
   declineJoinParty: CommandDeclineJoinParty.prototype,
   declineResurrect: CommandDeclineResurrect.prototype,
   dropItem: CommandDropItem.prototype,
   dwarvenCraftRecipes: CommandDwarvenCraftRecipes.prototype,
-  enter: CommandEnter.prototype,
   hit: CommandHit.prototype,
   inventory: CommandInventory.prototype,
+  login: CommandLogin.prototype,
   logout: CommandLogout.prototype,
   moveTo: CommandMoveTo.prototype,
   nextTarget: CommandNextTarget.prototype,
@@ -60,6 +64,8 @@ import CommandValidatePosition from "./CommandValidatePosition";
   sayToClan: CommandSayToClan.prototype,
   sayToParty: CommandSayToParty.prototype,
   sayToTrade: CommandSayToTrade.prototype,
+  selectCharacter: CommandSelectCharacter.prototype,
+  selectServer: CommandSelectServer.prototype,
   shout: CommandShout.prototype,
   sitStand: CommandSitStand.prototype,
   tell: CommandTell.prototype,
