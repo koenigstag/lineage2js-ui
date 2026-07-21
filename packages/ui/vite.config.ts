@@ -12,4 +12,11 @@ export default defineConfig({
       "@lineage2js/network": path.resolve(__dirname, "../network/src/index.ts"),
     },
   },
+  // @lineage2js/network fires events keyed off packet.constructor.name (e.g.
+  // "PacketReceived:ItemList") and logs via this.constructor.name -- esbuild's
+  // minifier renames class declarations by default, which would silently break
+  // both. Keep runtime names so minified production builds match dev behavior.
+  esbuild: {
+    keepNames: true,
+  },
 });

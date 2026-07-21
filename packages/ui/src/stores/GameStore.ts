@@ -1,5 +1,5 @@
-import { makeAutoObservable } from "mobx";
-import { L2Item, L2Skill, L2Buff, L2Shortcut, ItemType2, ItemGrade, ShortcutType } from "@lineage2js/network";
+import { makeAutoObservable, runInAction } from "mobx";
+import { L2Item, L2Skill, L2Buff, L2Shortcut, ItemType2, ItemGrade, ShortcutType, type Client } from "@lineage2js/network";
 
 export interface Creature {
   id: string;
@@ -167,5 +167,42 @@ export class GameStore {
 
   setActiveCharacter(id: number | undefined) {
     this.me = id;
+  }
+
+  /**
+   * Mirrors the network layer's live collections (Client.InventoryItems/
+   * SkillsList/BuffsList/Shortcuts -- plain Sets the mutators write into on
+   * every incoming packet) into these observable arrays, replacing the demo
+   * data the moment the server actually sends something. Called once from
+   * RootStore against the app's single long-lived Client instance.
+   */
+  bindToClient(client: Client) {
+    const syncInventory = () => runInAction(() => {
+      this.inventoryItems = Array.from(client.InventoryItems);
+    });
+    const syncSkills = () => runInAction(() => {
+      this.skills = Array.from(client.SkillsList);
+    });
+    const syncBuffs = () => runInAction(() => {
+      this.buffs = Array.from(client.BuffsList);
+    });
+    const syncHotbar = () => runInAction(() => {
+      const slots: (L2Shortcut | undefined)[] = new Array(HOTBAR_SLOT_COUNT).fill(undefined);
+      client.Shortcuts.forEach((shortcut) => {
+        if (shortcut.Slot < HOTBAR_SLOT_COUNT) {
+          slots[shortcut.Slot] = shortcut;
+        }
+      });
+      this.hotbarSlots = slots;
+    });
+
+    client.on("PacketReceived", "ItemList", syncInventory);
+    client.on("PacketReceived", "InventoryUpdate", syncInventory);
+    client.on("PacketReceived", "SkillList", syncSkills);
+    client.on("PacketReceived", "SkillCoolTime", syncSkills);
+    client.on("PacketReceived", "AbnormalStatusUpdate", syncBuffs);
+    client.on("PacketReceived", "ShortCutInit", syncHotbar);
+    client.on("PacketReceived", "ShortCutRegister", syncHotbar);
+    client.on("PacketReceived", "ShortCutDelete", syncHotbar);
   }
 }

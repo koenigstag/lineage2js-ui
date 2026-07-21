@@ -8,6 +8,10 @@ export class RootStore {
   ui = new UiStore();
   game = new GameStore();
   windowManager = new WindowManagerStore();
+
+  constructor() {
+    this.game.bindToClient(this.session.client);
+  }
 }
 
 export const rootStore = new RootStore();
