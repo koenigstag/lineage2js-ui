@@ -15,9 +15,9 @@ const fragmentShader = /* glsl */ `
   varying vec2 vUv;
 
   void main() {
-    vec3 left = vec3(0.039, 0.055, 0.122);
+    vec3 left = vec3(0.165, 0.129, 0.251);
     vec3 mid = vec3(0.109, 0.145, 0.278);
-    vec3 right = vec3(0.165, 0.129, 0.251);
+    vec3 right = vec3(0.039, 0.055, 0.122);
 
     float drift = sin(uTime * 0.05) * 0.06;
     float t = clamp(vUv.x + drift, 0.0, 1.0);
