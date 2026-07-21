@@ -10,6 +10,7 @@ export default class L2Skill extends L2Object {
   private _isDebuff!: boolean;
   private _isRunning!: boolean;
   private _isEnchanted!: boolean;
+  private _isDisabled!: boolean;
   private _isReady = true;
   private _haveItems!: boolean;
   private _progress!: number;
@@ -76,6 +77,15 @@ export default class L2Skill extends L2Object {
 
   public set IsEnchanted(value: boolean) {
     this._isEnchanted = value;
+  }
+
+  /** Situationally unusable (e.g. wrong weapon/class state), distinct from being on cooldown. */
+  public get IsDisabled(): boolean {
+    return this._isDisabled;
+  }
+
+  public set IsDisabled(value: boolean) {
+    this._isDisabled = value;
   }
   public get IsReady(): boolean {
     return this._isReady;

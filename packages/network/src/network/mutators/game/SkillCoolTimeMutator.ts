@@ -7,11 +7,13 @@ export default class SkillCoolTimeMutator extends IMMOClientMutator<
   SkillCoolTime
 > {
   update(packet: SkillCoolTime): void {
+    // Skill reuse timers (skill bar cooldown), not active buffs/debuffs --
+    // those are a separate collection populated by AbnormalStatusUpdate.
     packet.BuffsList.forEach((row) => {
-      const buff = this.Client.BuffsList.getEntryById(row.id);
-      if (buff) {
-        buff.RemainingTime = row.remaining * 1000;
-        buff.SkillLevel = row.lvl;
+      const skill = this.Client.SkillsList.getEntryById(row.id);
+      if (skill) {
+        skill.Remaining = row.remaining * 1000;
+        skill.ReuseDelay = row.reuse * 1000;
       }
     });
   }
