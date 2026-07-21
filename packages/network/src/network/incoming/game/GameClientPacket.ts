@@ -1,5 +1,7 @@
 import L2Item from "../../../entities/L2Item";
+import L2Shortcut from "../../../entities/L2Shortcut";
 import { ItemType2 } from "../../../enums/ItemType2";
+import { ShortcutType } from "../../../enums/ShortcutType";
 import ReceivablePacket from "../../../mmocore/ReceivablePacket";
 
 export default abstract class GameClientPacket extends ReceivablePacket {
@@ -47,6 +49,41 @@ export default abstract class GameClientPacket extends ReceivablePacket {
     item.IsQuest = item.Type2 === ItemType2.QuestItem;
 
     return item;
+  }
+
+  // Shared by ShortCutInit (full list) and ShortCutRegister (single upsert) --
+  // verified against lineage2ts's ShortCutInit/ShortCutRegister send packets
+  // (opcodes 0x45/0x44), which share this exact per-entry layout.
+  readShortcut(): L2Shortcut {
+    const shortcut = new L2Shortcut();
+    shortcut.Type = this.readD();
+    shortcut.Slot = this.readD(); // slot + (page * 12)
+
+    switch (shortcut.Type) {
+      case ShortcutType.ITEM:
+        shortcut.TargetId = this.readD();
+        shortcut.CharacterType = this.readD();
+        shortcut.ItemReuseGroup = this.readD();
+        this.readD(); // always 0x00 on the wire
+        shortcut.ItemReuseRemaining = this.readD(); // seconds, 0 when not on cooldown
+        shortcut.ItemReuseTotal = this.readD(); // seconds
+        break;
+      case ShortcutType.SKILL:
+        shortcut.TargetId = this.readD();
+        shortcut.Level = this.readD();
+        this.readC(); // always 0x00 on the wire
+        shortcut.CharacterType = this.readD();
+        break;
+      case ShortcutType.ACTION:
+      case ShortcutType.MACRO:
+      case ShortcutType.RECIPE:
+      case ShortcutType.BOOKMARK:
+        shortcut.TargetId = this.readD();
+        shortcut.CharacterType = this.readD();
+        break;
+    }
+
+    return shortcut;
   }
 
   abstract readImpl(): boolean;

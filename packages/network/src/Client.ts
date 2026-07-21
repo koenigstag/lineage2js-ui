@@ -4,6 +4,7 @@ import L2Creature from "./entities/L2Creature";
 import L2DroppedItem from "./entities/L2DroppedItem";
 import L2Item from "./entities/L2Item";
 import L2ObjectCollection from "./entities/L2ObjectCollection";
+import L2Shortcut from "./entities/L2Shortcut";
 import L2Skill from "./entities/L2Skill";
 import L2User from "./entities/L2User";
 import L2Recipe from "./entities/L2Recipe";
@@ -37,6 +38,9 @@ export default class Client extends ClientCommands {
   }
   get SkillsList(): L2ObjectCollection<L2Skill> {
     return this.GameClient.SkillsList;
+  }
+  get Shortcuts(): L2ObjectCollection<L2Shortcut> {
+    return this.GameClient.Shortcuts;
   }
   get DwarfRecipeBook(): L2ObjectCollection<L2Recipe> {
     return this.GameClient.DwarfRecipeBook;

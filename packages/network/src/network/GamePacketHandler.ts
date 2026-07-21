@@ -153,6 +153,9 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
         case 0x45:
           rpk = new Packets.ShortCutInit();
           break;
+        case 0x46:
+          rpk = new Packets.ShortCutDelete();
+          break;
         case 0x47:
           rpk = new Packets.StopMove();
           break;

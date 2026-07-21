@@ -14,6 +14,7 @@ export { default as L2PartyPet } from "./L2PartyPet";
 export { default as L2PartyPetCollection } from "./L2PartyPetCollection";
 export { default as L2Recipe } from "./L2Recipe";
 export { default as L2Server } from "./L2Server";
+export { default as L2Shortcut } from "./L2Shortcut";
 export { default as L2Skill } from "./L2Skill";
 export { default as L2Summon } from "./L2Summon";
 export { default as L2User } from "./L2User";

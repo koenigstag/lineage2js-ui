@@ -1,6 +1,5 @@
 import { makeAutoObservable } from "mobx";
-import { L2Item, L2Skill, L2Buff, ItemType2, ItemGrade } from "@lineage2js/network";
-import type { IconSlotType } from "../components/core/icon-frame.component";
+import { L2Item, L2Skill, L2Buff, L2Shortcut, ItemType2, ItemGrade, ShortcutType } from "@lineage2js/network";
 
 export interface Creature {
   id: string;
@@ -8,26 +7,34 @@ export interface Creature {
 
 export const MAX_CHARACTERS = 7;
 
-const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns
+const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + page*12 addressing
 
-// Demo content for the hotbar's first row: one example of every slot type.
-const HOTBAR_ROW_1_DEMO: IconSlotType[] = [
-  "skill",
-  "action",
-  "pair-action",
-  "pet-action",
-  "macro",
-  "item-misc",
-  "item-weapon",
-  "item-armor",
-  "item-jewelry",
-];
+// Builds a real L2Shortcut, same shape ShortCutInit/ShortCutRegister would
+// produce (Slot/Type/TargetId[/Level]). No name/icon on the entity itself --
+// resolved from the item/skill tables via config/shortcut-mapping.ts, same
+// as everywhere else.
+function demoShortcut(slot: number, type: ShortcutType, targetId: number, level?: number): L2Shortcut {
+  const shortcut = new L2Shortcut();
+  shortcut.Slot = slot;
+  shortcut.Type = type;
+  shortcut.TargetId = targetId;
+  if (level !== undefined) {
+    shortcut.Level = level;
+  }
+  return shortcut;
+}
 
-function createDemoHotbar(): (IconSlotType | undefined)[] {
-  const slots: (IconSlotType | undefined)[] = new Array(HOTBAR_SLOT_COUNT).fill(undefined);
-  HOTBAR_ROW_1_DEMO.forEach((type, index) => {
-    slots[index] = type;
-  });
+// One example of every real ShortcutType, referencing the same demo
+// item/skill ids as createDemoInventory()/createDemoSkills().
+function createDemoHotbarShortcuts(): (L2Shortcut | undefined)[] {
+  const slots: (L2Shortcut | undefined)[] = new Array(HOTBAR_SLOT_COUNT).fill(undefined);
+  slots[0] = demoShortcut(0, ShortcutType.SKILL, 3, 1); // Power Strike
+  slots[1] = demoShortcut(1, ShortcutType.ACTION, 0);
+  slots[2] = demoShortcut(2, ShortcutType.MACRO, 0);
+  slots[3] = demoShortcut(3, ShortcutType.ITEM, 727); // Healing Potion (item-misc)
+  slots[4] = demoShortcut(4, ShortcutType.ITEM, 2); // Long Sword (item-weapon)
+  slots[5] = demoShortcut(5, ShortcutType.ITEM, 44); // Leather Helmet (item-armor)
+  slots[6] = demoShortcut(6, ShortcutType.ITEM, 875); // Ring of Knowledge (item-jewelry)
   return slots;
 }
 
@@ -145,7 +152,7 @@ export class GameStore {
   me: number | undefined = undefined;
   /** ObjectId of the character highlighted on the char-select screen. */
   selectedCharacterId: number | undefined = undefined;
-  hotbarSlots: (IconSlotType | undefined)[] = createDemoHotbar();
+  hotbarSlots: (L2Shortcut | undefined)[] = createDemoHotbarShortcuts();
   inventoryItems: L2Item[] = createDemoInventory();
   skills: L2Skill[] = createDemoSkills();
   buffs: L2Buff[] = createDemoBuffs();

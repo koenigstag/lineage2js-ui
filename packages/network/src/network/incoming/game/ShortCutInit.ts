@@ -1,43 +1,20 @@
+import L2Shortcut from "../../../entities/L2Shortcut";
 import GameClientPacket from "./GameClientPacket";
+
+// Opcode 0x45. Was previously a fully commented-out no-op (looked like a
+// draft for a different chronicle's wire format); rewritten against
+// lineage2ts's ShortCutInit send packet.
 export default class ShortCutInit extends GameClientPacket {
+  Shortcuts: L2Shortcut[] = [];
+
   // @Override
   readImpl(): boolean {
-    // var _shortCuts: Shortcut[] = [];
+    const _id = this.readC();
+    const _size = this.readD();
 
-    // let _id = this.readC();
-    // let _shortCutsLength = this.readD();
-    // for (var i = 0; i < _shortCutsLength; i++) {
-    //   var sc = new Shortcut();
-    //   sc.setType(this.readD());
-    //   var c = this.readD(); // slot + (page * 12)
-    //   switch (sc.getType()) {
-    //     case ShortcutType.ITEM:
-    //       sc.setId(this.readD());
-    //       let _unkn1 = this.readD();
-    //       sc.setSharedReuseGroup(this.readD());
-    //       let _unkn2 = this.readD();
-    //       let _unkn3 = this.readD();
-    //       let _unkn4 = this.readH();
-    //       let _unkn5 = this.readH();
-    //       break;
-    //     case ShortcutType.SKILL:
-    //       sc.setId(this.readD());
-    //       sc.setLevel(this.readD());
-    //       let _unkn6 = this.readC();
-    //       let _unkn7 = this.readD();
-    //       break;
-    //     case ShortcutType.ACTION:
-    //     case ShortcutType.MACRO:
-    //     case ShortcutType.RECIPE:
-    //     case ShortcutType.BOOKMARK:
-    //       sc.setId(this.readD());
-    //       let _unkn8 = this.readD();
-    //       break;
-    //   }
-    //   _shortCuts.push(sc);
-    // }
-
-    /// this.Client.ActiveChar.setShortCuts(_shortCuts);
+    for (let i = 0; i < _size; i++) {
+      this.Shortcuts.push(this.readShortcut());
+    }
 
     return true;
   }

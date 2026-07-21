@@ -5,6 +5,7 @@ import L2Item from "../entities/L2Item";
 import L2ObjectCollection from "../entities/L2ObjectCollection";
 import L2ClientObjectCollection from "../entities/L2ClientObjectCollection";
 import L2PartyMember from "../entities/L2PartyMember";
+import L2Shortcut from "../entities/L2Shortcut";
 import L2Skill from "../entities/L2Skill";
 import L2User from "../entities/L2User";
 import MMOClient from "../mmocore/MMOClient";
@@ -27,6 +28,8 @@ export default class GameClient extends MMOClient {
   DroppedItems: L2ClientObjectCollection<L2DroppedItem> = new L2ClientObjectCollection(this);
   InventoryItems: L2ClientObjectCollection<L2Item> = new L2ClientObjectCollection(this);
   SkillsList: L2ClientObjectCollection<L2Skill> = new L2ClientObjectCollection(this);
+  /** Keyed by Shortcut.Slot (page*12 + column), see L2Shortcut. */
+  Shortcuts: L2ClientObjectCollection<L2Shortcut> = new L2ClientObjectCollection(this);
   DwarfRecipeBook: L2ClientObjectCollection<L2Recipe> = new L2ClientObjectCollection(this);
   CommonRecipeBook: L2ClientObjectCollection<L2Recipe> = new L2ClientObjectCollection(this);
 

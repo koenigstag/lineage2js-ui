@@ -6,7 +6,9 @@ import { t } from "../lang/lang";
 // (see UiStore.loadItemNames()), so this must be called at render time inside
 // an observer -- baking it into L2Item.Name at construction time would freeze
 // the fallback key forever for any item parsed before the table finishes loading.
-export function getItemName(item: L2Item): string {
+// Structural `{ Id }` rather than L2Item: a hotbar ITEM shortcut only carries
+// a TargetId, not a full L2Item (see config/shortcut-mapping.ts).
+export function getItemName(item: { Id: number }): string {
   return t(`item.name.${item.Id}`);
 }
 
