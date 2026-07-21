@@ -31,6 +31,20 @@ function pingColor(ms: number | null | undefined): string {
   return "#a0654f";
 }
 
+// Still-pinging/unreachable servers sink to the bottom instead of jumping
+// around as their real ping resolves.
+function pingSortValue(ms: number | null | undefined): number {
+  return typeof ms === "number" ? ms : Infinity;
+}
+
+type SortMode = "default" | "ping" | "slots";
+
+const SORT_OPTIONS: Array<{ mode: SortMode; label: string }> = [
+  { mode: "default", label: "Default" },
+  { mode: "ping", label: "By ping" },
+  { mode: "slots", label: "By free slots" },
+];
+
 function statusColor(status: ServerStatus): string {
   switch (status) {
     case ServerStatus.STATUS_GOOD:
@@ -56,6 +70,19 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
   const { alert, modal: alertModal } = useAlert();
   const [selectedId, setSelectedId] = useState<number | undefined>(session.servers[0]?.Id);
   const [visible, setVisible] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("default");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+
+  const sortedServers =
+    sortMode === "ping"
+      ? [...session.servers].sort(
+          (a, b) => pingSortValue(session.serverPings[a.Id]) - pingSortValue(session.serverPings[b.Id])
+        )
+      : sortMode === "slots"
+      ? [...session.servers].sort(
+          (a, b) => b.MaxPlayers - b.CurrentPlayers - (a.MaxPlayers - a.CurrentPlayers)
+        )
+      : session.servers;
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true));
@@ -93,10 +120,74 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
         transition: "transform 0.3s ease-out",
       }}
     >
-      <div style={{ color: "#e8dfc8", fontSize: 16, marginBottom: 8 }}>Select Server</div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 8,
+          position: "relative",
+        }}
+      >
+        <span style={{ color: "#e8dfc8", fontSize: 16 }}>Select Server</span>
+
+        <button
+          type="button"
+          onClick={() => setSortMenuOpen((open) => !open)}
+          title="Sort servers"
+          style={{
+            background: "none",
+            border: "1px solid #444444",
+            borderRadius: 4,
+            color: "#999999",
+            cursor: "pointer",
+            padding: "2px 6px",
+            fontSize: 14,
+            lineHeight: 1.4,
+          }}
+        >
+          ⇅
+        </button>
+
+        {sortMenuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              right: 0,
+              marginTop: 4,
+              zIndex: MENU_Z_INDEX + 1,
+              backgroundColor: "#222222",
+              border: "1px solid #444444",
+              borderRadius: 4,
+              overflow: "hidden",
+              minWidth: 130,
+            }}
+          >
+            {SORT_OPTIONS.map((option) => (
+              <div
+                key={option.mode}
+                onClick={() => {
+                  setSortMode(option.mode);
+                  setSortMenuOpen(false);
+                }}
+                style={{
+                  padding: "6px 10px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  color: option.mode === sortMode ? "#e8dfc8" : "#999999",
+                  backgroundColor: option.mode === sortMode ? "#332a1a" : "transparent",
+                }}
+              >
+                {option.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1, overflowY: "auto" }}>
-        {session.servers.map((server) => {
+        {sortedServers.map((server) => {
           const isSelected = server.Id === selectedId;
 
           return (
