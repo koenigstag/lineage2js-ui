@@ -7,11 +7,18 @@ import { getSkillIconUrl } from "../../../config/icon-urls";
 import { getSkillName } from "../../../config/skill-mapping";
 import { t } from "../../../lang/lang";
 
-const TABS = ["Active", "Passive"] as const;
+const TABS = ["Active", "Passive", "Learn"] as const;
 type Tab = (typeof TABS)[number];
 
 function matchesTab(skill: L2Skill, tab: Tab): boolean {
-  return tab === "Active" ? skill.IsActive : !skill.IsActive;
+  switch (tab) {
+    case "Active":
+      return skill.IsActive;
+    case "Passive":
+      return !skill.IsActive;
+    case "Learn":
+      return false;
+  }
 }
 
 const GRID_COLUMNS = 8;
@@ -49,35 +56,39 @@ export const SkillsContent = observer(function SkillsContent() {
           </button>
         ))}
       </div>
-      <div
-        className="slot-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${GRID_COLUMNS}, ${SLOT_SIZE}px)`,
-          gridAutoRows: SLOT_SIZE,
-          gap: SLOT_GAP,
-        }}
-      >
-        {filteredSkills.map((skill) => (
-          <Slot
-            key={skill.Id}
-            type="inventory"
-            iconBorder={SKILL_ICON_BORDER}
-            content={{
-              type: "skill",
-              data: skill,
-              iconUrl: getSkillIconUrl(skill.Id),
-              tooltip: {
-                kind: "skill",
-                name: getSkillName(skill),
-                stats: t("tooltip.levelLabel", { level: skill.Level }),
-                cost: skill.Mp,
-                id: skill.Id,
-              },
-            }}
-          />
-        ))}
-      </div>
+      {activeTab === "Learn" ? (
+        <div style={{ padding: "16px 8px", color: "#999999", fontSize: 12 }}>{t("skills.comingSoon")}</div>
+      ) : (
+        <div
+          className="slot-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${GRID_COLUMNS}, ${SLOT_SIZE}px)`,
+            gridAutoRows: SLOT_SIZE,
+            gap: SLOT_GAP,
+          }}
+        >
+          {filteredSkills.map((skill) => (
+            <Slot
+              key={skill.Id}
+              type="inventory"
+              iconBorder={SKILL_ICON_BORDER}
+              content={{
+                type: "skill",
+                data: skill,
+                iconUrl: getSkillIconUrl(skill.Id),
+                tooltip: {
+                  kind: "skill",
+                  name: getSkillName(skill),
+                  stats: t("tooltip.levelLabel", { level: skill.Level }),
+                  cost: skill.Mp,
+                  id: skill.Id,
+                },
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 });

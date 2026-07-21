@@ -126,7 +126,9 @@ export const LANG_RU_RU: LangDictionary = {
     tabs: {
       Active: "Активные",
       Passive: "Пассивные",
+      Learn: "Обучение",
     },
+    comingSoon: "Скоро будет доступно",
   },
   windows: {
     settings: "Настройки",

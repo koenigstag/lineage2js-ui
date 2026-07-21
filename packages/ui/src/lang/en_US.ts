@@ -126,7 +126,9 @@ export const LANG_EN_US: LangDictionary = {
     tabs: {
       Active: "Active",
       Passive: "Passive",
+      Learn: "Learn",
     },
+    comingSoon: "Coming soon",
   },
   windows: {
     settings: "Settings",
