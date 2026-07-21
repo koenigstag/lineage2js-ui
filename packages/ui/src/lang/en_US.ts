@@ -119,6 +119,9 @@ export const LANG_EN_US: LangDictionary = {
     searchPlaceholder: "Search",
     paperdollLabel: "Paperdoll",
   },
+  settings: {
+    language: "Language",
+  },
   tooltip: {
     types: {
       skill: "Skill",

@@ -119,6 +119,9 @@ export const LANG_RU_RU: LangDictionary = {
     searchPlaceholder: "Поиск",
     paperdollLabel: "Экипировка",
   },
+  settings: {
+    language: "Язык",
+  },
   tooltip: {
     types: {
       skill: "Навык",
