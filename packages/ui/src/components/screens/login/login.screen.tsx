@@ -7,6 +7,7 @@ import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
 import { WindowsRoot } from "../../windows/core/windows-root";
 import { LOGIN_WINDOW_IDS } from "../../../config/windows.registry";
 import { getRandomLoginBackground } from "../../../assets/login/backgrounds";
+import { AtmosphereScene } from "./atmosphere/atmosphere-scene.component";
 
 export function LoginScreen() {
   const background = useMemo(() => getRandomLoginBackground(), []);
@@ -25,6 +26,7 @@ export function LoginScreen() {
       }}
     >
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        <AtmosphereScene />
         <WindowsRoot ids={LOGIN_WINDOW_IDS} />
 
         <LoginMenu ref={loginMenuRef} />
