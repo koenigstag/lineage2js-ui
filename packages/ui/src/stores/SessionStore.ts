@@ -1,6 +1,7 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 import {
   Client,
+  pingGameServer,
   type CharacterTemplate,
   type L2Character,
   type L2Server,
@@ -59,6 +60,8 @@ export class SessionStore {
   servers: L2Server[] = [];
   characters: L2User[] = [];
   characterTemplates: CharacterTemplate[] = [];
+  /** Round-trip ms per server Id, undefined while pinging, null if unreachable. */
+  serverPings: Record<number, number | null | undefined> = {};
   isConnecting = false;
   error: string | undefined = undefined;
 
@@ -92,12 +95,31 @@ export class SessionStore {
       this.knownAccounts = getKnownAccounts();
       this.session = { login: username, token: crypto.randomUUID() };
 
+      this.pingServers();
+
       return true;
     } catch (reason) {
       this.error = describeFailure(reason, LOGIN_FAIL_MESSAGES, "Login failed.");
       return false;
     } finally {
       this.isConnecting = false;
+    }
+  }
+
+  /**
+   * Pings every listed server in the background (not awaited by login()) --
+   * see @lineage2js/network's pingGameServer for how, since the login
+   * protocol itself has no ping field.
+   */
+  pingServers(): void {
+    for (const server of this.servers) {
+      const id = server.Id;
+      this.serverPings[id] = undefined;
+
+      pingGameServer(server.Ipv4(), server.Port).then(
+        (ms) => runInAction(() => { this.serverPings[id] = ms; }),
+        () => runInAction(() => { this.serverPings[id] = null; })
+      );
     }
   }
 
@@ -175,6 +197,7 @@ export class SessionStore {
     this.servers = [];
     this.characters = [];
     this.characterTemplates = [];
+    this.serverPings = {};
     this.error = undefined;
     this.isConnecting = false;
     this.session = undefined;

@@ -17,6 +17,20 @@ function serverName(server: L2Server): string {
   return SERVER_ID_NAMES[server.Id] ?? `Server ${server.Id}`;
 }
 
+function pingLabel(ms: number | null | undefined): string {
+  if (ms === undefined) return "...";
+  if (ms === null) return "--";
+  return `${Math.round(ms)}ms`;
+}
+
+function pingColor(ms: number | null | undefined): string {
+  if (ms === undefined) return "#666666";
+  if (ms === null) return "#a0654f";
+  if (ms < 80) return "#7a9a5c";
+  if (ms < 200) return "#c2a23e";
+  return "#a0654f";
+}
+
 function statusColor(status: ServerStatus): string {
   switch (status) {
     case ServerStatus.STATUS_GOOD:
@@ -112,8 +126,13 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
                 />
                 {serverName(server)}
               </span>
-              <span style={{ color: "#999999", fontSize: 12 }}>
-                {server.CurrentPlayers}/{server.MaxPlayers}
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#999999", fontSize: 12 }}>
+                  {server.CurrentPlayers}/{server.MaxPlayers}
+                </span>
+                <span style={{ color: pingColor(session.serverPings[server.Id]), fontSize: 12, minWidth: 34, textAlign: "right" }}>
+                  {pingLabel(session.serverPings[server.Id])}
+                </span>
               </span>
             </div>
           );
