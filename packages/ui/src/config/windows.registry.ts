@@ -52,7 +52,7 @@ const SLOT_GAP = 2;
 const HOTBAR_WIDTH = 12 * SLOT_SIZE + 11 * SLOT_GAP;
 
 export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
-  settings: { id: "settings", type: "titlebar", title: "Settings", icon: "⚙️", closable: true, draggable: true },
+  settings: { id: "settings", type: "titlebar", title: "Settings", closable: true, draggable: true },
   character: { id: "character", type: "titlebar", title: "Character", closable: true, draggable: true },
   inventory: {
     id: "inventory",
