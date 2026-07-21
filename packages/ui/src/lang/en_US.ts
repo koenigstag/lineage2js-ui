@@ -122,6 +122,20 @@ export const LANG_EN_US: LangDictionary = {
   settings: {
     language: "Language",
   },
+  windows: {
+    settings: "Settings",
+    character: "Character",
+    inventory: "Inventory",
+    skillsList: "Skills",
+    skill: "Skill Info",
+    quests: "Quests",
+    questInfo: "Quest Info",
+    clan: "Clan",
+    actions: "Actions",
+    macroList: "Macro List",
+    macro: "Macro",
+    map: "Map",
+  },
   tooltip: {
     types: {
       skill: "Skill",

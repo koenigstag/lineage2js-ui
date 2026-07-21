@@ -122,6 +122,20 @@ export const LANG_RU_RU: LangDictionary = {
   settings: {
     language: "Язык",
   },
+  windows: {
+    settings: "Настройки",
+    character: "Персонаж",
+    inventory: "Инвентарь",
+    skillsList: "Навыки",
+    skill: "Информация о навыке",
+    quests: "Квесты",
+    questInfo: "Информация о квесте",
+    clan: "Клан",
+    actions: "Действия",
+    macroList: "Список макросов",
+    macro: "Макрос",
+    map: "Карта",
+  },
   tooltip: {
     types: {
       skill: "Навык",
