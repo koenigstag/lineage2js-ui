@@ -5,6 +5,7 @@ import L2Item from "../entities/L2Item";
 import L2Object from "../entities/L2Object";
 import L2Server from "../entities/L2Server";
 import L2User from "../entities/L2User";
+import { Actions } from "../enums/Actions";
 import { RestartPoint } from "../enums/RestartPoint";
 import { ShotsType } from "../enums/ShotsType";
 import Logger from "../mmocore/Logger";
@@ -112,6 +113,15 @@ export default interface ClientCommands {
    * @param shift
    */
   attack(object: L2Object | number, shift?: boolean): void;
+  /**
+   * Send any Actions enum member as a RequestActionUse -- covers sit/stand,
+   * social actions, pet/servitor commands, etc. without a Command class per
+   * action (see actionPackets.ts).
+   * @param action
+   * @param ctrlPressed
+   * @param shiftPressed
+   */
+  action(action: keyof typeof Actions, ctrlPressed?: boolean, shiftPressed?: boolean): void;
   /**
    * Cancel the active target
    */
