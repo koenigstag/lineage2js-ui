@@ -122,6 +122,12 @@ export const LANG_EN_US: LangDictionary = {
   settings: {
     language: "Language",
   },
+  skills: {
+    tabs: {
+      Active: "Active",
+      Passive: "Passive",
+    },
+  },
   windows: {
     settings: "Settings",
     character: "Character",
@@ -151,5 +157,6 @@ export const LANG_EN_US: LangDictionary = {
     },
     idLabel: "ID {id}",
     costLabel: "Cost: {cost}",
+    levelLabel: "Level {level}",
   },
 };

@@ -1,5 +1,5 @@
 import { makeAutoObservable } from "mobx";
-import { L2Item, ItemType2, ItemGrade } from "@lineage2js/network";
+import { L2Item, L2Skill, ItemType2, ItemGrade } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 
 export interface Creature {
@@ -78,6 +78,42 @@ function createDemoInventory(): L2Item[] {
   ];
 }
 
+interface DemoSkillInit {
+  id: number;
+  level: number;
+  isActive: boolean;
+  mp?: number;
+}
+
+// Builds a real L2Skill, same shape a server SkillList packet would produce.
+// No Name: resolved from the skill-name table via t("skill.name.<id>"), same
+// as items (see config/skill-mapping.ts).
+function demoSkill({ id, level, isActive, mp }: DemoSkillInit): L2Skill {
+  const skill = new L2Skill();
+  skill.Id = id;
+  skill.Level = level;
+  skill.IsActive = isActive;
+  skill.IsDisabled = false;
+  skill.IsEnchanted = false;
+  skill.Mp = mp ?? 0;
+  return skill;
+}
+
+// Real skill ids (see the skill-name table this pairs with), mixing active
+// and passive skills.
+function createDemoSkills(): L2Skill[] {
+  return [
+    demoSkill({ id: 3, level: 1, isActive: true, mp: 8 }), // Power Strike
+    demoSkill({ id: 19, level: 1, isActive: true, mp: 10 }), // Double Shot
+    demoSkill({ id: 30, level: 1, isActive: true, mp: 12 }), // Backstab
+    demoSkill({ id: 56, level: 1, isActive: true, mp: 10 }), // Power Shot
+    demoSkill({ id: 58, level: 1, isActive: true, mp: 15 }), // Elemental Heal
+    demoSkill({ id: 147, level: 1, isActive: false }), // Magic Resistance
+    demoSkill({ id: 143, level: 1, isActive: false }), // Cubic Mastery
+    demoSkill({ id: 194, level: 1, isActive: false }), // Lucky
+  ];
+}
+
 // The character roster itself lives in SessionStore.characters (real L2User[]
 // from the server) -- this store only tracks which one is active, plus
 // in-game-only state that has nothing to do with the account's character list.
@@ -89,6 +125,7 @@ export class GameStore {
   selectedCharacterId: number | undefined = undefined;
   hotbarSlots: (IconSlotType | undefined)[] = createDemoHotbar();
   inventoryItems: L2Item[] = createDemoInventory();
+  skills: L2Skill[] = createDemoSkills();
 
   constructor() {
     makeAutoObservable(this);
