@@ -4,6 +4,7 @@ import { LegalFooter } from "../../core/legal-footer.component";
 import { TitleMenu } from "../../menus/title/title.menu";
 import { LoginMenu, type LoginMenuHandle } from "../../menus/login/login.menu";
 import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
+import { ServerSelectMenu } from "../../menus/login/server-select.menu";
 import { WindowsRoot } from "../../windows/core/windows-root";
 import { LOGIN_WINDOW_IDS } from "../../../config/windows.registry";
 import {
@@ -11,6 +12,7 @@ import {
   getRandomLoginBackgroundVideoUrl,
 } from "../../../config/background-urls";
 import { AtmosphereScene } from "./atmosphere/atmosphere-scene.component";
+import { useUiStore } from "../../../stores/StoreContext";
 
 interface LoginBackground {
   type: "image" | "video";
@@ -21,7 +23,9 @@ export function LoginScreen() {
   // undefined = still resolving (don't show the sky gradient yet, to avoid a
   // flash before a real background loads); null = resolved, nothing found.
   const [background, setBackground] = useState<LoginBackground | null | undefined>(undefined);
+  const [showServerSelect, setShowServerSelect] = useState(false);
   const loginMenuRef = useRef<LoginMenuHandle>(null);
+  const ui = useUiStore();
 
   useEffect(() => {
     let cancelled = false;
@@ -79,9 +83,15 @@ export function LoginScreen() {
         {background === null && <AtmosphereScene />}
         <WindowsRoot ids={LOGIN_WINDOW_IDS} />
 
-        <LoginMenu ref={loginMenuRef} />
-        <TitleMenu />
-        <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
+        {showServerSelect ? (
+          <ServerSelectMenu onConfirm={() => ui.setScreen("select-char")} />
+        ) : (
+          <>
+            <LoginMenu ref={loginMenuRef} onLoginSuccess={() => setShowServerSelect(true)} />
+            <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
+            <TitleMenu />
+          </>
+        )}
       </div>
       <LegalFooter />
     </Screen>

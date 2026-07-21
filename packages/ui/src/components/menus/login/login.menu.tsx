@@ -3,17 +3,20 @@ import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
-import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
+import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 
 export interface LoginMenuHandle {
   fillAccount: (login: string) => void;
 }
 
+export interface LoginMenuProps {
+  onLoginSuccess: () => void;
+}
+
 export const LoginMenu = observer(
-  forwardRef<LoginMenuHandle>(function LoginMenu(_props, ref) {
+  forwardRef<LoginMenuHandle, LoginMenuProps>(function LoginMenu({ onLoginSuccess }, ref) {
     const session = useSessionStore();
-    const ui = useUiStore();
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
     const { confirm, modal } = useConfirmation();
@@ -31,7 +34,7 @@ export const LoginMenu = observer(
 
       const token = crypto.randomUUID();
       session.login(account, token);
-      ui.setScreen("select-char");
+      onLoginSuccess();
     }
 
     async function handleExit() {
