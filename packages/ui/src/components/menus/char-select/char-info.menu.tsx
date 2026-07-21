@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { t } from "../../../lang/lang";
 
 interface VitalBarProps {
   label: string;
@@ -52,8 +53,8 @@ export const CharInfoMenu = observer(function CharInfoMenu() {
       }}
     >
       <div style={{ color: "#e8dfc8", fontSize: 14, marginBottom: 8 }}>{character.Name}</div>
-      <VitalBar label="HP" value={character.Hp} max={character.MaxHp} color="#8a3a3a" />
-      <VitalBar label="MP" value={character.Mp} max={character.MaxMp} color="#3a5a8a" />
+      <VitalBar label={t("charSelect.hp")} value={character.Hp} max={character.MaxHp} color="#8a3a3a" />
+      <VitalBar label={t("charSelect.mp")} value={character.Mp} max={character.MaxMp} color="#3a5a8a" />
     </div>
   );
 });

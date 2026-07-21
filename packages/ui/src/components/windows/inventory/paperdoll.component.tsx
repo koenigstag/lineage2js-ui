@@ -1,4 +1,7 @@
-export function Paperdoll() {
+import { observer } from "mobx-react-lite";
+import { t } from "../../../lang/lang";
+
+export const Paperdoll = observer(function Paperdoll() {
   return (
     <div
       style={{
@@ -14,7 +17,7 @@ export function Paperdoll() {
         flexShrink: 0,
       }}
     >
-      Paperdoll
+      {t("inventory.paperdollLabel")}
     </div>
   );
-}
+});

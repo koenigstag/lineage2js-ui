@@ -1,23 +1,25 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { observer } from "mobx-react-lite";
 import type { IconSlotType } from "./icon-frame.component";
 import { TOOLTIP_Z_INDEX } from "../../config/z-index";
+import { t } from "../../lang/lang";
 
-const TYPE_TEXT: Record<IconSlotType, string> = {
-  skill: "Skill",
-  "pet-action": "Pet Action",
-  action: "Action",
-  macro: "Macro",
-  "pair-action": "Pair Action",
-  "item-misc": "Misc. Item",
-  "item-weapon": "Weapon",
-  "item-shield": "Shield",
-  "item-armor": "Armor",
-  "item-jewelry": "Jewelry",
+const TYPE_KEYS: Record<IconSlotType, string> = {
+  skill: "skill",
+  "pet-action": "petAction",
+  action: "action",
+  macro: "macro",
+  "pair-action": "pairAction",
+  "item-misc": "miscItem",
+  "item-weapon": "weapon",
+  "item-shield": "shield",
+  "item-armor": "armor",
+  "item-jewelry": "jewelry",
 };
 
 export function getTypeText(type: IconSlotType): string {
-  return TYPE_TEXT[type] ?? type;
+  return t(`tooltip.types.${TYPE_KEYS[type] ?? type}`);
 }
 
 export type TooltipInfo =
@@ -47,7 +49,7 @@ const tooltipStyle: CSSProperties = {
   zIndex: TOOLTIP_Z_INDEX,
 };
 
-function TooltipContent({ info }: { info: TooltipInfo }) {
+const TooltipContent = observer(function TooltipContent({ info }: { info: TooltipInfo }) {
   switch (info.kind) {
     case "item": {
       const nameLine = info.count && info.count > 1 ? `${info.name} (${info.count})` : info.name;
@@ -55,7 +57,7 @@ function TooltipContent({ info }: { info: TooltipInfo }) {
         <>
           <div>{nameLine}</div>
           <div>{getTypeText(info.type)}</div>
-          <div style={{ marginTop: 6 }}>ID {info.id}</div>
+          <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>
         </>
       );
     }
@@ -64,14 +66,14 @@ function TooltipContent({ info }: { info: TooltipInfo }) {
         <>
           <div>{info.name}</div>
           <div style={{ marginTop: 6 }}>{info.stats}</div>
-          <div style={{ marginTop: 6 }}>Cost: {info.cost}</div>
-          <div style={{ marginTop: 6 }}>ID {info.id}</div>
+          <div style={{ marginTop: 6 }}>{t("tooltip.costLabel", { cost: info.cost })}</div>
+          <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>
         </>
       );
     case "simple":
       return <div>{info.name}</div>;
   }
-}
+});
 
 // Mounted off-screen (visibility: hidden) on the first paint so its real
 // size can be measured, then repositioned to flip off whichever edge(s) it

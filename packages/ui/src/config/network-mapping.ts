@@ -59,7 +59,7 @@ export function getRootClassLabel(classIdName: string): string | undefined {
 
   const race = NetworkRace[entry.race] as unknown as Race;
   const baseClass: BaseClass = entry.isMage ? "mystic" : "fighter";
-  return `${getRaceLabel(race)} ${getBaseClassLabel(race, baseClass)}`;
+  return `${getRaceLabel(race)} ${getBaseClassLabel(baseClass)}`;
 }
 
 // The tier-0 ClassId a freshly created character starts as. Kamael is the

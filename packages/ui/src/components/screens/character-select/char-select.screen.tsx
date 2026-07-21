@@ -8,6 +8,7 @@ import { CharInfoMenu } from "../../menus/char-select/char-info.menu";
 import { CharSelectScene } from "./scene/char-select-scene.component";
 import { useGameStore, useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { toLocalRace, toLocalBaseClass, toLocalSex } from "../../../config/network-mapping";
+import { t } from "../../../lang/lang";
 
 export const CharSelectScreen = observer(function CharSelectScreen() {
   const game = useGameStore();
@@ -25,7 +26,7 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
       game.setActiveCharacter(game.selectedCharacterId);
       ui.setScreen("game");
     } else {
-      await alert(session.error ?? "Could not enter the world.");
+      await alert(session.error ?? t("charSelect.enterWorldFailed"));
     }
   }
 
@@ -66,7 +67,7 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
         <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)" }}>
           <BaseButton onClick={handleEnterWorld} disabled={!selectedCharacter || session.isConnecting}>
             <span style={{ fontSize: 20, padding: "4px 24px", display: "inline-block" }}>
-              {session.isConnecting ? "Entering..." : "Start"}
+              {session.isConnecting ? t("charSelect.entering") : t("charSelect.startButton")}
             </span>
           </BaseButton>
         </div>

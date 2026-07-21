@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
+import { observer } from "mobx-react-lite";
 import { BaseButton } from "./buttons/base.button";
 import { MODAL_Z_INDEX } from "../../config/z-index";
+import { t } from "../../lang/lang";
 
 export interface AlertModalProps {
   open: boolean;
@@ -8,7 +10,7 @@ export interface AlertModalProps {
   onClose: () => void;
 }
 
-export function AlertModal({ open, message, onClose }: AlertModalProps) {
+export const AlertModal = observer(function AlertModal({ open, message, onClose }: AlertModalProps) {
   if (!open) {
     return null;
   }
@@ -40,12 +42,12 @@ export function AlertModal({ open, message, onClose }: AlertModalProps) {
       >
         <span style={{ color: "#cccccc" }}>{message}</span>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <BaseButton onClick={onClose}>OK</BaseButton>
+          <BaseButton onClick={onClose}>{t("common.ok")}</BaseButton>
         </div>
       </div>
     </div>
   );
-}
+});
 
 interface AlertState {
   message: string;

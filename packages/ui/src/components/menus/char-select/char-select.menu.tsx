@@ -5,6 +5,7 @@ import { useAlert } from "../../core/alert-modal";
 import { useGameStore, useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { MAX_CHARACTERS } from "../../../stores/GameStore";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { t } from "../../../lang/lang";
 
 export const CharSelectMenu = observer(function CharSelectMenu() {
   const game = useGameStore();
@@ -19,12 +20,12 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
     if (await session.requestCharacterTemplates()) {
       ui.setScreen("create-char");
     } else {
-      await alert(session.error ?? "Could not load character templates.");
+      await alert(session.error ?? t("charSelect.templatesFailed"));
     }
   }
 
   async function handleLogout() {
-    if (await confirm("Logout to the login screen?")) {
+    if (await confirm(t("charSelect.logoutConfirm"))) {
       game.selectCharacter(undefined);
       session.logout();
       ui.setScreen("login");
@@ -52,9 +53,9 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
         onClick={handleCreateCharacter}
         disabled={session.characters.length >= MAX_CHARACTERS || session.isConnecting}
       >
-        {session.isConnecting ? "Loading..." : "Create"}
+        {session.isConnecting ? t("charSelect.loading") : t("charSelect.createButton")}
       </BaseButton>
-      <BaseButton onClick={handleLogout}>Re-Login</BaseButton>
+      <BaseButton onClick={handleLogout}>{t("charSelect.reLoginButton")}</BaseButton>
       {modal}
       {alertModal}
     </div>

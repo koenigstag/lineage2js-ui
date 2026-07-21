@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { t } from "../../../lang/lang";
 
 export interface AccountsMenuProps {
   onSelectAccount: (login: string) => void;
@@ -30,7 +31,7 @@ export const AccountsMenu = observer(function AccountsMenu({ onSelectAccount }: 
         padding: 12,
       }}
     >
-      <span style={{ color: "#999999", fontSize: 12, textTransform: "uppercase" }}>Known accounts</span>
+      <span style={{ color: "#999999", fontSize: 12, textTransform: "uppercase" }}>{t("accounts.title")}</span>
       {session.knownAccounts.map(({ login }) => (
         <div key={login} style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
           <span style={{ color: "#999999" }}>{login}</span>

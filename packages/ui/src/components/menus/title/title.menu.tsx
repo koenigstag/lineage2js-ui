@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useWindowManagerStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { t } from "../../../lang/lang";
 
 export const TitleMenu = observer(function TitleMenu() {
   const windowManager = useWindowManagerStore();
@@ -22,10 +23,10 @@ export const TitleMenu = observer(function TitleMenu() {
         padding: 12,
       }}
     >
-      <BaseButton href={import.meta.env.VITE_REGISTER_URL}>New Account</BaseButton>
-      <BaseButton href={import.meta.env.VITE_RESTORE_PASSWORD_URL}>Lost Account</BaseButton>
-      <BaseButton href={import.meta.env.VITE_WIKI_URL}>Wiki portal</BaseButton>
-      <BaseButton onClick={() => windowManager.toggle("settings")}>Settings</BaseButton>
+      <BaseButton href={import.meta.env.VITE_REGISTER_URL}>{t("titleMenu.newAccount")}</BaseButton>
+      <BaseButton href={import.meta.env.VITE_RESTORE_PASSWORD_URL}>{t("titleMenu.lostAccount")}</BaseButton>
+      <BaseButton href={import.meta.env.VITE_WIKI_URL}>{t("titleMenu.wikiPortal")}</BaseButton>
+      <BaseButton onClick={() => windowManager.toggle("settings")}>{t("common.settings")}</BaseButton>
     </div>
   );
 });

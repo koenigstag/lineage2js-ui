@@ -3,15 +3,9 @@ import { useSessionStore } from "../../../stores/StoreContext";
 import { getTemplateStats } from "../../../config/network-mapping";
 import { type BaseClass, type BaseStats, type Race, type Sex } from "../../../config/character-races";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { t } from "../../../lang/lang";
 
-const STAT_LABELS: Array<{ key: keyof BaseStats; label: string }> = [
-  { key: "str", label: "STR" },
-  { key: "dex", label: "DEX" },
-  { key: "con", label: "CON" },
-  { key: "int", label: "INT" },
-  { key: "wit", label: "WIT" },
-  { key: "men", label: "MEN" },
-];
+const STAT_KEYS: Array<keyof BaseStats> = ["str", "dex", "con", "int", "wit", "men"];
 
 interface CharTemplateInfoMenuProps {
   race: Race;
@@ -45,10 +39,10 @@ export const CharTemplateInfoMenu = observer(function CharTemplateInfoMenu({
         gap: 4,
       }}
     >
-      <div style={{ color: "#e8dfc8", fontSize: 13, marginBottom: 4 }}>Base Stats</div>
-      {STAT_LABELS.map(({ key, label }) => (
+      <div style={{ color: "#e8dfc8", fontSize: 13, marginBottom: 4 }}>{t("charCreate.baseStatsTitle")}</div>
+      {STAT_KEYS.map((key) => (
         <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#cccccc" }}>
-          <span>{label}</span>
+          <span>{t(`charCreate.stat.${key}`)}</span>
           <span>{stats[key]}</span>
         </div>
       ))}

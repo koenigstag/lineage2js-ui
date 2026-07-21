@@ -21,11 +21,7 @@ export function getAvailableBaseClasses(race: Race): BaseClass[] {
   return RACES_WITHOUT_MYSTIC.has(race) ? ["fighter"] : ["fighter", "mystic"];
 }
 
-// Orc mystics are called Shaman -- same baseClass ("mystic") under the hood, different display name.
-export function getBaseClassLabel(race: Race, baseClass: BaseClass): string {
-  if (baseClass === "mystic" && race === "ORC") {
-    return t("classes.orcMystic");
-  }
+export function getBaseClassLabel(baseClass: BaseClass): string {
   return t(`classes.baseClass.${baseClass}`);
 }
 

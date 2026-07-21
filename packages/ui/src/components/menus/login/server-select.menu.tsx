@@ -5,22 +5,24 @@ import { BaseButton } from "../../core/buttons/base.button";
 import { useAlert } from "../../core/alert-modal";
 import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { t } from "../../../lang/lang";
 
 // The login protocol has no server display name -- only an Id. Real L2
 // clients ship a client-side ServerId -> name mapping; this app only knows
-// the one demo server for now.
+// the one demo server for now. A proper noun, so left untranslated like any
+// other server's real name would be.
 const SERVER_ID_NAMES: Record<number, string> = {
   1: "Bartz",
 };
 
 function serverName(server: L2Server): string {
-  return SERVER_ID_NAMES[server.Id] ?? `Server ${server.Id}`;
+  return SERVER_ID_NAMES[server.Id] ?? t("serverSelect.serverPrefix", { id: server.Id });
 }
 
 function pingLabel(ms: number | null | undefined): string {
-  if (ms === undefined) return "...";
-  if (ms === null) return "--";
-  return `${Math.round(ms)}ms`;
+  if (ms === undefined) return t("serverSelect.pinging");
+  if (ms === null) return t("serverSelect.unreachable");
+  return `${Math.round(ms)}${t("serverSelect.msSuffix")}`;
 }
 
 function pingColor(ms: number | null | undefined): string {
@@ -39,10 +41,10 @@ function pingSortValue(ms: number | null | undefined): number {
 
 type SortMode = "default" | "ping" | "slots";
 
-const SORT_OPTIONS: Array<{ mode: SortMode; label: string }> = [
-  { mode: "default", label: "Default" },
-  { mode: "ping", label: "By ping" },
-  { mode: "slots", label: "By free slots" },
+const SORT_OPTIONS: Array<{ mode: SortMode; labelKey: string }> = [
+  { mode: "default", labelKey: "serverSelect.sortDefault" },
+  { mode: "ping", labelKey: "serverSelect.sortByPing" },
+  { mode: "slots", labelKey: "serverSelect.sortByFreeSlots" },
 ];
 
 function statusColor(status: ServerStatus): string {
@@ -97,7 +99,7 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
     if (await session.selectServer(selectedId)) {
       onConfirm();
     } else {
-      await alert(session.error ?? "Could not connect to that server.");
+      await alert(session.error ?? t("serverSelect.connectFailed"));
     }
   }
 
@@ -129,12 +131,12 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
           position: "relative",
         }}
       >
-        <span style={{ color: "#e8dfc8", fontSize: 16 }}>Select Server</span>
+        <span style={{ color: "#e8dfc8", fontSize: 16 }}>{t("serverSelect.title")}</span>
 
         <button
           type="button"
           onClick={() => setSortMenuOpen((open) => !open)}
-          title="Sort servers"
+          title={t("serverSelect.sortTooltip")}
           style={{
             background: "none",
             border: "1px solid #444444",
@@ -179,7 +181,7 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
                   backgroundColor: option.mode === sortMode ? "#332a1a" : "transparent",
                 }}
               >
-                {option.label}
+                {t(option.labelKey)}
               </div>
             ))}
           </div>
@@ -231,7 +233,7 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
       </div>
 
       <BaseButton onClick={handleConfirm} disabled={selectedId === undefined || session.isConnecting}>
-        {session.isConnecting ? "Connecting..." : "Confirm"}
+        {session.isConnecting ? t("common.connecting") : t("common.confirm")}
       </BaseButton>
       {alertModal}
     </div>

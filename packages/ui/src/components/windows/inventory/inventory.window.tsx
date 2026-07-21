@@ -6,6 +6,7 @@ import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import type { InventoryItem } from "../../../stores/GameStore";
 import { getItemIconUrl } from "../../../config/icon-urls";
+import { t } from "../../../lang/lang";
 
 const TABS = ["All", "Equip", "Consume", "Craft", "Etc", "Quest"] as const;
 type Tab = (typeof TABS)[number];
@@ -68,11 +69,16 @@ export const InventoryContent = observer(function InventoryContent() {
                 cursor: "pointer",
               }}
             >
-              {tab}
+              {t(`inventory.tabs.${tab}`)}
             </button>
           ))}
           <div style={{ width: 90 }}>
-            <BaseInput value={search} placeholder="Search" onChange={setSearch} style={{ padding: "2px 8px" }} />
+            <BaseInput
+              value={search}
+              placeholder={t("inventory.searchPlaceholder")}
+              onChange={setSearch}
+              style={{ padding: "2px 8px" }}
+            />
           </div>
         </div>
         <div

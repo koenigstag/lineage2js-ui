@@ -27,7 +27,10 @@ export const LANG_DEFAULT: LANG = "en";
 // Ported from https://github.com/koenigstag/cooking-advisor's script/lang/lang.ts,
 // rewired to read the current language from UiStore (this project's MobX
 // equivalent of that app's `window.__appState()`) instead of a plain global.
-export function translate(key: string): string {
+export function translate(
+  key: string,
+  params?: { [key: string]: string | number | boolean | null | undefined }
+): string {
   const parts = key.split(".");
 
   const currentLang = rootStore.ui.lang || LANG_DEFAULT;
@@ -42,6 +45,13 @@ export function translate(key: string): string {
       } else if (typeof dict[part] === "object") {
         dict = dict[part] as LangDictionary;
       }
+    }
+  }
+
+  if (params && translation) {
+    for (const [paramKey, value] of Object.entries(params)) {
+      if (value == null) continue;
+      translation = translation.replace(`{${paramKey}}`, String(value));
     }
   }
 
