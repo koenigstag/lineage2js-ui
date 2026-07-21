@@ -11,7 +11,7 @@ export interface GalleryGroup {
   variants: GalleryVariant[];
 }
 
-const SEXES: Sex[] = ["male", "female"];
+const SEXES: Sex[] = ["MALE", "FEMALE"];
 
 export const RACE_GALLERY: GalleryGroup[] = RACES.map((race) => {
   const variants: GalleryVariant[] = [];
@@ -23,9 +23,9 @@ export const RACE_GALLERY: GalleryGroup[] = RACES.map((race) => {
   return { race, variants };
 });
 
-const CLASS_COLORS: Record<BaseClass, { male: string; female: string }> = {
-  fighter: { male: "#8a4a3a", female: "#b06a4a" },
-  mystic: { male: "#3a5a8a", female: "#6a8ab0" },
+const CLASS_COLORS: Record<BaseClass, { MALE: string; FEMALE: string }> = {
+  fighter: { MALE: "#8a4a3a", FEMALE: "#b06a4a" },
+  mystic: { MALE: "#3a5a8a", FEMALE: "#6a8ab0" },
 };
 
 export function colorForVariant(variant: GalleryVariant): string {

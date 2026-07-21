@@ -3,6 +3,8 @@
   "version": "0.0.1",
   "description": "Lineage 2 network protocol layer (login/game packets, encryption, sockets)",
   "license": "MIT",
+  "author": "npetrovski",
+  "contributors": ["koenigstag"],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

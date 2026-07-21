@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
+import { observer } from "mobx-react-lite";
 import { BaseButton } from "./buttons/base.button";
 import { MODAL_Z_INDEX } from "../../config/z-index";
+import { t } from "../../lang/lang";
 
 export interface ConfirmationModalProps {
   open: boolean;
@@ -9,7 +11,12 @@ export interface ConfirmationModalProps {
   onCancel: () => void;
 }
 
-export function ConfirmationModal({ open, message, onConfirm, onCancel }: ConfirmationModalProps) {
+export const ConfirmationModal = observer(function ConfirmationModal({
+  open,
+  message,
+  onConfirm,
+  onCancel,
+}: ConfirmationModalProps) {
   if (!open) {
     return null;
   }
@@ -41,13 +48,13 @@ export function ConfirmationModal({ open, message, onConfirm, onCancel }: Confir
       >
         <span style={{ color: "#cccccc" }}>{message}</span>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <BaseButton onClick={onCancel}>Cancel</BaseButton>
-          <BaseButton onClick={onConfirm}>Confirm</BaseButton>
+          <BaseButton onClick={onCancel}>{t("common.cancel")}</BaseButton>
+          <BaseButton onClick={onConfirm}>{t("common.confirm")}</BaseButton>
         </div>
       </div>
     </div>
   );
-}
+});
 
 interface ConfirmationState {
   message: string;

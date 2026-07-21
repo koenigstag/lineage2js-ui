@@ -13,9 +13,9 @@ const CIRCLE_RADIUS = 2.6;
 const ARC_SPREAD = Math.PI * 0.85;
 
 export interface CharSelectSceneProps {
-  characters: Array<{ id: string; nickname: string; race: string; baseClass: string; sex: string }>;
-  selectedCharacterId?: string;
-  onSelect: (id: string) => void;
+  characters: Array<{ id: number; nickname: string; race: string; baseClass: string; sex: string }>;
+  selectedCharacterId?: number;
+  onSelect: (id: number) => void;
 }
 
 /** Diablo-style character select backdrop: a campfire with characters standing in a circle around it. */
@@ -70,7 +70,7 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
               skinColor={getSkinColor(race)}
               heightScale={bodyScale.height}
               widthScale={bodyScale.width}
-              hasCape={race === "kamael"}
+              hasCape={race === "KAMAEL"}
               nickname={character.nickname}
               selected={character.id === selectedCharacterId}
               onSelect={() => onSelect(character.id)}

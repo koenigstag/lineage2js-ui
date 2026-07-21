@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useWindowManagerStore } from "../../../stores/StoreContext";
+import { t } from "../../../lang/lang";
 import type {
   WindowOrigin,
   WindowPosition,
@@ -272,7 +273,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
               ...config.windowStyle?.title,
             }}
           >
-            {config.title}
+            {config.title && t(config.title)}
           </span>
           {config.closable && (
             <button

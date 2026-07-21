@@ -25,17 +25,23 @@ export interface SlotProps {
   slotKey?: string;
   /** Icon frame border colors. Not set by IconFrame itself -- each caller opts in. */
   iconBorder?: IconBorder;
+  /** Square size in px. Defaults to the standard 34px slot (hotbar/inventory); smaller for e.g. buff icons. */
+  size?: number;
+  /** Brief highlight, e.g. while its bound hotbar key is held down. */
+  pressed?: boolean;
 }
 
 const SLOT_SIZE = 34;
 
-const emptySlotStyle: CSSProperties = {
-  width: SLOT_SIZE,
-  height: SLOT_SIZE,
-  border: "1px solid #393839",
-  backgroundColor: "#101010",
-  boxShadow: "inset 0 0 6px 1px #080808",
-};
+function getEmptySlotStyle(size: number): CSSProperties {
+  return {
+    width: size,
+    height: size,
+    border: "1px solid #393839",
+    backgroundColor: "#101010",
+    boxShadow: "inset 0 0 6px 1px #080808",
+  };
+}
 
 const slotKeyStyle: CSSProperties = {
   position: "absolute",
@@ -70,7 +76,7 @@ function formatCount(count: number): string {
   return count > 99 ? "99+" : String(count);
 }
 
-export function Slot({ content, slotKey, iconBorder }: SlotProps) {
+export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE, pressed }: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { target, showTooltip, hideTooltip } = useTooltipTarget();
   const tooltip = content?.tooltip;
@@ -78,7 +84,12 @@ export function Slot({ content, slotKey, iconBorder }: SlotProps) {
   return (
     <div
       ref={rootRef}
-      style={{ position: "relative", width: SLOT_SIZE, height: SLOT_SIZE }}
+      style={{
+        position: "relative",
+        width: size,
+        height: size,
+        filter: pressed ? "brightness(1.6)" : undefined,
+      }}
       onMouseEnter={() => {
         if (tooltip && rootRef.current) {
           showTooltip(rootRef.current, tooltip);
@@ -90,16 +101,16 @@ export function Slot({ content, slotKey, iconBorder }: SlotProps) {
         <IconSlot
           type={content.type}
           iconUrl={content.iconUrl}
-          width={SLOT_SIZE}
-          height={SLOT_SIZE}
+          width={size}
+          height={size}
           borderFrom={iconBorder?.from}
           borderTo={iconBorder?.to}
         />
       ) : (
-        <div style={emptySlotStyle} />
+        <div style={getEmptySlotStyle(size)} />
       )}
       {slotKey && <div style={slotKeyStyle}>{slotKey}</div>}
-      {content?.count !== undefined && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
+      {content?.count !== undefined && content.count > 1 && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
       {tooltip && <Tooltip target={target} />}
     </div>
   );

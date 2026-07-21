@@ -52,12 +52,12 @@ const SLOT_GAP = 2;
 const HOTBAR_WIDTH = 12 * SLOT_SIZE + 11 * SLOT_GAP;
 
 export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
-  settings: { id: "settings", type: "titlebar", title: "Settings", icon: "⚙️", closable: true, draggable: true },
-  character: { id: "character", type: "titlebar", title: "Character", closable: true, draggable: true },
+  settings: { id: "settings", type: "titlebar", title: "windows.settings", closable: true, draggable: true },
+  character: { id: "character", type: "titlebar", title: "windows.character", closable: true, draggable: true },
   inventory: {
     id: "inventory",
     type: "titlebar",
-    title: "Inventory",
+    title: "windows.inventory",
     closable: true,
     draggable: true,
     contentBackground: "#141313",
@@ -65,26 +65,26 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
   "skills-list": {
     id: "skills-list",
     type: "titlebar",
-    title: "Skills",
+    title: "windows.skillsList",
     closable: true,
     draggable: true,
   },
-  skill: { id: "skill", type: "titlebar", title: "Skill Info", icon: "📖", closable: true, draggable: true },
-  quests: { id: "quests", type: "titlebar", title: "Quests", icon: "🗞️", closable: true, draggable: true },
+  skill: { id: "skill", type: "titlebar", title: "windows.skill", icon: "📖", closable: true, draggable: true },
+  quests: { id: "quests", type: "titlebar", title: "windows.quests", icon: "🗞️", closable: true, draggable: true },
   "quest-info": {
     id: "quest-info",
     type: "titlebar",
-    title: "Quest Info",
+    title: "windows.questInfo",
     icon: "🗞️",
     closable: false,
     draggable: false,
   },
-  clan: { id: "clan", type: "titlebar", title: "Clan", closable: true, draggable: true },
-  actions: { id: "actions", type: "titlebar", title: "Actions", icon: "🤜", closable: true, draggable: true },
+  clan: { id: "clan", type: "titlebar", title: "windows.clan", closable: true, draggable: true },
+  actions: { id: "actions", type: "titlebar", title: "windows.actions", icon: "🤜", closable: true, draggable: true },
   macroses: {
     id: "macroses",
     type: "titlebar",
-    title: "Macro List",
+    title: "windows.macroList",
     icon: "🪄",
     closable: true,
     draggable: true,
@@ -92,7 +92,7 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
   macro: {
     id: "macro",
     type: "titlebar",
-    title: "Macro",
+    title: "windows.macro",
     icon: "🪄",
     closable: true,
     draggable: true,
@@ -100,7 +100,7 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
   map: {
     id: "map",
     type: "titlebar",
-    title: "Map",
+    title: "windows.map",
     closable: true,
     draggable: true,
     origin: "top-right",
@@ -157,6 +157,8 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     draggable: true,
     defaultOpen: true,
     defaultPosition: () => ({ x: 220, y: 10 }),
+    bare: true,
+    contentPadding: 0,
   },
   radar: {
     id: "radar",

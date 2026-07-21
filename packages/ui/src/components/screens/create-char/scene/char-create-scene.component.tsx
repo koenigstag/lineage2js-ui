@@ -110,7 +110,7 @@ export function CharCreateScene({ race, baseClass, sex, onSelectVariant }: CharC
                     skinColor={getSkinColor(variant.race)}
                     heightScale={bodyScale.height}
                     widthScale={bodyScale.width}
-                    hasCape={variant.race === "kamael"}
+                    hasCape={variant.race === "KAMAEL"}
                     selected={variant.race === race && variant.baseClass === baseClass && variant.sex === sex}
                     onSelect={() => onSelectVariant(variant.race, variant.baseClass, variant.sex)}
                   />

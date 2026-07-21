@@ -3,8 +3,10 @@ import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
+import { useAlert } from "../../core/alert-modal";
 import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { t } from "../../../lang/lang";
 
 export interface LoginMenuHandle {
   fillAccount: (login: string) => void;
@@ -20,6 +22,7 @@ export const LoginMenu = observer(
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
     const { confirm, modal } = useConfirmation();
+    const { alert, modal: alertModal } = useAlert();
 
     useImperativeHandle(ref, () => ({
       fillAccount: setAccount,
@@ -30,15 +33,15 @@ export const LoginMenu = observer(
         return;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      const token = crypto.randomUUID();
-      session.login(account, token);
-      onLoginSuccess();
+      if (await session.login(account, password)) {
+        onLoginSuccess();
+      } else {
+        await alert(session.error ?? t("login.loginFailed"));
+      }
     }
 
     async function handleExit() {
-      if (await confirm("Exit the game?")) {
+      if (await confirm(t("common.exitGameConfirm"))) {
         window.close();
       }
     }
@@ -61,13 +64,16 @@ export const LoginMenu = observer(
           padding: 16,
         }}
       >
-        <BaseInput value={account} placeholder="ID" onChange={setAccount} />
-        <BaseInput value={password} placeholder="PWD" onChange={setPassword} type="password" />
+        <BaseInput value={account} placeholder={t("login.idPlaceholder")} onChange={setAccount} />
+        <BaseInput value={password} placeholder={t("login.pwdPlaceholder")} onChange={setPassword} type="password" />
         <div style={{ display: "flex", gap: 8 }}>
-          <BaseButton onClick={handleLogin}>Login</BaseButton>
-          <BaseButton onClick={handleExit}>Exit</BaseButton>
+          <BaseButton onClick={handleLogin} disabled={session.isConnecting}>
+            {session.isConnecting ? t("common.connecting") : t("login.loginButton")}
+          </BaseButton>
+          <BaseButton onClick={handleExit}>{t("login.exitButton")}</BaseButton>
         </div>
         {modal}
+        {alertModal}
       </div>
     );
   })
