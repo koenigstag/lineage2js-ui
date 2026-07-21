@@ -1,9 +1,15 @@
 import { Actions } from "@lineage2js/network";
+import { t } from "../lang/lang";
 
-export type ActionCategory = "basic" | "party" | "social" | "pet";
+export type ActionCategory = "basic" | "party" | "target" | "social" | "pet";
 
 export interface Action {
   code: Actions;
+}
+
+/** Display name for an action, from the id->name table loaded by UiStore.loadActionNames() (see lang.ts's "action.name.<id>" special case). */
+export function getActionName(action: Action): string {
+  return t(`action.name.${action.code}`);
 }
 
 // Only Actions enum members that are actually reachable via client.action()
@@ -16,6 +22,10 @@ export interface Action {
 export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
   basic: [{ code: Actions.SIT_STAND }, { code: Actions.WALK_RUN }, { code: Actions.MOUNT_DISMOUNT }],
   party: [],
+  // Not a real client tab -- placeholder for target-related actions
+  // (attack/next target/assist/pick up/exchange), still undecided which of
+  // those belong here vs. basic. Left empty on purpose for now.
+  target: [],
   social: [
     { code: Actions.SOCIAL_GREETING },
     { code: Actions.SOCIAL_VICROTY },

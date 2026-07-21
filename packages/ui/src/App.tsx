@@ -21,6 +21,7 @@ export const App = observer(function App() {
   useEffect(() => {
     ui.loadItemNames();
     ui.loadSkillNames();
+    ui.loadActionNames();
   }, [ui]);
 
   useResetShortcut(() => windowManager.resetPositions());

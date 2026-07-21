@@ -29,6 +29,7 @@ export const LANG_DEFAULT: LANG = "en";
 // equivalent of that app's `window.__appState()`) instead of a plain global.
 const ITEM_NAME_PREFIX = "item.name.";
 const SKILL_NAME_PREFIX = "skill.name.";
+const ACTION_NAME_PREFIX = "action.name.";
 
 export function translate(
   key: string,
@@ -45,6 +46,10 @@ export function translate(
   if (key.startsWith(SKILL_NAME_PREFIX)) {
     const skillId = key.slice(SKILL_NAME_PREFIX.length);
     return rootStore.ui.skillNames[skillId] || key;
+  }
+  if (key.startsWith(ACTION_NAME_PREFIX)) {
+    const actionId = key.slice(ACTION_NAME_PREFIX.length);
+    return rootStore.ui.actionNames[actionId] || key;
   }
 
   const parts = key.split(".");
