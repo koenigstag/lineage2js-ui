@@ -6,18 +6,8 @@ import { BaseButton } from "../../core/buttons/base.button";
 import { useAlert } from "../../core/alert-modal";
 import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
-import { buildNewCharacter } from "../../../config/network-mapping";
-import {
-  RACES,
-  RACE_LABELS,
-  getAvailableBaseClasses,
-  getBaseClassLabel,
-  type Race,
-  type BaseClass,
-  type Sex,
-} from "../../../config/character-races";
-
-const RACE_OPTIONS: SelectOption[] = RACES.map((race) => ({ value: race, label: RACE_LABELS[race] }));
+import { buildNewCharacter, getAvailableBaseClassesFromTemplates, getAvailableRacesFromTemplates } from "../../../config/network-mapping";
+import { RACE_LABELS, getBaseClassLabel, type Race, type BaseClass, type Sex } from "../../../config/character-races";
 
 const SEX_OPTIONS: SelectOption[] = [
   { value: "MALE", label: "Male" },
@@ -72,25 +62,34 @@ export const CharCreateMenu = observer(function CharCreateMenu({
   const [hair, setHair] = useState(HAIR_OPTIONS[0].value);
   const [hairColor, setHairColor] = useState(HAIR_COLOR_OPTIONS[0].value);
 
-  const baseClassOptions: SelectOption[] = getAvailableBaseClasses(race).map((value) => ({
+  const raceOptions: SelectOption[] = getAvailableRacesFromTemplates(session.characterTemplates).map((value) => ({
     value,
-    label: getBaseClassLabel(race, value),
+    label: RACE_LABELS[value],
   }));
+  const baseClassOptions: SelectOption[] = getAvailableBaseClassesFromTemplates(session.characterTemplates, race).map(
+    (value) => ({
+      value,
+      label: getBaseClassLabel(race, value),
+    })
+  );
 
   async function handleCreateCharacter() {
     if (!nickname.trim()) {
       return;
     }
 
-    const charData = buildNewCharacter({
-      nickname,
-      race,
-      baseClass,
-      sex,
-      face: Number(face),
-      hair: Number(hair),
-      hairColor: Number(hairColor),
-    });
+    const charData = buildNewCharacter(
+      {
+        nickname,
+        race,
+        baseClass,
+        sex,
+        face: Number(face),
+        hair: Number(hair),
+        hairColor: Number(hairColor),
+      },
+      session.characterTemplates
+    );
 
     // The new character is appended at the roster's current length -- see
     // CommandCreateCharacter. A real client goes straight into the world
@@ -120,7 +119,7 @@ export const CharCreateMenu = observer(function CharCreateMenu({
       }}
     >
       <BaseInput value={nickname} placeholder="Nickname" onChange={setNickname} />
-      <SelectInput options={RACE_OPTIONS} value={race} onChange={(value) => onRaceChange(value as Race)} />
+      <SelectInput options={raceOptions} value={race} onChange={(value) => onRaceChange(value as Race)} />
       <SelectInput
         options={baseClassOptions}
         value={baseClass}

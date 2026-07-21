@@ -43,7 +43,7 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
           rpk = new Packets.NpcInfo();
           break;
         case 0x0d:
-          rpk = new Packets.NewCharacterSuccess();
+          rpk = new Packets.RequestNewCharacterSuccess();
           break;
         case 0x0f:
           rpk = new Packets.CharCreateOk();

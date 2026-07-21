@@ -54,7 +54,6 @@ import MagicSkillUse from "./MagicSkillUse";
 import MoveToLocation from "./MoveToLocation";
 import MoveToPawn from "./MoveToPawn";
 import MyTargetSelected from "./MyTargetSelected";
-import NewCharacterSuccess from "./NewCharacterSuccess";
 import NicknameChanged from "./NicknameChanged";
 import NormalCamera from "./NormalCamera";
 import NpcHtmlMessage from "./NpcHtmlMessage";
@@ -75,6 +74,7 @@ import PrivateStoreListSell from "./PrivateStoreListSell";
 import RecipeBookItemList from "./RecipeBookItemList";
 import RecipeItemMakeInfo from "./RecipeItemMakeInfo";
 import RelationChanged from "./RelationChanged";
+import RequestNewCharacterSuccess from "./RequestNewCharacterSuccess";
 import RestartResponse from "./RestartResponse";
 import Revive from "./Revive";
 import SendTradeRequest from "./SendTradeRequest";
@@ -183,7 +183,6 @@ export {
   MoveToLocation,
   MoveToPawn,
   MyTargetSelected,
-  NewCharacterSuccess,
   NicknameChanged,
   NormalCamera,
   NpcHtmlMessage,
@@ -204,6 +203,7 @@ export {
   RecipeBookItemList,
   RecipeItemMakeInfo,
   RelationChanged,
+  RequestNewCharacterSuccess,
   RestartResponse,
   Revive,
   SendTradeRequest,

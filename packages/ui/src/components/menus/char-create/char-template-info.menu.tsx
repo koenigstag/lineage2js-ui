@@ -1,7 +1,10 @@
-import { getBaseStats, type Race } from "../../../config/character-races";
+import { observer } from "mobx-react-lite";
+import { useSessionStore } from "../../../stores/StoreContext";
+import { getTemplateStats } from "../../../config/network-mapping";
+import { type BaseClass, type BaseStats, type Race, type Sex } from "../../../config/character-races";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 
-const STAT_LABELS: Array<{ key: keyof ReturnType<typeof getBaseStats>; label: string }> = [
+const STAT_LABELS: Array<{ key: keyof BaseStats; label: string }> = [
   { key: "str", label: "STR" },
   { key: "dex", label: "DEX" },
   { key: "con", label: "CON" },
@@ -12,11 +15,18 @@ const STAT_LABELS: Array<{ key: keyof ReturnType<typeof getBaseStats>; label: st
 
 interface CharTemplateInfoMenuProps {
   race: Race;
+  baseClass: BaseClass;
+  sex: Sex;
 }
 
-/** Base stats preview for the race currently focused in the create-char scene. */
-export function CharTemplateInfoMenu({ race }: CharTemplateInfoMenuProps) {
-  const stats = getBaseStats(race);
+/** Base stats preview for the race/class/sex currently focused in the create-char scene, from the real server template when available. */
+export const CharTemplateInfoMenu = observer(function CharTemplateInfoMenu({
+  race,
+  baseClass,
+  sex,
+}: CharTemplateInfoMenuProps) {
+  const session = useSessionStore();
+  const stats = getTemplateStats(session.characterTemplates, race, baseClass, sex);
 
   return (
     <div
@@ -44,4 +54,4 @@ export function CharTemplateInfoMenu({ race }: CharTemplateInfoMenuProps) {
       ))}
     </div>
   );
-}
+});

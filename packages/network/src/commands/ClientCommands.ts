@@ -14,6 +14,7 @@ import LoginClient from "../network/LoginClient";
 import { EnterWorldResult } from "./AbstractEnterWorldCommand";
 import AbstractGameCommand from "./AbstractGameCommand";
 import { LoginResult } from "./CommandLogin";
+import { CharacterTemplate } from "../network/incoming/game/RequestNewCharacterSuccess";
 import ICommand from "./ICommand";
 import commands from "./index";
 
@@ -37,8 +38,15 @@ export default interface ClientCommands {
    */
   selectCharacter(slotIndex: number): Promise<EnterWorldResult>;
   /**
+   * Requests the race/class base-stat templates for the character-creation
+   * screen. Matches the real client: sent when opening that screen, not at
+   * the point of submitting the form.
+   */
+  requestCharacterTemplates(): Promise<CharacterTemplate[]>;
+  /**
    * Create a character in the given slot (the existing character count from
-   * selectServer()'s result) and enter the world with it.
+   * selectServer()'s result) and enter the world with it. Assumes
+   * requestCharacterTemplates() already ran for this game session.
    * @param charData
    * @param newCharSlot
    */

@@ -1,6 +1,7 @@
 import { makeAutoObservable } from "mobx";
 import {
   Client,
+  type CharacterTemplate,
   type L2Character,
   type L2Server,
   type L2User,
@@ -57,6 +58,7 @@ export class SessionStore {
   client = new Client();
   servers: L2Server[] = [];
   characters: L2User[] = [];
+  characterTemplates: CharacterTemplate[] = [];
   isConnecting = false;
   error: string | undefined = undefined;
 
@@ -129,6 +131,22 @@ export class SessionStore {
     }
   }
 
+  /** Sent when opening the char-create screen -- matches the real client (see CommandRequestCharacterTemplates). */
+  async requestCharacterTemplates(): Promise<boolean> {
+    this.isConnecting = true;
+    this.error = undefined;
+
+    try {
+      this.characterTemplates = await this.client.requestCharacterTemplates();
+      return true;
+    } catch (reason) {
+      this.error = describeFailure(reason, {}, "Could not load character templates.");
+      return false;
+    } finally {
+      this.isConnecting = false;
+    }
+  }
+
   async createCharacter(charData: L2Character, newCharSlot: number): Promise<boolean> {
     this.isConnecting = true;
     this.error = undefined;
@@ -156,6 +174,7 @@ export class SessionStore {
 
     this.servers = [];
     this.characters = [];
+    this.characterTemplates = [];
     this.error = undefined;
     this.isConnecting = false;
     this.session = undefined;

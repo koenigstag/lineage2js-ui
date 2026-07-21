@@ -8,7 +8,9 @@ pitch; this file is for working in the code.
 
 - pnpm workspaces + Turborepo. Packages live in `packages/*`.
 - `packages/network` (`@lineage2js/network`) — login/game protocol layer
-  (packets, encryption, sockets). Plain TypeScript, compiled with `tsc`.
+  (packets, encryption, sockets). Plain TypeScript, compiled with `tsc`. See
+  `packages/network/README.md` for protocol reference sources when fixing or
+  extending a packet.
 - `packages/ui` (`@lineage2js/ui`) — the web client. Vite + React + TypeScript
   + MobX (`mobx-react-lite`). This is where almost all UI work happens.
 - `packages/assets-server` (`@lineage2js/assets-server`) — Express static

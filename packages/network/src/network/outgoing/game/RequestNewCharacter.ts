@@ -1,6 +1,6 @@
 import GameServerPacket from "./GameServerPacket";
 
-export default class NewCharacter extends GameServerPacket {
+export default class RequestNewCharacter extends GameServerPacket {
   constructor() {
     super();
   }

@@ -19,6 +19,7 @@ import CommandMoveTo from "./CommandMoveTo";
 import CommandNextTarget from "./CommandNextTarget";
 import CommandRequestBypass from "./CommandRequestBypass";
 import CommandRequestDuel from "./CommandRequestDuel";
+import CommandRequestCharacterTemplates from "./CommandRequestCharacterTemplates";
 import CommandRequestJoinParty from "./CommandRequestJoinParty";
 import CommandRevive from "./CommandRevive";
 import CommandSay from "./CommandSay";
@@ -56,6 +57,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   moveTo: CommandMoveTo.prototype,
   nextTarget: CommandNextTarget.prototype,
   requestBypass: CommandRequestBypass.prototype,
+  requestCharacterTemplates: CommandRequestCharacterTemplates.prototype,
   requestDuel: CommandRequestDuel.prototype,
   requestJoinParty: CommandRequestJoinParty.prototype,
   revive: CommandRevive.prototype,
