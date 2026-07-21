@@ -3,6 +3,7 @@ import { Screen } from "../../core/screen.component";
 import { BaseButton } from "../../core/buttons/base.button";
 import { LegalFooter } from "../../core/legal-footer.component";
 import { CharSelectMenu } from "../../menus/char-select/char-select.menu";
+import { CharInfoMenu } from "../../menus/char-select/char-info.menu";
 import { CharSelectScene } from "./scene/char-select-scene.component";
 import { useGameStore, useUiStore } from "../../../stores/StoreContext";
 
@@ -50,6 +51,7 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
         </div>
 
         <CharSelectMenu />
+        <CharInfoMenu />
       </div>
       <LegalFooter />
     </Screen>

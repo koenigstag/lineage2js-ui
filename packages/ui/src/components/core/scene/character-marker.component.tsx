@@ -50,7 +50,9 @@ export function CharacterMarker({
           <capsuleGeometry args={[0.24, 0.85, 4, 8]} />
           <meshStandardMaterial color={color} roughness={0.7} />
         </mesh>
-        <mesh position={[0, 1.52, 0]}>
+        {/* Counter-scale so the head stays a sphere instead of stretching into
+            an ellipsoid along with the parent group's non-uniform scale. */}
+        <mesh position={[0, 1.52, 0]} scale={[1 / widthScale, 1 / heightScale, 1 / widthScale]}>
           <sphereGeometry args={[0.21, 16, 16]} />
           <meshStandardMaterial color={skinColor} roughness={0.8} />
         </mesh>

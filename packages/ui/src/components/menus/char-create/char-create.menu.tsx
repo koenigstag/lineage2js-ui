@@ -4,7 +4,15 @@ import { SelectInput, type SelectOption } from "../../core/inputs/select.input";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useGameStore, useUiStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
-import { RACES, RACE_LABELS, getAvailableBaseClasses, getBaseClassLabel, type Race } from "../../../config/character-races";
+import {
+  RACES,
+  RACE_LABELS,
+  getAvailableBaseClasses,
+  getBaseClassLabel,
+  type Race,
+  type BaseClass,
+  type Sex,
+} from "../../../config/character-races";
 
 const RACE_OPTIONS: SelectOption[] = RACES.map((race) => ({ value: race, label: RACE_LABELS[race] }));
 
@@ -29,16 +37,25 @@ const HAIR_OPTIONS: SelectOption[] = [
 
 interface CharCreateMenuProps {
   race: Race;
+  baseClass: BaseClass;
+  sex: Sex;
   onRaceChange: (race: Race) => void;
+  onBaseClassChange: (baseClass: BaseClass) => void;
+  onSexChange: (sex: Sex) => void;
 }
 
-export function CharCreateMenu({ race, onRaceChange }: CharCreateMenuProps) {
+export function CharCreateMenu({
+  race,
+  baseClass,
+  sex,
+  onRaceChange,
+  onBaseClassChange,
+  onSexChange,
+}: CharCreateMenuProps) {
   const game = useGameStore();
   const ui = useUiStore();
 
   const [nickname, setNickname] = useState("");
-  const [baseClass, setBaseClass] = useState<string>(getAvailableBaseClasses(race)[0]);
-  const [sex, setSex] = useState(SEX_OPTIONS[0].value);
   const [face, setFace] = useState(FACE_OPTIONS[0].value);
   const [hair, setHair] = useState(HAIR_OPTIONS[0].value);
 
@@ -46,15 +63,6 @@ export function CharCreateMenu({ race, onRaceChange }: CharCreateMenuProps) {
     value,
     label: getBaseClassLabel(race, value),
   }));
-
-  function handleRaceChange(nextRace: string) {
-    const parsedRace = nextRace as Race;
-    onRaceChange(parsedRace);
-    const available = getAvailableBaseClasses(parsedRace);
-    if (!available.includes(baseClass as (typeof available)[number])) {
-      setBaseClass(available[0]);
-    }
-  }
 
   function handleCreateCharacter() {
     if (!nickname.trim()) {
@@ -84,9 +92,13 @@ export function CharCreateMenu({ race, onRaceChange }: CharCreateMenuProps) {
       }}
     >
       <BaseInput value={nickname} placeholder="Nickname" onChange={setNickname} />
-      <SelectInput options={RACE_OPTIONS} value={race} onChange={handleRaceChange} />
-      <SelectInput options={baseClassOptions} value={baseClass} onChange={setBaseClass} />
-      <SelectInput options={SEX_OPTIONS} value={sex} onChange={setSex} />
+      <SelectInput options={RACE_OPTIONS} value={race} onChange={(value) => onRaceChange(value as Race)} />
+      <SelectInput
+        options={baseClassOptions}
+        value={baseClass}
+        onChange={(value) => onBaseClassChange(value as BaseClass)}
+      />
+      <SelectInput options={SEX_OPTIONS} value={sex} onChange={(value) => onSexChange(value as Sex)} />
       <SelectInput options={FACE_OPTIONS} value={face} onChange={setFace} />
       <SelectInput options={HAIR_OPTIONS} value={hair} onChange={setHair} />
       <div style={{ marginTop: 8 }}>

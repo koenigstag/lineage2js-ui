@@ -3,24 +3,17 @@ import { Campfire } from "./campfire.component";
 import { CharacterMarker } from "../../../core/scene/character-marker.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
+import { getSkinColor, getBodyScale, type Race, type BaseClass, type Sex } from "../../../../config/character-races";
+import { colorForVariant } from "../../create-char/scene/race-gallery.utils";
 
 const SKY_SIZE: [number, number] = [70, 45];
 const SKY_Z = -25;
 
 const CIRCLE_RADIUS = 2.6;
 const ARC_SPREAD = Math.PI * 0.85;
-const MARKER_COLORS = ["#6b8cae", "#a0654f", "#7a9a5c", "#9a7ab8", "#c2a23e", "#5c9a94", "#b06a8a"];
-
-function colorForCharacter(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  return MARKER_COLORS[hash % MARKER_COLORS.length];
-}
 
 export interface CharSelectSceneProps {
-  characters: Array<{ id: string; nickname: string }>;
+  characters: Array<{ id: string; nickname: string; race: string; baseClass: string; sex: string }>;
   selectedCharacterId?: string;
   onSelect: (id: string) => void;
 }
@@ -62,13 +55,22 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
           const x = Math.cos(angle) * CIRCLE_RADIUS;
           const z = Math.sin(angle) * CIRCLE_RADIUS;
 
+          const race = character.race as Race;
+          const baseClass = character.baseClass as BaseClass;
+          const sex = character.sex as Sex;
+          const bodyScale = getBodyScale(race, baseClass, sex);
+
           return (
             <CharacterMarker
               key={character.id}
               x={x}
               z={z}
               angleToCenter={angle + Math.PI / 2}
-              color={colorForCharacter(character.id)}
+              color={colorForVariant({ race, baseClass, sex })}
+              skinColor={getSkinColor(race)}
+              heightScale={bodyScale.height}
+              widthScale={bodyScale.width}
+              hasCape={race === "kamael"}
               nickname={character.nickname}
               selected={character.id === selectedCharacterId}
               onSelect={() => onSelect(character.id)}

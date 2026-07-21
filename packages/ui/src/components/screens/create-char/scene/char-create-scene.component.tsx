@@ -4,7 +4,14 @@ import { Object3D } from "three";
 import { CharacterMarker } from "../../../core/scene/character-marker.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
-import { RACES, getSkinColor, getBodyScale, type Race } from "../../../../config/character-races";
+import {
+  RACES,
+  getSkinColor,
+  getBodyScale,
+  type Race,
+  type BaseClass,
+  type Sex,
+} from "../../../../config/character-races";
 import { RACE_GALLERY, colorForVariant, type GalleryVariant } from "./race-gallery.utils";
 import { CameraRig } from "./camera-rig.component";
 
@@ -56,10 +63,13 @@ function MoonLight({ groupX }: MoonLightProps) {
 
 export interface CharCreateSceneProps {
   race: Race;
+  baseClass: BaseClass;
+  sex: Sex;
+  onSelectVariant: (race: Race, baseClass: BaseClass, sex: Sex) => void;
 }
 
 /** Character-creation backdrop: camera focuses on the selected race's group of class/sex placeholders. */
-export function CharCreateScene({ race }: CharCreateSceneProps) {
+export function CharCreateScene({ race, baseClass, sex, onSelectVariant }: CharCreateSceneProps) {
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <Canvas
@@ -101,6 +111,8 @@ export function CharCreateScene({ race }: CharCreateSceneProps) {
                     heightScale={bodyScale.height}
                     widthScale={bodyScale.width}
                     hasCape={variant.race === "kamael"}
+                    selected={variant.race === race && variant.baseClass === baseClass && variant.sex === sex}
+                    onSelect={() => onSelectVariant(variant.race, variant.baseClass, variant.sex)}
                   />
                 );
               })}

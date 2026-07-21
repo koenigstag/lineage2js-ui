@@ -72,3 +72,43 @@ const CLASS_BODY_SCALE_OVERRIDES: Partial<Record<Race, Partial<Record<BaseClass,
 export function getBodyScale(race: Race, baseClass: BaseClass, sex: Sex): BodyScale {
   return CLASS_BODY_SCALE_OVERRIDES[race]?.[baseClass]?.[sex] ?? RACE_BODY_SCALE[race] ?? DEFAULT_BODY_SCALE;
 }
+
+export interface BaseStats {
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wit: number;
+  men: number;
+}
+
+// Flavor/demo base stats per race -- not exact game formulas, just enough
+// differentiation to read as distinct archetypes (no server data yet).
+const RACE_BASE_STATS: Record<Race, BaseStats> = {
+  human: { str: 40, dex: 30, con: 43, int: 21, wit: 11, men: 25 },
+  elf: { str: 36, dex: 30, con: 38, int: 21, wit: 11, men: 34 },
+  "dark-elf": { str: 39, dex: 34, con: 36, int: 21, wit: 11, men: 29 },
+  orc: { str: 42, dex: 26, con: 44, int: 19, wit: 10, men: 29 },
+  dwarf: { str: 40, dex: 30, con: 46, int: 21, wit: 9, men: 24 },
+  kamael: { str: 41, dex: 33, con: 40, int: 19, wit: 9, men: 28 },
+};
+
+export function getBaseStats(race: Race): BaseStats {
+  return RACE_BASE_STATS[race];
+}
+
+export interface Vitals {
+  hp: number;
+  mp: number;
+  cp: number;
+}
+
+// Flavor/demo vitals derived from base stats -- not exact game formulas.
+export function getBaseVitals(race: Race, baseClass: BaseClass): Vitals {
+  const stats = getBaseStats(race);
+  const isFighter = baseClass === "fighter";
+  const hp = Math.round(stats.con * (isFighter ? 6.2 : 4.8));
+  const mp = Math.round((stats.int + stats.wit + stats.men) * (isFighter ? 1.1 : 2.4));
+  const cp = Math.round(hp * (isFighter ? 0.55 : 0.15));
+  return { hp, mp, cp };
+}
