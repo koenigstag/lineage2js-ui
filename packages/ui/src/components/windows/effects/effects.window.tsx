@@ -25,7 +25,6 @@ export const EffectsContent = observer(function EffectsContent() {
           content={{
             type: "skill",
             data: buff,
-            count: Math.ceil(buff.RemainingTime / 60),
             iconUrl: getSkillIconUrl(buff.Id),
             tooltip: {
               kind: "skill",

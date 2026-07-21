@@ -27,6 +27,8 @@ export interface SlotProps {
   iconBorder?: IconBorder;
   /** Square size in px. Defaults to the standard 34px slot (hotbar/inventory); smaller for e.g. buff icons. */
   size?: number;
+  /** Brief highlight, e.g. while its bound hotbar key is held down. */
+  pressed?: boolean;
 }
 
 const SLOT_SIZE = 34;
@@ -74,7 +76,7 @@ function formatCount(count: number): string {
   return count > 99 ? "99+" : String(count);
 }
 
-export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE }: SlotProps) {
+export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE, pressed }: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { target, showTooltip, hideTooltip } = useTooltipTarget();
   const tooltip = content?.tooltip;
@@ -82,7 +84,12 @@ export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE }: SlotPro
   return (
     <div
       ref={rootRef}
-      style={{ position: "relative", width: size, height: size }}
+      style={{
+        position: "relative",
+        width: size,
+        height: size,
+        filter: pressed ? "brightness(1.6)" : undefined,
+      }}
       onMouseEnter={() => {
         if (tooltip && rootRef.current) {
           showTooltip(rootRef.current, tooltip);

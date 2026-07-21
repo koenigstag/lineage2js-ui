@@ -157,6 +157,8 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     draggable: true,
     defaultOpen: true,
     defaultPosition: () => ({ x: 220, y: 10 }),
+    bare: true,
+    contentPadding: 0,
   },
   radar: {
     id: "radar",
