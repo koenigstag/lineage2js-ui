@@ -28,18 +28,23 @@ export const LANG_DEFAULT: LANG = "en";
 // rewired to read the current language from UiStore (this project's MobX
 // equivalent of that app's `window.__appState()`) instead of a plain global.
 const ITEM_NAME_PREFIX = "item.name.";
+const SKILL_NAME_PREFIX = "skill.name.";
 
 export function translate(
   key: string,
   params?: { [key: string]: string | number | boolean | null | undefined }
 ): string {
-  // Special case: item names come from a lazily-fetched id->name table (see
-  // UiStore.loadItemNames()), not the static per-language dictionaries below --
-  // the wire protocol never sends item name strings (only numeric ids), so
-  // there's nothing to look up in LANGS for these keys.
+  // Special case: item/skill names come from lazily-fetched id->name tables
+  // (see UiStore.loadItemNames()/loadSkillNames()), not the static
+  // per-language dictionaries below -- the wire protocol never sends these
+  // as strings (only numeric ids), so there's nothing to look up in LANGS.
   if (key.startsWith(ITEM_NAME_PREFIX)) {
     const itemId = key.slice(ITEM_NAME_PREFIX.length);
     return rootStore.ui.itemNames[itemId] || key;
+  }
+  if (key.startsWith(SKILL_NAME_PREFIX)) {
+    const skillId = key.slice(SKILL_NAME_PREFIX.length);
+    return rootStore.ui.skillNames[skillId] || key;
   }
 
   const parts = key.split(".");

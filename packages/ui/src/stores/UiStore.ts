@@ -10,6 +10,9 @@ export class UiStore {
   /** id -> name, see lang.ts's "item.name.<id>" special case. English-only for now (no server-sent item names, see network's readItem()). */
   itemNames: Record<string, string> = {};
   private itemNamesRequested = false;
+  /** id -> name, see lang.ts's "skill.name.<id>" special case. Same gap as items -- SkillList/AcquireSkillInfo never send skill name strings. */
+  skillNames: Record<string, string> = {};
+  private skillNamesRequested = false;
 
   constructor() {
     makeAutoObservable(this);
@@ -41,6 +44,23 @@ export class UiStore {
       this.setItemNames(names);
     } catch {
       this.itemNamesRequested = false;
+    }
+  }
+
+  setSkillNames(names: Record<string, string>) {
+    this.skillNames = names;
+  }
+
+  /** Fetches the skill-name table once (public/skill-names/en.json), same treatment as loadItemNames(). */
+  async loadSkillNames() {
+    if (this.skillNamesRequested) return;
+    this.skillNamesRequested = true;
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}skill-names/en.json`);
+      const names: Record<string, string> = await response.json();
+      this.setSkillNames(names);
+    } catch {
+      this.skillNamesRequested = false;
     }
   }
 }
