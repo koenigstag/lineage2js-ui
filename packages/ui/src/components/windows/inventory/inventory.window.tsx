@@ -1,32 +1,32 @@
 import { useState } from "react";
 import { observer } from "mobx-react-lite";
+import type { L2Item } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
-import type { InventoryItem } from "../../../stores/GameStore";
 import { getItemIconUrl } from "../../../config/icon-urls";
+import { EQUIPMENT_SLOT_TYPES, getItemSlotType, getItemGradeLabel, getMiscItemCategory } from "../../../config/item-mapping";
 import { t } from "../../../lang/lang";
 
 const TABS = ["All", "Equip", "Consume", "Craft", "Etc", "Quest"] as const;
 type Tab = (typeof TABS)[number];
 
-const EQUIP_TYPES = new Set(["item-weapon", "item-shield", "item-armor", "item-jewelry"]);
-
-function matchesTab(item: InventoryItem, tab: Tab): boolean {
+function matchesTab(item: L2Item, tab: Tab): boolean {
+  const slotType = getItemSlotType(item);
   switch (tab) {
     case "All":
       return true;
     case "Equip":
-      return EQUIP_TYPES.has(item.type);
+      return EQUIPMENT_SLOT_TYPES.has(slotType);
     case "Consume":
-      return item.type === "item-misc" && item.consume === true;
+      return getMiscItemCategory(item) === "consume";
     case "Craft":
-      return item.type === "item-misc" && item.ingredient === true;
+      return getMiscItemCategory(item) === "ingredient";
     case "Etc":
-      return item.type === "item-misc" && !item.consume && !item.ingredient && !item.quest;
+      return slotType === "item-misc" && !item.IsQuest && getMiscItemCategory(item) === undefined;
     case "Quest":
-      return item.quest === true;
+      return item.IsQuest === true;
   }
 }
 
@@ -45,7 +45,7 @@ export const InventoryContent = observer(function InventoryContent() {
 
   const query = search.trim().toLowerCase();
   const filteredItems = game.inventoryItems.filter(
-    (item) => matchesTab(item, activeTab) && (query === "" || item.name.toLowerCase().includes(query))
+    (item) => matchesTab(item, activeTab) && (query === "" || (item.Name ?? "").toLowerCase().includes(query))
   );
 
   return (
@@ -95,18 +95,26 @@ export const InventoryContent = observer(function InventoryContent() {
         >
           {Array.from({ length: GRID_COLUMNS * GRID_ROWS }).map((_, index) => {
             const item = filteredItems[index];
+            const slotType = item ? getItemSlotType(item) : undefined;
             return (
               <Slot
-                key={item ? `item-${item.id}` : `empty-${index}`}
+                key={item ? `item-${item.ObjectId}` : `empty-${index}`}
                 type="inventory"
                 content={
-                  item
+                  item && slotType
                     ? {
-                        type: item.type,
+                        type: slotType,
                         data: item,
-                        count: item.count,
-                        iconUrl: getItemIconUrl(item.id),
-                        tooltip: { kind: "item", name: item.name, type: item.type, id: item.id, count: item.count },
+                        count: item.Count,
+                        iconUrl: getItemIconUrl(item.Id),
+                        tooltip: {
+                          kind: "item",
+                          name: item.Name ?? `#${item.Id}`,
+                          type: slotType,
+                          id: item.Id,
+                          count: item.Count,
+                          grade: getItemGradeLabel(item),
+                        },
                       }
                     : undefined
                 }

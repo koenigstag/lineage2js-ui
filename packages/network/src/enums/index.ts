@@ -11,6 +11,7 @@ export * from "./HairColor";
 export * from "./HairStyle";
 export * from "./ItemGrade";
 export * from "./ItemType";
+export * from "./ItemType2";
 export * from "./L2InstanceType";
 export * from "./LoginFailReason";
 export * from "./MountType";

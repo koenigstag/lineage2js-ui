@@ -10,7 +10,6 @@ export default class ItemList extends GameClientPacket {
     const _size = this.readH();
     for (let i = 0; i < _size; i++) {
       const item = this.readItem();
-      item.IsQuest = false;
       this.Items.push(item);
     }
 

@@ -1,24 +1,9 @@
 import { makeAutoObservable } from "mobx";
+import { L2Item, ItemType2, ItemGrade } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 
 export interface Creature {
   id: string;
-}
-
-export type EquipmentItemType = "item-weapon" | "item-shield" | "item-armor" | "item-jewelry";
-
-export interface InventoryItem {
-  id: string;
-  name: string;
-  type: EquipmentItemType | "item-misc";
-  /** item-misc only: usable by clicking (potions, scrolls, ...). */
-  consume?: boolean;
-  /** item-misc only: craft/recipe material. */
-  ingredient?: boolean;
-  /** Any item type: quest-bound, cannot be traded/dropped. */
-  quest?: boolean;
-  /** Stack size, mainly item-misc. Equipment stays unset (single instance). */
-  count?: number;
 }
 
 export const MAX_CHARACTERS = 7;
@@ -46,27 +31,48 @@ function createDemoHotbar(): (IconSlotType | undefined)[] {
   return slots;
 }
 
-let nextItemId = 1;
-function item(data: Omit<InventoryItem, "id">): InventoryItem {
-  return { id: String(nextItemId++), ...data };
+let nextObjectId = 1;
+interface DemoItemInit {
+  id: number;
+  name: string;
+  type2: ItemType2;
+  bodyPart?: number;
+  count?: number;
+  grade?: ItemGrade;
 }
 
-function createDemoInventory(): InventoryItem[] {
+// Builds a real L2Item, same shape a server ItemList/InventoryUpdate packet
+// would produce -- only ObjectId/ItemId/Name/Type2/BodyPart/Count/IsQuest/Grade
+// are set, everything else stays at its default like an unread wire field would.
+function demoItem({ id, name, type2, bodyPart, count, grade }: DemoItemInit): L2Item {
+  const item = new L2Item();
+  item.ObjectId = nextObjectId++;
+  item.Id = id;
+  item.Name = name;
+  item.Type2 = type2;
+  item.BodyPart = bodyPart ?? L2Item.SLOT_NONE;
+  item.Count = count ?? 1;
+  item.IsQuest = type2 === ItemType2.QuestItem;
+  item.Grade = grade ?? ItemGrade.None;
+  return item;
+}
+
+function createDemoInventory(): L2Item[] {
   return [
-    item({ name: "Healing Potion", type: "item-misc", consume: true, count: 25 }),
-    item({ name: "Mana Potion", type: "item-misc", consume: true, count: 10 }),
-    item({ name: "Iron Ore", type: "item-misc", ingredient: true, count: 47 }),
-    item({ name: "Wolf Pelt", type: "item-misc", ingredient: true, count: 132 }),
-    item({ name: "Ancient Map Fragment", type: "item-misc", quest: true, count: 1 }),
-    item({ name: "Adena", type: "item-misc", count: 15230 }),
-    item({ name: "Leather Helmet", type: "item-armor" }),
-    item({ name: "Leather Gaiters", type: "item-armor" }),
-    item({ name: "Leather Boots", type: "item-armor" }),
-    item({ name: "Long Sword", type: "item-weapon" }),
-    item({ name: "Ring of the Beginner", type: "item-jewelry" }),
-    item({ name: "Necklace of Knowledge", type: "item-jewelry" }),
-    item({ name: "Earring of Wisdom", type: "item-jewelry" }),
-    item({ name: "Bracelet of Fortitude", type: "item-jewelry" }),
+    demoItem({ id: 1060, name: "Healing Potion", type2: ItemType2.Item, count: 25 }),
+    demoItem({ id: 1061, name: "Mana Potion", type2: ItemType2.Item, count: 10 }),
+    demoItem({ id: 1867, name: "Iron Ore", type2: ItemType2.Item, count: 47 }),
+    demoItem({ id: 1025, name: "Wolf Pelt", type2: ItemType2.Item, count: 132 }),
+    demoItem({ id: 7574, name: "Ancient Map Fragment", type2: ItemType2.QuestItem, count: 1 }),
+    demoItem({ id: 57, name: "Adena", type2: ItemType2.Adena, count: 15230 }),
+    demoItem({ id: 5, name: "Leather Helmet", type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_HEAD, grade: ItemGrade.D }),
+    demoItem({ id: 27, name: "Leather Gaiters", type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_LEGS, grade: ItemGrade.D }),
+    demoItem({ id: 12, name: "Leather Boots", type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_FEET, grade: ItemGrade.D }),
+    demoItem({ id: 1, name: "Long Sword", type2: ItemType2.Weapon, bodyPart: L2Item.SLOT_R_HAND, grade: ItemGrade.D }),
+    demoItem({ id: 970, name: "Ring of the Beginner", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_FINGER }),
+    demoItem({ id: 906, name: "Necklace of Knowledge", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_NECK }),
+    demoItem({ id: 872, name: "Earring of Wisdom", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_EAR }),
+    demoItem({ id: 8317, name: "Bracelet of Fortitude", type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_BRACELET }),
   ];
 }
 
@@ -80,7 +86,7 @@ export class GameStore {
   /** ObjectId of the character highlighted on the char-select screen. */
   selectedCharacterId: number | undefined = undefined;
   hotbarSlots: (IconSlotType | undefined)[] = createDemoHotbar();
-  inventoryItems: InventoryItem[] = createDemoInventory();
+  inventoryItems: L2Item[] = createDemoInventory();
 
   constructor() {
     makeAutoObservable(this);

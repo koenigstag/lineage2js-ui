@@ -1,6 +1,7 @@
 import L2Object from "./L2Object";
 import { Element } from "../enums/Element";
 import { ItemType } from "../enums/ItemType";
+import { ItemType2 } from "../enums/ItemType2";
 import { ItemGrade } from "../enums/ItemGrade";
 import L2ObjectCollection from "./L2ObjectCollection";
 
@@ -59,6 +60,19 @@ export default class L2Item extends L2Object {
   private _enchantLevel!: number;
   private _count!: number;
   private _ingredients: L2ObjectCollection<L2Item> = new L2ObjectCollection();
+  private _type2!: ItemType2;
+  private _bodyPart!: number;
+  private _locationSlot!: number;
+  private _mana!: number;
+  private _time!: number;
+
+  public get AttackElementType(): Element {
+    return this._attackElementType;
+  }
+
+  public set AttackElementType(value: Element) {
+    this._attackElementType = value;
+  }
 
   public get AttackElementVal(): number {
     return this._attackElementVal;
@@ -166,5 +180,58 @@ export default class L2Item extends L2Object {
 
   public set Count(value: number) {
     this._count = value;
+  }
+
+  /** Not sent by ItemList/InventoryUpdate -- comes from item-template data this project doesn't have yet. */
+  public get Grade(): ItemGrade {
+    return this._grade;
+  }
+
+  public set Grade(value: ItemGrade) {
+    this._grade = value;
+  }
+
+  /** Wire "Type 2" category: 0-weapon, 1-shield/armor, 2-ring/earring/necklace, 3-questitem, 4-adena, 5-item. */
+  public get Type2(): ItemType2 {
+    return this._type2;
+  }
+
+  public set Type2(value: ItemType2) {
+    this._type2 = value;
+  }
+
+  /** Paperdoll slot bitmask, see the static SLOT_* constants above. */
+  public get BodyPart(): number {
+    return this._bodyPart;
+  }
+
+  public set BodyPart(value: number) {
+    this._bodyPart = value;
+  }
+
+  /** Wire "T1" field (legacy type1 slot ordering, distinct from Type2). */
+  public get LocationSlot(): number {
+    return this._locationSlot;
+  }
+
+  public set LocationSlot(value: number) {
+    this._locationSlot = value;
+  }
+
+  public get Mana(): number {
+    return this._mana;
+  }
+
+  public set Mana(value: number) {
+    this._mana = value;
+  }
+
+  /** Remaining time in seconds for time-limited items, or 0/-1 when unlimited. */
+  public get Time(): number {
+    return this._time;
+  }
+
+  public set Time(value: number) {
+    this._time = value;
   }
 }
