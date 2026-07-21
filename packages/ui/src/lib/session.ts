@@ -1,27 +1,8 @@
-export interface Session {
-  login: string;
-  token: string;
-}
-
 export interface KnownAccount {
   login: string;
 }
 
-const SESSION_KEY = "session";
 const KNOWN_ACCOUNTS_KEY = "knownAccounts";
-
-export function getSession(): Session | undefined {
-  const raw = sessionStorage.getItem(SESSION_KEY);
-  return raw ? (JSON.parse(raw) as Session) : undefined;
-}
-
-export function setSession(session: Session): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-export function clearSession(): void {
-  sessionStorage.removeItem(SESSION_KEY);
-}
 
 export function getKnownAccounts(): KnownAccount[] {
   const raw = localStorage.getItem(KNOWN_ACCOUNTS_KEY);

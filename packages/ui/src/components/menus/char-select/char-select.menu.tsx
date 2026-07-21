@@ -15,14 +15,9 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
     ui.setScreen("create-char");
   }
 
-  async function handleDeleteCharacter() {
-    if (game.selectedCharacterId && (await confirm("Delete this character? This cannot be undone."))) {
-      game.deleteCharacter(game.selectedCharacterId);
-    }
-  }
-
   async function handleLogout() {
     if (await confirm("Logout to the login screen?")) {
+      game.selectCharacter(undefined);
       session.logout();
       ui.setScreen("login");
     }
@@ -45,11 +40,8 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
         padding: 16,
       }}
     >
-      <BaseButton onClick={handleCreateCharacter} disabled={game.characters.size >= MAX_CHARACTERS}>
+      <BaseButton onClick={handleCreateCharacter} disabled={session.characters.length >= MAX_CHARACTERS}>
         Create
-      </BaseButton>
-      <BaseButton onClick={handleDeleteCharacter} disabled={!game.selectedCharacterId}>
-        Delete
       </BaseButton>
       <BaseButton onClick={handleLogout}>Re-Login</BaseButton>
       {modal}

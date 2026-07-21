@@ -9,7 +9,7 @@ import { RACES, getAvailableBaseClasses, type Race, type BaseClass, type Sex } f
 export function CreateCharScreen() {
   const [race, setRace] = useState<Race>(RACES[0]);
   const [baseClass, setBaseClass] = useState<BaseClass>(getAvailableBaseClasses(RACES[0])[0]);
-  const [sex, setSex] = useState<Sex>("male");
+  const [sex, setSex] = useState<Sex>("MALE");
 
   function handleRaceChange(nextRace: Race) {
     setRace(nextRace);

@@ -23,10 +23,6 @@ export function useGameStore() {
   return useContext(StoreContext).game;
 }
 
-export function useNetworkStore() {
-  return useContext(StoreContext).network;
-}
-
 export function useWindowManagerStore() {
   return useContext(StoreContext).windowManager;
 }

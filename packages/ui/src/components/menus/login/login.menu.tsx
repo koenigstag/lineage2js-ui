@@ -4,7 +4,7 @@ import { BaseInput } from "../../core/inputs/base.input";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { useAlert } from "../../core/alert-modal";
-import { useNetworkStore, useSessionStore } from "../../../stores/StoreContext";
+import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 
 export interface LoginMenuHandle {
@@ -18,7 +18,6 @@ export interface LoginMenuProps {
 export const LoginMenu = observer(
   forwardRef<LoginMenuHandle, LoginMenuProps>(function LoginMenu({ onLoginSuccess }, ref) {
     const session = useSessionStore();
-    const network = useNetworkStore();
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
     const { confirm, modal } = useConfirmation();
@@ -33,15 +32,11 @@ export const LoginMenu = observer(
         return;
       }
 
-      const ok = await network.login(account, password);
-      if (!ok) {
-        await alert(network.error ?? "Login failed.");
-        return;
+      if (await session.login(account, password)) {
+        onLoginSuccess();
+      } else {
+        await alert(session.error ?? "Login failed.");
       }
-
-      const token = crypto.randomUUID();
-      session.login(account, token);
-      onLoginSuccess();
     }
 
     async function handleExit() {
@@ -71,8 +66,8 @@ export const LoginMenu = observer(
         <BaseInput value={account} placeholder="ID" onChange={setAccount} />
         <BaseInput value={password} placeholder="PWD" onChange={setPassword} type="password" />
         <div style={{ display: "flex", gap: 8 }}>
-          <BaseButton onClick={handleLogin} disabled={network.isConnecting}>
-            {network.isConnecting ? "Connecting..." : "Login"}
+          <BaseButton onClick={handleLogin} disabled={session.isConnecting}>
+            {session.isConnecting ? "Connecting..." : "Login"}
           </BaseButton>
           <BaseButton onClick={handleExit}>Exit</BaseButton>
         </div>

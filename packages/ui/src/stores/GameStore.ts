@@ -1,16 +1,6 @@
 import { makeAutoObservable } from "mobx";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 
-export interface Character {
-  id: string;
-  nickname: string;
-  race: string;
-  baseClass: string;
-  sex: string;
-  face: string;
-  hair: string;
-}
-
 export interface Creature {
   id: string;
 }
@@ -80,24 +70,15 @@ function createDemoInventory(): InventoryItem[] {
   ];
 }
 
-const CHARACTERS_KEY = "characters";
-
-// Temporary local persistence until characters are served by the game server.
-function loadCharacters(): Map<string, Character> {
-  const raw = localStorage.getItem(CHARACTERS_KEY);
-  const characters: Character[] = raw ? JSON.parse(raw) : [];
-  return new Map(characters.map((character) => [character.id, character]));
-}
-
-function persistCharacters(characters: Map<string, Character>): void {
-  localStorage.setItem(CHARACTERS_KEY, JSON.stringify(Array.from(characters.values())));
-}
-
+// The character roster itself lives in SessionStore.characters (real L2User[]
+// from the server) -- this store only tracks which one is active, plus
+// in-game-only state that has nothing to do with the account's character list.
 export class GameStore {
-  characters = loadCharacters();
   creatures = new Map<string, Creature>();
-  me: string | undefined = undefined;
-  selectedCharacterId: string | undefined = undefined;
+  /** ObjectId of the character entered world with, once Start actually succeeds. */
+  me: number | undefined = undefined;
+  /** ObjectId of the character highlighted on the char-select screen. */
+  selectedCharacterId: number | undefined = undefined;
   hotbarSlots: (IconSlotType | undefined)[] = createDemoHotbar();
   inventoryItems: InventoryItem[] = createDemoInventory();
 
@@ -105,26 +86,11 @@ export class GameStore {
     makeAutoObservable(this);
   }
 
-  selectCharacter(id: string | undefined) {
+  selectCharacter(id: number | undefined) {
     this.selectedCharacterId = id;
   }
 
-  createCharacter(data: Omit<Character, "id">): string {
-    const id = crypto.randomUUID();
-    this.characters.set(id, { id, ...data });
-    persistCharacters(this.characters);
-    return id;
-  }
-
-  deleteCharacter(id: string) {
-    this.characters.delete(id);
-    if (this.selectedCharacterId === id) {
-      this.selectedCharacterId = undefined;
-    }
-    persistCharacters(this.characters);
-  }
-
-  enterWorld() {
-    this.me = this.selectedCharacterId;
+  setActiveCharacter(id: number | undefined) {
+    this.me = id;
   }
 }

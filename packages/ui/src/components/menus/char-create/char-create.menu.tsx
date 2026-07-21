@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { SelectInput, type SelectOption } from "../../core/inputs/select.input";
 import { BaseButton } from "../../core/buttons/base.button";
-import { useGameStore, useUiStore } from "../../../stores/StoreContext";
+import { useAlert } from "../../core/alert-modal";
+import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { buildNewCharacter } from "../../../config/network-mapping";
 import {
   RACES,
   RACE_LABELS,
@@ -17,22 +20,30 @@ import {
 const RACE_OPTIONS: SelectOption[] = RACES.map((race) => ({ value: race, label: RACE_LABELS[race] }));
 
 const SEX_OPTIONS: SelectOption[] = [
-  { value: "male", label: "Male" },
-  { value: "female", label: "Female" },
+  { value: "MALE", label: "Male" },
+  { value: "FEMALE", label: "Female" },
 ];
 
+// Values are 0-based to match Face/HairStyle/HairColor's own enum indices directly.
 const FACE_OPTIONS: SelectOption[] = [
-  { value: "1", label: "Face 1" },
-  { value: "2", label: "Face 2" },
-  { value: "3", label: "Face 3" },
+  { value: "0", label: "Face 1" },
+  { value: "1", label: "Face 2" },
+  { value: "2", label: "Face 3" },
 ];
 
 const HAIR_OPTIONS: SelectOption[] = [
-  { value: "1", label: "Hair 1" },
-  { value: "2", label: "Hair 2" },
-  { value: "3", label: "Hair 3" },
-  { value: "4", label: "Hair 4" },
-  { value: "5", label: "Hair 5" },
+  { value: "0", label: "Hair 1" },
+  { value: "1", label: "Hair 2" },
+  { value: "2", label: "Hair 3" },
+  { value: "3", label: "Hair 4" },
+  { value: "4", label: "Hair 5" },
+];
+
+const HAIR_COLOR_OPTIONS: SelectOption[] = [
+  { value: "0", label: "Color 1" },
+  { value: "1", label: "Color 2" },
+  { value: "2", label: "Color 3" },
+  { value: "3", label: "Color 4" },
 ];
 
 interface CharCreateMenuProps {
@@ -44,7 +55,7 @@ interface CharCreateMenuProps {
   onSexChange: (sex: Sex) => void;
 }
 
-export function CharCreateMenu({
+export const CharCreateMenu = observer(function CharCreateMenu({
   race,
   baseClass,
   sex,
@@ -52,26 +63,43 @@ export function CharCreateMenu({
   onBaseClassChange,
   onSexChange,
 }: CharCreateMenuProps) {
-  const game = useGameStore();
+  const session = useSessionStore();
   const ui = useUiStore();
+  const { alert, modal: alertModal } = useAlert();
 
   const [nickname, setNickname] = useState("");
   const [face, setFace] = useState(FACE_OPTIONS[0].value);
   const [hair, setHair] = useState(HAIR_OPTIONS[0].value);
+  const [hairColor, setHairColor] = useState(HAIR_COLOR_OPTIONS[0].value);
 
   const baseClassOptions: SelectOption[] = getAvailableBaseClasses(race).map((value) => ({
     value,
     label: getBaseClassLabel(race, value),
   }));
 
-  function handleCreateCharacter() {
+  async function handleCreateCharacter() {
     if (!nickname.trim()) {
       return;
     }
 
-    const id = game.createCharacter({ nickname, race, baseClass, sex, face, hair });
-    game.selectCharacter(id);
-    ui.setScreen("select-char");
+    const charData = buildNewCharacter({
+      nickname,
+      race,
+      baseClass,
+      sex,
+      face: Number(face),
+      hair: Number(hair),
+      hairColor: Number(hairColor),
+    });
+
+    // The new character is appended at the roster's current length -- see
+    // CommandCreateCharacter. A real client goes straight into the world
+    // after creation, so success here means "game", not back to char-select.
+    if (await session.createCharacter(charData, session.characters.length)) {
+      ui.setScreen("game");
+    } else {
+      await alert(session.error ?? "Could not create character.");
+    }
   }
 
   return (
@@ -101,11 +129,13 @@ export function CharCreateMenu({
       <SelectInput options={SEX_OPTIONS} value={sex} onChange={(value) => onSexChange(value as Sex)} />
       <SelectInput options={FACE_OPTIONS} value={face} onChange={setFace} />
       <SelectInput options={HAIR_OPTIONS} value={hair} onChange={setHair} />
+      <SelectInput options={HAIR_COLOR_OPTIONS} value={hairColor} onChange={setHairColor} />
       <div style={{ marginTop: 8 }}>
-        <BaseButton onClick={handleCreateCharacter} disabled={!nickname.trim()}>
-          Create character
+        <BaseButton onClick={handleCreateCharacter} disabled={!nickname.trim() || session.isConnecting}>
+          {session.isConnecting ? "Creating..." : "Create character"}
         </BaseButton>
       </div>
+      {alertModal}
     </div>
   );
-}
+});

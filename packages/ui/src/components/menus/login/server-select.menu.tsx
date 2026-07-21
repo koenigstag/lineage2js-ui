@@ -3,7 +3,7 @@ import { observer } from "mobx-react-lite";
 import { ServerStatus, type L2Server } from "@lineage2js/network";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useAlert } from "../../core/alert-modal";
-import { useNetworkStore } from "../../../stores/StoreContext";
+import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 
 // The login protocol has no server display name -- only an Id. Real L2
@@ -38,9 +38,9 @@ interface ServerSelectMenuProps {
 }
 
 export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }: ServerSelectMenuProps) {
-  const network = useNetworkStore();
+  const session = useSessionStore();
   const { alert, modal: alertModal } = useAlert();
-  const [selectedId, setSelectedId] = useState<number | undefined>(network.servers[0]?.Id);
+  const [selectedId, setSelectedId] = useState<number | undefined>(session.servers[0]?.Id);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -53,10 +53,10 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
       return;
     }
 
-    if (await network.selectServer(selectedId)) {
+    if (await session.selectServer(selectedId)) {
       onConfirm();
     } else {
-      await alert(network.error ?? "Could not connect to that server.");
+      await alert(session.error ?? "Could not connect to that server.");
     }
   }
 
@@ -82,7 +82,7 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
       <div style={{ color: "#e8dfc8", fontSize: 16, marginBottom: 8 }}>Select Server</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1, overflowY: "auto" }}>
-        {network.servers.map((server) => {
+        {session.servers.map((server) => {
           const isSelected = server.Id === selectedId;
 
           return (
@@ -120,8 +120,8 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
         })}
       </div>
 
-      <BaseButton onClick={handleConfirm} disabled={selectedId === undefined || network.isConnecting}>
-        {network.isConnecting ? "Connecting..." : "Confirm"}
+      <BaseButton onClick={handleConfirm} disabled={selectedId === undefined || session.isConnecting}>
+        {session.isConnecting ? "Connecting..." : "Confirm"}
       </BaseButton>
       {alertModal}
     </div>
