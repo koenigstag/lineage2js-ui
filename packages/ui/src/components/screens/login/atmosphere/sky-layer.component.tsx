@@ -31,8 +31,15 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+export interface SkyLayerProps {
+  /** Plane size in world units. Defaults to the orthographic viewport size (login screen usage). */
+  size?: [number, number];
+  /** Z position of the plane. Defaults to -3 (behind the login atmosphere's other layers). */
+  z?: number;
+}
+
 /** Opaque night-sky gradient -- the base of the atmosphere scene when no real background image/video is available. */
-export function SkyLayer() {
+export function SkyLayer({ size, z = -3 }: SkyLayerProps) {
   const materialRef = useRef<ShaderMaterial>(null);
   const meshRef = useRef<Mesh>(null);
   const { viewport } = useThree();
@@ -43,8 +50,10 @@ export function SkyLayer() {
     }
   });
 
+  const [sizeX, sizeY] = size ?? [viewport.width, viewport.height];
+
   return (
-    <mesh ref={meshRef} position={[0, 0, -3]} scale={[viewport.width, viewport.height, 1]}>
+    <mesh ref={meshRef} position={[0, 0, z]} scale={[sizeX, sizeY, 1]}>
       <planeGeometry args={[1, 1]} />
       <shaderMaterial
         ref={materialRef}

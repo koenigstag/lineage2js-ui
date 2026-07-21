@@ -33,9 +33,18 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function StarField() {
+export interface StarFieldProps {
+  /** Spread area in world units. Defaults to the orthographic viewport size (login screen usage). */
+  size?: [number, number];
+  /** Base Z position stars are scattered around (each star jitters slightly further back). Defaults to -1.5. */
+  z?: number;
+}
+
+export function StarField({ size, z = -1.5 }: StarFieldProps = {}) {
   const materialRef = useRef<ShaderMaterial>(null);
   const { viewport } = useThree();
+
+  const [sizeX, sizeY] = size ?? [viewport.width, viewport.height];
 
   const geometry = useMemo(() => {
     const positions = new Float32Array(STAR_COUNT * 3);
@@ -44,9 +53,9 @@ export function StarField() {
     const sizes = new Float32Array(STAR_COUNT);
 
     for (let i = 0; i < STAR_COUNT; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * viewport.width;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * viewport.height;
-      positions[i * 3 + 2] = -1.5 - Math.random();
+      positions[i * 3] = (Math.random() - 0.5) * sizeX;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * sizeY;
+      positions[i * 3 + 2] = z - Math.random();
       phases[i] = Math.random() * Math.PI * 2;
       speeds[i] = 0.5 + Math.random() * 1.5;
       sizes[i] = 1 + Math.random() * 2;
@@ -58,7 +67,7 @@ export function StarField() {
     geo.setAttribute("aSpeed", new BufferAttribute(speeds, 1));
     geo.setAttribute("aSize", new BufferAttribute(sizes, 1));
     return geo;
-  }, [viewport.width, viewport.height]);
+  }, [sizeX, sizeY, z]);
 
   useFrame((_, delta) => {
     if (materialRef.current) {
