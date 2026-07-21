@@ -69,6 +69,7 @@ export const LANG_EN_US: LangDictionary = {
     nicknamePlaceholder: "Nickname",
     creating: "Creating...",
     createButton: "Create character",
+    backButton: "Back",
     baseStatsTitle: "Base Stats",
     stat: {
       str: "STR",
@@ -162,5 +163,6 @@ export const LANG_EN_US: LangDictionary = {
     costLabel: "Cost: {cost}",
     levelLabel: "Level {level}",
     remainingLabel: "Remaining: {ms}ms",
+    equippedLabel: "Equipped",
   },
 };

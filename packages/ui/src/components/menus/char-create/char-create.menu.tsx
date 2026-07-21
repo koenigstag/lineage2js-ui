@@ -106,6 +106,10 @@ export const CharCreateMenu = observer(function CharCreateMenu({
     }
   }
 
+  function handleBack() {
+    ui.setScreen("select-char");
+  }
+
   return (
     <div
       style={{
@@ -134,9 +138,12 @@ export const CharCreateMenu = observer(function CharCreateMenu({
       <SelectInput options={faceOptions} value={face} onChange={setFace} />
       <SelectInput options={hairOptions} value={hair} onChange={setHair} />
       <SelectInput options={hairColorOptions} value={hairColor} onChange={setHairColor} />
-      <div style={{ marginTop: 8 }}>
+      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
         <BaseButton onClick={handleCreateCharacter} disabled={!nickname.trim() || session.isConnecting}>
           {session.isConnecting ? t("charCreate.creating") : t("charCreate.createButton")}
+        </BaseButton>
+        <BaseButton onClick={handleBack} disabled={session.isConnecting}>
+          {t("charCreate.backButton")}
         </BaseButton>
       </div>
       {alertModal}

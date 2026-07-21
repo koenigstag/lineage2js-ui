@@ -23,7 +23,15 @@ export function getTypeText(type: IconSlotType): string {
 }
 
 export type TooltipInfo =
-  | { kind: "item"; name: string; type: IconSlotType; id: string | number; count?: number; grade?: string }
+  | {
+      kind: "item";
+      name: string;
+      type: IconSlotType;
+      id: string | number;
+      count?: number;
+      grade?: string;
+      isEquipped?: boolean;
+    }
   | {
       kind: "skill";
       name: string;
@@ -78,6 +86,7 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
         <>
           <div>{info.name}{countSuffix}{gradeSuffix}</div>
           <div>{getTypeText(info.type)}</div>
+          {info.isEquipped && <div style={{ marginTop: 6 }}>{t("tooltip.equippedLabel")}</div>}
           <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>
         </>
       );

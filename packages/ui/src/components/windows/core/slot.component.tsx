@@ -110,7 +110,7 @@ export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE, pressed }
         <div style={getEmptySlotStyle(size)} />
       )}
       {slotKey && <div style={slotKeyStyle}>{slotKey}</div>}
-      {content?.count !== undefined && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
+      {content?.count !== undefined && content.count > 1 && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
       {tooltip && <Tooltip target={target} />}
     </div>
   );

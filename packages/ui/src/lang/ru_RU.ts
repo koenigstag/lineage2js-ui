@@ -69,6 +69,7 @@ export const LANG_RU_RU: LangDictionary = {
     nicknamePlaceholder: "Имя персонажа",
     creating: "Создание...",
     createButton: "Создать персонажа",
+    backButton: "Назад",
     baseStatsTitle: "Базовые характеристики",
     stat: {
       str: "СИЛ",
@@ -162,5 +163,6 @@ export const LANG_RU_RU: LangDictionary = {
     costLabel: "Цена: {cost}",
     levelLabel: "Уровень {level}",
     remainingLabel: "Осталось: {ms}мс",
+    equippedLabel: "Надето",
   },
 };

@@ -120,6 +120,7 @@ export const InventoryContent = observer(function InventoryContent() {
                           id: item.Id,
                           count: item.Count,
                           grade: getItemGradeLabel(item),
+                          isEquipped: item.IsEquipped,
                         },
                       }
                     : undefined
