@@ -16,6 +16,8 @@ interface ImportMetaEnv {
   readonly VITE_LOGIN_BACKGROUND_IMAGE_BASE_URL: string;
   /** e.g. "http://localhost:4000/legacy/videos/titlescreens/{id}.mp4" -- same "{id}" + "count" endpoint convention as the image variant. */
   readonly VITE_LOGIN_BACKGROUND_VIDEO_BASE_URL: string;
+  /** @lineage2js/network Logger verbosity bitmask (NONE=0, INFO=1, WARNING=2, ERROR=4, DEBUG=8). Defaults to INFO. */
+  readonly VITE_L2JSC_LOG_LEVEL: string;
 }
 
 interface ImportMeta {
