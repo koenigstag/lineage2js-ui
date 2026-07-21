@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Campfire } from "./campfire.component";
-import { CharacterMarker } from "./character-marker.component";
+import { CharacterMarker } from "../../../core/scene/character-marker.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
 
