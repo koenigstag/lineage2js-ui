@@ -3,12 +3,13 @@ import { CloudLayer } from "./cloud-layer.component";
 import { StarField } from "./star-field.component";
 import { SkyLayer } from "./sky-layer.component";
 
-export interface AtmosphereSceneProps {
-  /** Renders the opaque night-sky gradient. Disable when a real background image/video is already showing behind this scene, otherwise it would cover it. */
-  showSky?: boolean;
-}
-
-export function AtmosphereScene({ showSky = false }: AtmosphereSceneProps) {
+/**
+ * Fully self-contained fallback scene (sky gradient + stars + drifting fog),
+ * used only when no static background (local/server image or video)
+ * resolved. Never mixed with a real background -- static art and the r3f
+ * scene are two independent fallback tiers, not layers stacked together.
+ */
+export function AtmosphereScene() {
   return (
     <div
       style={{
@@ -23,7 +24,7 @@ export function AtmosphereScene({ showSky = false }: AtmosphereSceneProps) {
         camera={{ position: [0, 0, 5], zoom: 1, near: 0.1, far: 100 }}
         dpr={[1, 1.5]}
       >
-        {showSky && <SkyLayer />}
+        <SkyLayer />
         <StarField />
         <CloudLayer />
       </Canvas>

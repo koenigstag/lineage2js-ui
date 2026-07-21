@@ -83,7 +83,7 @@ export function LoginScreen() {
             <source src={background.url} />
           </video>
         )}
-        <AtmosphereScene showSky={background === null} />
+        {background === null && <AtmosphereScene />}
         <WindowsRoot ids={LOGIN_WINDOW_IDS} />
 
         <LoginMenu ref={loginMenuRef} />
