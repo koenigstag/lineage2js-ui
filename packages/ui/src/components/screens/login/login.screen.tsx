@@ -1,16 +1,53 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Screen } from "../../core/screen.component";
 import { LegalFooter } from "../../core/legal-footer.component";
 import { TitleMenu } from "../../menus/title/title.menu";
 import { LoginMenu, type LoginMenuHandle } from "../../menus/login/login.menu";
 import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
+import { ServerSelectMenu } from "../../menus/login/server-select.menu";
 import { WindowsRoot } from "../../windows/core/windows-root";
 import { LOGIN_WINDOW_IDS } from "../../../config/windows.registry";
-import { getRandomLoginBackground } from "../../../assets/login/backgrounds";
+import {
+  getRandomLoginBackgroundImageUrl,
+  getRandomLoginBackgroundVideoUrl,
+} from "../../../config/background-urls";
+import { AtmosphereScene } from "./atmosphere/atmosphere-scene.component";
+import { useUiStore } from "../../../stores/StoreContext";
+
+interface LoginBackground {
+  type: "image" | "video";
+  url: string;
+}
 
 export function LoginScreen() {
-  const background = useMemo(() => getRandomLoginBackground(), []);
+  // undefined = still resolving (don't show the sky gradient yet, to avoid a
+  // flash before a real background loads); null = resolved, nothing found.
+  const [background, setBackground] = useState<LoginBackground | null | undefined>(undefined);
+  const [showServerSelect, setShowServerSelect] = useState(false);
   const loginMenuRef = useRef<LoginMenuHandle>(null);
+  const ui = useUiStore();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const videoUrl = await getRandomLoginBackgroundVideoUrl();
+      if (cancelled) return;
+      if (videoUrl) {
+        setBackground({ type: "video", url: videoUrl });
+        return;
+      }
+
+      const imageUrl = await getRandomLoginBackgroundImageUrl();
+      if (!cancelled) {
+        setBackground(imageUrl ? { type: "image", url: imageUrl } : null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <Screen
@@ -18,18 +55,43 @@ export function LoginScreen() {
       style={{
         display: "flex",
         flexDirection: "column",
-        backgroundImage: background ? `url(${background})` : undefined,
+        backgroundImage: background?.type === "image" ? `url(${background.url})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
     >
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        {background?.type === "video" && (
+          <video
+            key={background.url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          >
+            <source src={background.url} />
+          </video>
+        )}
+        {background === null && <AtmosphereScene />}
         <WindowsRoot ids={LOGIN_WINDOW_IDS} />
 
-        <LoginMenu ref={loginMenuRef} />
-        <TitleMenu />
-        <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
+        {showServerSelect ? (
+          <ServerSelectMenu onConfirm={() => ui.setScreen("select-char")} />
+        ) : (
+          <>
+            <LoginMenu ref={loginMenuRef} onLoginSuccess={() => setShowServerSelect(true)} />
+            <AccountsMenu onSelectAccount={(login) => loginMenuRef.current?.fillAccount(login)} />
+            <TitleMenu />
+          </>
+        )}
       </div>
       <LegalFooter />
     </Screen>
