@@ -161,5 +161,6 @@ export const LANG_EN_US: LangDictionary = {
     idLabel: "ID {id}",
     costLabel: "Cost: {cost}",
     levelLabel: "Level {level}",
+    remainingLabel: "Remaining: {ms}ms",
   },
 };

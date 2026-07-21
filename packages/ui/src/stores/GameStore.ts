@@ -1,5 +1,5 @@
 import { makeAutoObservable } from "mobx";
-import { L2Item, L2Skill, ItemType2, ItemGrade } from "@lineage2js/network";
+import { L2Item, L2Skill, L2Buff, ItemType2, ItemGrade } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 
 export interface Creature {
@@ -114,6 +114,28 @@ function createDemoSkills(): L2Skill[] {
   ];
 }
 
+// Builds a real L2Buff, same shape AbnormalStatusUpdate's readImpl() would
+// produce (Id/SkillLevel/RemainingTime). No Name: a buff is just an active
+// skill instance, resolved through the same t("skill.name.<id>") table
+// (see skill-mapping.ts's getSkillName()).
+function demoBuff(id: number, level: number, remainingSeconds: number): L2Buff {
+  const buff = new L2Buff(id, level);
+  buff.RemainingTime = remainingSeconds;
+  return buff;
+}
+
+// Real buff skill ids (see the skill-name table this pairs with).
+function createDemoBuffs(): L2Buff[] {
+  return [
+    demoBuff(1204, 1, 1200), // Wind Walk
+    demoBuff(1086, 3, 1200), // Haste
+    demoBuff(1045, 1, 1200), // Bless the Body
+    demoBuff(1048, 1, 1200), // Bless the Soul
+    demoBuff(1040, 1, 1200), // Shield
+    demoBuff(871, 1, 1200), // Might
+  ];
+}
+
 // The character roster itself lives in SessionStore.characters (real L2User[]
 // from the server) -- this store only tracks which one is active, plus
 // in-game-only state that has nothing to do with the account's character list.
@@ -126,6 +148,7 @@ export class GameStore {
   hotbarSlots: (IconSlotType | undefined)[] = createDemoHotbar();
   inventoryItems: L2Item[] = createDemoInventory();
   skills: L2Skill[] = createDemoSkills();
+  buffs: L2Buff[] = createDemoBuffs();
 
   constructor() {
     makeAutoObservable(this);

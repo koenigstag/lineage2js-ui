@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { observer } from "mobx-react-lite";
 import type { IconSlotType } from "./icon-frame.component";
@@ -24,7 +24,15 @@ export function getTypeText(type: IconSlotType): string {
 
 export type TooltipInfo =
   | { kind: "item"; name: string; type: IconSlotType; id: string | number; count?: number; grade?: string }
-  | { kind: "skill"; name: string; stats: string; cost: number; id: string | number }
+  | {
+      kind: "skill";
+      name: string;
+      stats: string;
+      cost?: number;
+      /** Countdown target (Date.now() + remaining ms), captured once at hover-start -- see the "skill" case below. */
+      expiresAt?: number;
+      id: string | number;
+    }
   | { kind: "simple"; name: string };
 
 export interface TooltipTarget {
@@ -50,6 +58,18 @@ const tooltipStyle: CSSProperties = {
 };
 
 const TooltipContent = observer(function TooltipContent({ info }: { info: TooltipInfo }) {
+  const hasCountdown = info.kind === "skill" && info.expiresAt !== undefined;
+  const [now, setNow] = useState(() => Date.now());
+
+  // Ticks the countdown live while the tooltip is shown -- expiresAt itself
+  // is a fixed timestamp captured once at hover-start (see effects.window.tsx
+  // /skills.window.tsx), so this is the only thing making it count down.
+  useEffect(() => {
+    if (!hasCountdown) return;
+    const interval = setInterval(() => setNow(Date.now()), 50);
+    return () => clearInterval(interval);
+  }, [hasCountdown]);
+
   switch (info.kind) {
     case "item": {
       const countSuffix = info.count && info.count > 1 ? ` (${info.count})` : "";
@@ -62,15 +82,22 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
         </>
       );
     }
-    case "skill":
+    case "skill": {
+      const remainingMs = info.expiresAt !== undefined ? Math.max(0, info.expiresAt - now) : undefined;
       return (
         <>
           <div>{info.name}</div>
           <div style={{ marginTop: 6 }}>{info.stats}</div>
-          <div style={{ marginTop: 6 }}>{t("tooltip.costLabel", { cost: info.cost })}</div>
+          {info.cost !== undefined && (
+            <div style={{ marginTop: 6 }}>{t("tooltip.costLabel", { cost: info.cost })}</div>
+          )}
+          {remainingMs !== undefined && (
+            <div style={{ marginTop: 6 }}>{t("tooltip.remainingLabel", { ms: remainingMs })}</div>
+          )}
           <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>
         </>
       );
+    }
     case "simple":
       return <div>{info.name}</div>;
   }

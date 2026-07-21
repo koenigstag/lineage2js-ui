@@ -161,5 +161,6 @@ export const LANG_RU_RU: LangDictionary = {
     idLabel: "ID {id}",
     costLabel: "Цена: {cost}",
     levelLabel: "Уровень {level}",
+    remainingLabel: "Осталось: {ms}мс",
   },
 };

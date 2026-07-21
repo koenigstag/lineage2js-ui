@@ -94,6 +94,7 @@ export const SkillsContent = observer(function SkillsContent() {
                     name: getSkillName(skill),
                     stats: t("tooltip.levelLabel", { level: skill.Level }),
                     cost: skill.Mp,
+                    expiresAt: skill.IsReady ? undefined : Date.now() + skill.Remaining,
                     id: skill.Id,
                   },
                 }}
