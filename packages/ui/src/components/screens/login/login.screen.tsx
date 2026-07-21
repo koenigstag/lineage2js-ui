@@ -6,7 +6,6 @@ import { LoginMenu, type LoginMenuHandle } from "../../menus/login/login.menu";
 import { AccountsMenu } from "../../menus/known-accounts/accounts.menu";
 import { WindowsRoot } from "../../windows/core/windows-root";
 import { LOGIN_WINDOW_IDS } from "../../../config/windows.registry";
-import { getRandomLoginBackground } from "../../../assets/login/backgrounds";
 import {
   getRandomLoginBackgroundImageUrl,
   getRandomLoginBackgroundVideoUrl,
@@ -25,12 +24,6 @@ export function LoginScreen() {
   const loginMenuRef = useRef<LoginMenuHandle>(null);
 
   useEffect(() => {
-    const localImage = getRandomLoginBackground();
-    if (localImage) {
-      setBackground({ type: "image", url: localImage });
-      return;
-    }
-
     let cancelled = false;
 
     (async () => {
