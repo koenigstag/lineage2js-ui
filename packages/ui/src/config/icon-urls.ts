@@ -22,9 +22,12 @@ export function getItemIconUrl(itemId: string | number | undefined): string | un
   return buildIconUrl(ITEM_ICON_BASE_URL, itemId);
 }
 
-/** Icon URL by action id -- covers action, pet-action, pair-action and party action. */
+/** Icon URL by action id -- covers action, pet-action, pair-action and party action. Action icon filenames are zero-padded to 3 digits (e.g. "005.png"), unlike skill/item/class ids. */
 export function getActionIconUrl(actionId: string | number | undefined): string | undefined {
-  return buildIconUrl(ACTION_ICON_BASE_URL, actionId);
+  if (actionId === undefined) {
+    return undefined;
+  }
+  return buildIconUrl(ACTION_ICON_BASE_URL, String(actionId).padStart(3, "0"));
 }
 
 /** Icon URL by char.baseClassId / char.classId. */
