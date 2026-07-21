@@ -14,6 +14,8 @@ export default class CommandRequestCharacterTemplates extends AbstractGameComman
         resolve((e.data.packet as RequestNewCharacterSuccess).Templates);
       });
 
+      this.GameClient.once("Disconnected", () => reject(new Error("Connection closed by server")));
+
       this.GameClient.sendPacket(new RequestNewCharacter()).catch((e) => reject(e));
     });
   }

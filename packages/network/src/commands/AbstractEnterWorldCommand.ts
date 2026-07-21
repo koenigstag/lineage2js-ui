@@ -23,6 +23,10 @@ export type EnterWorldResult = {
 // (CharSelected -> ManorList/KeyMapping/EnterWorld -> WELCOME_TO_LINEAGE).
 export default abstract class AbstractEnterWorldCommand extends AbstractGameCommand {
   protected awaitEnterWorld(resolve: (result: EnterWorldResult) => void, reject: (reason: unknown) => void): void {
+    // Without this, a server that just closes the socket instead of sending
+    // an explicit failure packet would leave this promise hanging forever.
+    this.GameClient.once("Disconnected", () => reject(new Error("Connection closed by server")));
+
     this.GameClient.once("PacketReceived:CharSelected", () => {
       this.GameClient.sendPacket(new RequestManorList())
         .then(() => this.GameClient.sendPacket(new RequestKeyMapping()))

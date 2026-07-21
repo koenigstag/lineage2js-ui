@@ -29,6 +29,11 @@ export default class CommandLogin extends AbstractGameCommand {
             reject((e.data.packet as LoginFail).FailReason);
           });
 
+          // Some servers just close the socket instead of sending LoginFail
+          // (e.g. "account in use") -- without this the promise would hang
+          // forever instead of surfacing a failure.
+          this.LoginClient.once("Disconnected", () => reject(new Error("Connection closed by server")));
+
           this.LoginClient.once("PacketReceived:Init", () =>
             this.LoginClient.sendPacket(new AuthGameGuard(this.LoginClient.Session.sessionId))
           );

@@ -28,6 +28,12 @@ export default class CommandSelectServer extends AbstractGameCommand {
         reject((e.data.packet as PlayFail).FailReason);
       });
 
+      // Some servers just close the socket instead of sending PlayFail (e.g.
+      // "already in game") -- without this the promise would hang forever.
+      // Harmless once PlayOk's own success path closes this connection on
+      // purpose: by then this handler has already been cleared via offAll().
+      this.LoginClient.once("Disconnected", () => reject(new Error("Connection closed by server")));
+
       this.LoginClient.once("PacketReceived:PlayOk", () => {
         setTimeout(() => {
           this.LoginClient.Connection.close();
