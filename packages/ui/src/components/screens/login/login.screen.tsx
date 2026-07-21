@@ -19,7 +19,9 @@ interface LoginBackground {
 }
 
 export function LoginScreen() {
-  const [background, setBackground] = useState<LoginBackground | undefined>();
+  // undefined = still resolving (don't show the sky gradient yet, to avoid a
+  // flash before a real background loads); null = resolved, nothing found.
+  const [background, setBackground] = useState<LoginBackground | null | undefined>(undefined);
   const loginMenuRef = useRef<LoginMenuHandle>(null);
 
   useEffect(() => {
@@ -40,8 +42,8 @@ export function LoginScreen() {
       }
 
       const imageUrl = await getRandomLoginBackgroundImageUrl();
-      if (!cancelled && imageUrl) {
-        setBackground({ type: "image", url: imageUrl });
+      if (!cancelled) {
+        setBackground(imageUrl ? { type: "image", url: imageUrl } : null);
       }
     })();
 
@@ -81,7 +83,7 @@ export function LoginScreen() {
             <source src={background.url} />
           </video>
         )}
-        <AtmosphereScene />
+        <AtmosphereScene showSky={background === null} />
         <WindowsRoot ids={LOGIN_WINDOW_IDS} />
 
         <LoginMenu ref={loginMenuRef} />
