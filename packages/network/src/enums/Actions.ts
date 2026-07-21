@@ -3,9 +3,27 @@ export enum Actions {
 
   WALK_RUN = 1, // Walk/Run
 
+  ATTACK = 2, // Attack
+
+  EXCHANGE = 3, // Exchange (Trade)
+
+  NEXT_TARGET = 4, // Next Target
+
+  PICK_UP = 5, // Pick Up
+
+  ASSIST = 6, // Assist
+
+  INVITE = 7, // Invite (party)
+
+  LEAVE_PARTY = 8, // Leave Party
+
+  DISMISS_PARTY_MEMBER = 9, // Dismiss Party Member
+
   PRIVATE_STORE_SELL = 10, // Private Store - Sell
   PRIVATE_STORE_BUY = 28, // Private Store - Buy
   PRIVATE_STORE_PACKAGE_SELL = 61, // Private Store Package Sell
+
+  PARTY_MATCHING = 11, // Party Matching
 
   PET_CHANGE_MOVEMENT_MODE = 15, // Change Movement Mode (Pets)
 
@@ -21,7 +39,12 @@ export enum Actions {
 
   SERVITOR_SOP = 23, // Stop (Servitors)
 
-  WILD_HOG_CANNON = 32, // Wild Hog Cannon - Wild Cannon
+  // Was mislabeled WILD_HOG_CANNON here -- per the HighFive action-name
+  // table (id 32 is "Switch Mode"), the real Wild Hog Cannon action is 41
+  // (see WILD_HOG_ATTACK below).
+  SWITCH_MODE = 32, // Switch Mode
+
+  CHANGE_PARTY_LEADER = 50, // Change Party Leader
 
   SOULLESS_TOXIC_SMOKE = 36, // Soulless - Toxic Smoke
 
