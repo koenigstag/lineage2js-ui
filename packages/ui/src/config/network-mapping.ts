@@ -15,6 +15,7 @@ import {
   type Race,
   type Sex,
 } from "./character-races";
+import classTreeData from "../assets/class_tree.json";
 
 // L2User.Race/Sex come back from the server as the *enum key name* (e.g.
 // "HUMAN", "MALE"), not the numeric value -- the vendored packet parser
@@ -30,52 +31,41 @@ export function toLocalSex(user: L2User): Sex {
   return user.Sex as unknown as Sex;
 }
 
-// Every class that starts down the race's "mystic" tree, across all
-// advancement tiers (High Five chronicle). Everything else -- including all
-// Dwarf/Kamael classes, which never appear here -- defaults to "fighter".
-// Typed against ClassId's own keys so a typo would be a compile error.
-const MYSTIC_CLASS_NAMES = new Set<keyof typeof ClassId>([
-  "Mage",
-  "Wizard",
-  "Sorceror",
-  "Necromancer",
-  "Warlock",
-  "Cleric",
-  "Bishop",
-  "Prophet",
-  "ElvenMage",
-  "ElvenWizard",
-  "Spellsinger",
-  "ElementalSummoner",
-  "Oracle",
-  "Elder",
-  "DarkMage",
-  "DarkWizard",
-  "Spellhowler",
-  "PhantomSummoner",
-  "ShillienOracle",
-  "ShillenElder",
-  "OrcMage",
-  "OrcShaman",
-  "Overlord",
-  "Warcryer",
-  "Archmage",
-  "Soultaker",
-  "ArcanaLord",
-  "Cardinal",
-  "Hierophant",
-  "MysticMuse",
-  "ElementalMaster",
-  "EvaSaint",
-  "StormScreamer",
-  "SpectralMaster",
-  "ShillienSaint",
-  "Dominator",
-  "Doomcryer",
-]);
+interface ClassTreeNode {
+  classId: number;
+  name: string;
+  subclasses: ClassTreeNode[];
+}
+
+// classId of every class down each race's "mystic" tree, across all
+// advancement tiers -- derived by walking assets/class_tree.json (a
+// community-maintained class tree) rather than hand-listing class names, so
+// it stays correct if that file is ever updated. A tree root is a mystic
+// root iff its name contains "mystic" (human_mystic/elven_mystic/
+// dark_mystic/orc_mystic); every other root (including Dwarf/Kamael, which
+// have no mystic tree, and the newer-chronicle branches like Ertheia/4th
+// classes that this project's ClassId enum doesn't define) classifies as
+// "fighter" by default, matching the old behavior.
+function collectMysticClassIds(): Set<number> {
+  const mysticIds = new Set<number>();
+
+  function walk(node: ClassTreeNode, isMystic: boolean): void {
+    if (isMystic) mysticIds.add(node.classId);
+    node.subclasses.forEach((child) => walk(child, isMystic));
+  }
+
+  Object.values(classTreeData as Record<string, ClassTreeNode[]>).forEach((roots) => {
+    roots.forEach((root) => walk(root, root.name.includes("mystic")));
+  });
+
+  return mysticIds;
+}
+
+const MYSTIC_CLASS_IDS = collectMysticClassIds();
 
 function classifyBaseClass(classIdName: string): BaseClass {
-  return MYSTIC_CLASS_NAMES.has(classIdName as keyof typeof ClassId) ? "mystic" : "fighter";
+  const classId = ClassId[classIdName as keyof typeof ClassId];
+  return MYSTIC_CLASS_IDS.has(classId) ? "mystic" : "fighter";
 }
 
 export function toLocalBaseClass(user: L2User): BaseClass {
