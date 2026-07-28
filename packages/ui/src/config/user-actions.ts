@@ -12,15 +12,29 @@ export function getActionName(action: Action): string {
   return t(`action.name.${action.code}`);
 }
 
-// Only Actions enum members that are actually reachable via client.action()
-// (RequestActionUse) belong here. Attack/next-target/trade/pick-up-item (Basic
-// tab) and invite/leave/kick/transfer-leadership (Party tab) all use their own
-// dedicated packets instead (CommandAttack, CommandNextTarget,
-// CommandRequestJoinParty, ...) -- see the Actions window scoping discussion.
+// Not every entry here is actually dispatched via client.action()
+// (RequestActionUse) once clicks are wired up -- Attack/Next Target/Trade/
+// Pick Up/Assist/private-store all have their own dedicated packets/commands
+// in this codebase (CommandAttack, CommandNextTarget, ...) rather than
+// RequestActionUse(Actions.code), same as real L2. They're still listed by
+// Actions-enum code here purely for icon/name lookup (getActionIconUrl/
+// getActionName) -- no slot in this window has click dispatch wired yet
+// (see slot.component.tsx), so this is icon/tooltip-only for now regardless.
 // Party has no Actions-enum member at all yet, so it stays empty until those
 // commands get their own place in the window.
 export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
-  basic: [{ code: Actions.SIT_STAND }, { code: Actions.WALK_RUN }],
+  basic: [
+    { code: Actions.SIT_STAND },
+    { code: Actions.WALK_RUN },
+    { code: Actions.ATTACK },
+    { code: Actions.EXCHANGE },
+    { code: Actions.NEXT_TARGET },
+    { code: Actions.PICK_UP },
+    { code: Actions.ASSIST },
+    { code: Actions.PRIVATE_STORE_SELL },
+    { code: Actions.PRIVATE_STORE_BUY },
+    { code: Actions.PRIVATE_STORE_PACKAGE_SELL },
+  ],
   party: [],
   // Not a real client tab -- placeholder for target-related actions
   // (attack/next target/assist/pick up/exchange), still undecided which of
