@@ -31,23 +31,38 @@ function StaffPath() {
   );
 }
 
-function BowPath() {
+// Shepherd's crook -- summoner mages (isSummoner) get this instead of the
+// plain orb-topped staff, to set them apart from regular mages in the party window.
+function ShepherdStaffPath() {
   return (
     <>
-      <path d="M6 2 C 1 6, 1 14, 6 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <line x1="6" y1="2" x2="6" y2="18" stroke="currentColor" strokeWidth="0.8" />
-      <line x1="4" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M17 10 L14 8.5 M17 10 L14 11.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="8" y1="6" x2="8" y2="18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M8 6 C 8 1, 3 1, 3 5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </>
   );
 }
 
-/** Placeholder role icon for the party window -- warrior=sword, mage=staff, archer=bow (see class-tree.ts's getClassRole()). */
+function BowPath() {
+  return (
+    <>
+      {/* Bow limb + string */}
+      <path d="M5 2 C 0 6, 0 14, 5 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <line x1="5" y1="2" x2="5" y2="18" stroke="currentColor" strokeWidth="0.8" />
+      {/* Arrow shaft, nocked at the string and flying right, away from the bow */}
+      <line x1="5" y1="10" x2="15" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      {/* Solid arrowhead, tip pointing right */}
+      <polygon points="18,10 12,7 12,13" fill="currentColor" />
+    </>
+  );
+}
+
+/** Placeholder role icon for the party window -- warrior=sword, mage=staff, summoner=shepherd's crook, archer=bow (see class-tree.ts's getClassRole()). */
 export function ClassRoleIcon({ role, size = 16, color = "#e6d9be" }: ClassRoleIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" style={{ color, flexShrink: 0 }}>
       {role === "warrior" && <SwordPath />}
       {role === "mage" && <StaffPath />}
+      {role === "summoner" && <ShepherdStaffPath />}
       {role === "archer" && <BowPath />}
     </svg>
   );

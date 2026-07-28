@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import type { L2PartyMember } from "@lineage2js/network";
 import { StatBar } from "../../core/stat-bar.component";
 import { ClassRoleIcon, CrownIcon } from "../../core/class-role-icon.component";
 import { useGameStore } from "../../../stores/StoreContext";
@@ -8,13 +9,30 @@ import { CP_COLOR, HP_COLOR, MP_COLOR } from "../../../config/stat-colors";
 const BAR_WIDTH = 170;
 const BAR_HEIGHT = 5;
 
-export const PartyCharInfoContent = observer(function PartyCharInfoContent() {
+export interface PartyCharInfoContentProps {
+  /** Not wired to anything yet -- e.g. future "set as target"/context menu. */
+  onMemberClick?: (member: L2PartyMember) => void;
+}
+
+export const PartyCharInfoContent = observer(function PartyCharInfoContent({
+  onMemberClick,
+}: PartyCharInfoContentProps) {
   const game = useGameStore();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {game.party.map((member) => (
-        <div key={member.ObjectId} style={{ display: "flex", flexDirection: "column", gap: 2, width: BAR_WIDTH }}>
+        <div
+          key={member.ObjectId}
+          onClick={() => onMemberClick?.(member)}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            width: BAR_WIDTH,
+            cursor: onMemberClick ? "pointer" : undefined,
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <ClassRoleIcon role={getClassRole(member.ClassId)} />
             <span style={{ color: "#e6d9be", fontSize: 12 }}>{member.Name}</span>

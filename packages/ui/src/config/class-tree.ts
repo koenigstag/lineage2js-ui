@@ -152,11 +152,15 @@ export function isArcherClass(classId: ClassId): boolean {
   return ARCHER_CLASS_IDS.has(classId);
 }
 
-export type ClassRole = "warrior" | "mage" | "archer";
+export type ClassRole = "warrior" | "mage" | "summoner" | "archer";
 
-/** Party window icon category: mage (isMage) > archer (bow/crossbow) > warrior (everything else physical). */
+/** Party window icon category: summoner (isSummoner, a mage subtype) > mage > archer (bow/crossbow) > warrior (everything else physical). */
 export function getClassRole(classId: ClassId): ClassRole {
-  if (CLASS_TREE[classId]?.isMage) {
+  const entry = CLASS_TREE[classId];
+  if (entry?.isSummoner) {
+    return "summoner";
+  }
+  if (entry?.isMage) {
     return "mage";
   }
   if (isArcherClass(classId)) {

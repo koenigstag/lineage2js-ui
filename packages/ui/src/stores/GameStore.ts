@@ -203,8 +203,8 @@ interface DemoPartyMemberInit {
 }
 
 // Builds a real L2PartyMember, same shape PartySmallWindowAll/Add/Update would
-// produce. One of each class-role icon (warrior/mage/archer) for the party
-// window (see class-tree.ts's getClassRole()).
+// produce. One of each class-role icon (warrior/mage/summoner/archer) for the
+// party window (see class-tree.ts's getClassRole()).
 function demoPartyMember({
   objectId,
   name,
@@ -271,6 +271,18 @@ function createDemoParty(): L2PartyMember[] {
       maxHp: 2400,
       mp: 1200,
       maxMp: 1600,
+    }),
+    demoPartyMember({
+      objectId: 90004,
+      name: "DemoWarlock",
+      level: 38,
+      classId: ClassId.Warlock,
+      cp: 0,
+      maxCp: 650,
+      hp: 1300,
+      maxHp: 1800,
+      mp: 2000,
+      maxMp: 2500,
     }),
   ];
 }
