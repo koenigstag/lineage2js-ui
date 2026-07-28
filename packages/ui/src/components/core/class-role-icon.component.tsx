@@ -69,32 +69,30 @@ function ShieldPath() {
   );
 }
 
+// Same diagonal as the sword, mirrored so the tip points down instead of up
+// -- an axis-aligned blade+crossguard reads as a plain cross at 16px.
 function DaggerPath() {
   return (
     <>
-      {/* Short single-edged blade, same diagonal as the sword but shorter */}
-      <line x1="14" y1="4" x2="7" y2="11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      {/* Blade */}
+      <line x1="14" y1="16" x2="7" y2="9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       {/* Crossguard */}
-      <line x1="5.5" y1="9.5" x2="8.5" y2="12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="5.5" y1="10.5" x2="8.5" y2="7.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
       {/* Handle */}
-      <line x1="6" y1="11.5" x2="4" y2="13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="6" y1="8.5" x2="4" y2="6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </>
   );
 }
 
-function BellPath() {
+// 8-point sparkle for dancer/buffer classes -- 4 long cardinal points, 4
+// shorter diagonal points, all meeting at center (10,10).
+function SparklePath() {
   return (
     <>
-      <path
-        d="M10 3 V4.5 M6 15 C 6 9, 6 6, 10 6 C 14 6, 14 9, 14 15 Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      <line x1="4.5" y1="15" x2="15.5" y2="15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <circle cx="10" cy="17.3" r="1.2" fill="currentColor" />
+      <polygon points="10,1 11.3,10 10,19 8.7,10" fill="currentColor" />
+      <polygon points="1,10 10,8.7 19,10 10,11.3" fill="currentColor" />
+      <polygon points="14.2,5.8 10.7,10.7 5.8,14.2 9.3,9.3" fill="currentColor" />
+      <polygon points="5.8,5.8 9.3,10.7 14.2,14.2 10.7,9.3" fill="currentColor" />
     </>
   );
 }
@@ -110,7 +108,7 @@ function CrossPath() {
 
 /**
  * Placeholder role icon for the party window (see class-tree.ts's
- * getClassRole()): tank=shield, healer=cross, buffer=bell, rogue=dagger,
+ * getClassRole()): tank=shield, healer=cross, buffer=sparkle, rogue=dagger,
  * archer=bow, summoner=shepherd's crook, mage=staff, warrior=sword.
  */
 export function ClassRoleIcon({ role, size = 16, color = "#e6d9be" }: ClassRoleIconProps) {
@@ -123,7 +121,7 @@ export function ClassRoleIcon({ role, size = 16, color = "#e6d9be" }: ClassRoleI
       {role === "tank" && <ShieldPath />}
       {role === "healer" && <CrossPath />}
       {role === "rogue" && <DaggerPath />}
-      {role === "buffer" && <BellPath />}
+      {role === "buffer" && <SparklePath />}
     </svg>
   );
 }
