@@ -1,12 +1,16 @@
 import GameClientPacket from "./GameClientPacket";
 
 export default class PledgeInfo extends GameClientPacket {
+  ClanId!: number;
+  ClanName!: string;
+  AllyName!: string;
+
   // @Override
   readImpl(): boolean {
     const _id = this.readC();
-    const _clanId = this.readD();
-    const _clanName = this.readS();
-    const _allyName = this.readS();
+    this.ClanId = this.readD();
+    this.ClanName = this.readS();
+    this.AllyName = this.readS();
 
     return true;
   }

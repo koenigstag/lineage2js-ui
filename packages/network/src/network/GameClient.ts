@@ -15,6 +15,7 @@ import GameCrypt from "./GameCrypt";
 import GamePacketHandler from "./GamePacketHandler";
 import GameServerPacket from "./outgoing/game/GameServerPacket";
 import L2Recipe from "../entities/L2Recipe";
+import PledgeInfo from "./incoming/game/PledgeInfo";
 import IConnection from "../mmocore/IConnection";
 import mutators from "./mutators/game/index";
 import SocketFactory from "../socket/SocketFactory";
@@ -32,6 +33,8 @@ export default class GameClient extends MMOClient {
   Shortcuts: L2ClientObjectCollection<L2Shortcut> = new L2ClientObjectCollection(this);
   DwarfRecipeBook: L2ClientObjectCollection<L2Recipe> = new L2ClientObjectCollection(this);
   CommonRecipeBook: L2ClientObjectCollection<L2Recipe> = new L2ClientObjectCollection(this);
+  /** clanId -> last PledgeInfo received for it. No outgoing request is wired to populate this on demand yet. */
+  PledgeInfoByClanId: Map<number, PledgeInfo> = new Map();
 
   LastConfirmMessageId!: number;
   LastConfirmMessageRequesterId!: number;

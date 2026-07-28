@@ -9,6 +9,7 @@ import L2Shortcut from "./entities/L2Shortcut";
 import L2Skill from "./entities/L2Skill";
 import L2User from "./entities/L2User";
 import L2Recipe from "./entities/L2Recipe";
+import PledgeInfo from "./network/incoming/game/PledgeInfo";
 import { EventHandlerType } from "./events/EventTypes";
 import ClientCommands from "./commands/ClientCommands";
 
@@ -48,6 +49,9 @@ export default class Client extends ClientCommands {
   }
   get CommonRecipeBook(): L2ObjectCollection<L2Recipe> {
     return this.GameClient.CommonRecipeBook;
+  }
+  get PledgeInfoByClanId(): Map<number, PledgeInfo> {
+    return this.GameClient.PledgeInfoByClanId;
   }
 
   private ___event_params(...params: EventHandlerType): {

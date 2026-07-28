@@ -5,7 +5,10 @@ import {
   L2Buff,
   L2Shortcut,
   L2PartyMember,
+  L2Character,
   L2Creature,
+  L2Mob,
+  L2Summon,
   ItemType2,
   ItemGrade,
   ShortcutType,
@@ -234,23 +237,64 @@ function demoPartyMember({
   return member;
 }
 
+export type CreatureKind = "mob" | "npc" | "summon";
+
 export interface TargetSnapshot {
   objectId: number;
   name: string;
   hp: number;
   maxHp: number;
   buffs: L2Buff[];
+  // Player-specific (only set for L2Character targets -- party members, other
+  // PCs). Clan/ally are only filled once a name is actually known (see
+  // pledgeCache below); a nonzero ClanId with no cached name still hides the
+  // row, since there's nothing real to show yet.
+  title?: string;
+  clanName?: string;
+  allyName?: string;
+  // Non-player creature kind (L2Mob/L2Npc/L2Summon), for a type icon --
+  // only set when the target is NOT a player.
+  creatureKind?: CreatureKind;
+}
+
+export interface PledgeSnapshot {
+  ClanName: string;
+  AllyName: string;
+}
+
+// Real clan/ally names never travel with CharInfo/PartySmallWindow (only
+// numeric ClanId does) -- they only arrive via a PledgeInfo packet, keyed by
+// clanId (see Client.PledgeInfoByClanId). There's no outgoing request wired
+// yet to fetch one on demand, so this cache only fills from whatever
+// PledgeInfo happens to arrive.
+function createDemoPledgeCache(): Map<number, PledgeSnapshot> {
+  return new Map([[1001, { ClanName: "Aden Vanguards", AllyName: "Kingdom Alliance" }]]);
 }
 
 // Target-select window's data source -- the currently targeted creature,
 // wherever it came from (party member click, or a real MyTargetSelected).
-function targetSnapshotFromCreature(creature: L2Creature): TargetSnapshot {
-  return {
+function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<number, PledgeSnapshot>): TargetSnapshot {
+  const base = {
     objectId: creature.ObjectId,
     name: creature.Name,
     hp: creature.Hp,
     maxHp: creature.MaxHp,
     buffs: Array.from(creature.Buffs),
+  };
+
+  if (creature instanceof L2Character) {
+    const pledge = creature.ClanId ? pledgeCache.get(creature.ClanId) : undefined;
+    return {
+      ...base,
+      title: creature.Title || undefined,
+      clanName: pledge?.ClanName,
+      allyName: pledge?.AllyName,
+    };
+  }
+
+  return {
+    ...base,
+    creatureKind: creature instanceof L2Mob ? "mob" : creature instanceof L2Summon ? "summon" : "npc",
   };
 }
 
@@ -270,6 +314,8 @@ function createDemoParty(): L2PartyMember[] {
   });
   hero.Buffs.add(demoBuff(1086, 3, 1200)); // Haste
   hero.Buffs.add(demoBuff(1040, 1, 1200)); // Shield
+  hero.Title = "Vanguard of Aden";
+  hero.ClanId = 1001; // matches createDemoPledgeCache()'s seeded entry
 
   const sorc = demoPartyMember({
     objectId: 90002,
@@ -386,6 +432,8 @@ export class GameStore {
   party: L2PartyMember[] = createDemoParty();
   /** Currently selected attack/spell/buff target, if any -- see target-select window. */
   target: TargetSnapshot | undefined = undefined;
+  /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
+  pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** Set once by bindToClient -- used by selectTarget/clearTarget to dispatch outgoing packets. */
   client: Client | undefined;
 
@@ -411,7 +459,7 @@ export class GameStore {
     if (this.client?.GameClient.IsConnected) {
       this.client.hit(member);
     }
-    this.target = targetSnapshotFromCreature(member);
+    this.target = targetSnapshotFromCreature(member, this.pledgeCache);
   }
 
   clearTarget() {
@@ -496,7 +544,7 @@ export class GameStore {
 
     const syncTarget = () => runInAction(() => {
       const targetObj = client.Me.Target;
-      this.target = targetObj instanceof L2Creature ? targetSnapshotFromCreature(targetObj) : undefined;
+      this.target = targetObj instanceof L2Creature ? targetSnapshotFromCreature(targetObj, this.pledgeCache) : undefined;
     });
     const clearTarget = () => runInAction(() => {
       this.target = undefined;
@@ -509,5 +557,15 @@ export class GameStore {
     // StatusUpdateMutator mutates in place, so re-snapshotting is cheap and
     // correct even when the update was for a different creature.
     client.on("PacketReceived", "StatusUpdate", syncTarget);
+    // No outgoing request is wired to populate client.PledgeInfoByClanId on
+    // demand yet -- this only ever fires from whatever PledgeInfo the server
+    // happens to send unprompted, but if it names the current target's clan,
+    // re-snapshot so the clan/ally rows pick it up without a re-select.
+    client.on("PacketReceived", "PledgeInfo", () => runInAction(() => {
+      this.pledgeCache = new Map(
+        Array.from(client.PledgeInfoByClanId, ([clanId, info]) => [clanId, { ClanName: info.ClanName, AllyName: info.AllyName }])
+      );
+      syncTarget();
+    }));
   }
 }

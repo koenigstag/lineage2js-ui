@@ -90,9 +90,9 @@ export default class CharInfo extends GameClientPacket {
 
     this.Char.Title = this.readS();
 
-    const _clanId = this.readD();
+    this.Char.ClanId = this.readD();
     const _clanCrestId = this.readD();
-    const _clanAllyId = this.readD();
+    this.Char.AllyId = this.readD();
     const _clanAllyCrestId = this.readD();
 
     this.Char.IsSitting = this.readC() === 0; // standing = 1 sitting = 0

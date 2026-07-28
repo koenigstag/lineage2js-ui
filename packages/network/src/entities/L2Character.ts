@@ -5,6 +5,21 @@ export default class L2Character extends L2Creature {
   private _cp!: number;
   private _maxCp!: number;
   private _level!: number;
+  private _clanId!: number;
+  private _allyId!: number;
+
+  public get ClanId(): number {
+    return this._clanId;
+  }
+  public set ClanId(value: number) {
+    this._clanId = value;
+  }
+  public get AllyId(): number {
+    return this._allyId;
+  }
+  public set AllyId(value: number) {
+    this._allyId = value;
+  }
 
   public get Cp(): number {
     return this._cp;

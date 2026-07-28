@@ -30,7 +30,6 @@ export default class L2User extends L2Character {
   private _gauge = 0;
   private _gaugeInterval!: ReturnType<typeof setInterval>;
   private _gm!: boolean;
-  private _clanId!: number;
   private _mountType!: MountType;
   private _vitalityPoints!: number;
   private _canCrystalizeItems!: boolean;
@@ -234,14 +233,6 @@ export default class L2User extends L2Character {
   public set IsGM(value: boolean) {
     this._gm = value;
   }
-  public get ClanId(): number {
-    return this._clanId;
-  }
-
-  public set ClanId( value: number ) {
-    this._clanId = value;
-  }
-
   public get MountType(): MountType {
     return this._mountType;
   }

@@ -67,6 +67,8 @@ import PartySmallWindowUpdateMutator from "./PartySmallWindowUpdateMutator";
 import PartySmallWindowUpdate from "../../incoming/game/PartySmallWindowUpdate";
 import PartySpelledMutator from "./PartySpelledMutator";
 import PartySpelled from "../../incoming/game/PartySpelled";
+import PledgeInfoMutator from "./PledgeInfoMutator";
+import PledgeInfo from "../../incoming/game/PledgeInfo";
 import RecipeBookItemListMutator from "./RecipeBookItemListMutator";
 import RecipeBookItemList from "../../incoming/game/RecipeBookItemList";
 import RecipeItemMakeInfoMutator from "./RecipeItemMakeInfoMutator";
@@ -139,6 +141,7 @@ export default [
   [PartySmallWindowDeleteMutator.prototype, PartySmallWindowDelete],
   [PartySmallWindowUpdateMutator.prototype, PartySmallWindowUpdate],
   [PartySpelledMutator.prototype, PartySpelled],
+  [PledgeInfoMutator.prototype, PledgeInfo],
   [RecipeBookItemListMutator.prototype, RecipeBookItemList],
   [RecipeItemMakeInfoMutator.prototype, RecipeItemMakeInfo],
   [ReviveMutator.prototype, Revive],
