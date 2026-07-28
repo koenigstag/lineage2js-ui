@@ -53,6 +53,11 @@ export default class CommandSelectServer extends AbstractGameCommand {
           .catch((e) => reject(e));
       });
 
+      // Without this, a game server that just closes the socket instead of
+      // sending an explicit failure (e.g. no CharSelectionInfo after
+      // AuthLogin) would leave this promise hanging forever.
+      this.GameClient.once("Disconnected", () => reject(new Error("Connection closed by server")));
+
       this.GameClient.once("PacketReceived:KeyPacket", () =>
         this.GameClient.sendPacket(new AuthLogin(this.GameClient.Session))
       );
