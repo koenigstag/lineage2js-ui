@@ -37,6 +37,17 @@ export default class L2User extends L2Character {
   private _privateStoreType!: PrivateStoreType;
   private _clanPrivileges!: ClanPrivilege;
   private _movementType!: MovementType;
+  // Cumulative delta from equipped Henna dyes (see network/incoming/game/
+  // HennaInfo.ts) -- each dye trades a bonus on one stat for a penalty on
+  // another (dist/game/data/stats/hennaList.xml in the H5 reference server,
+  // e.g. dyeId=1 is str +1 / con -3), so this can be negative. Capped at +5
+  // per stat, no floor (Player.java's _hennaSTR += ... accumulator).
+  private _hennaSTR!: number;
+  private _hennaDEX!: number;
+  private _hennaCON!: number;
+  private _hennaINT!: number;
+  private _hennaWIT!: number;
+  private _hennaMEN!: number;
 
   public get PDef(): number {
     return this._pDef;
@@ -294,5 +305,53 @@ export default class L2User extends L2Character {
 
   public set MovementType( value: MovementType ) {
     this._movementType = value;
+  }
+
+  public get HennaSTR(): number {
+    return this._hennaSTR;
+  }
+
+  public set HennaSTR( value: number ) {
+    this._hennaSTR = value;
+  }
+
+  public get HennaDEX(): number {
+    return this._hennaDEX;
+  }
+
+  public set HennaDEX( value: number ) {
+    this._hennaDEX = value;
+  }
+
+  public get HennaCON(): number {
+    return this._hennaCON;
+  }
+
+  public set HennaCON( value: number ) {
+    this._hennaCON = value;
+  }
+
+  public get HennaINT(): number {
+    return this._hennaINT;
+  }
+
+  public set HennaINT( value: number ) {
+    this._hennaINT = value;
+  }
+
+  public get HennaWIT(): number {
+    return this._hennaWIT;
+  }
+
+  public set HennaWIT( value: number ) {
+    this._hennaWIT = value;
+  }
+
+  public get HennaMEN(): number {
+    return this._hennaMEN;
+  }
+
+  public set HennaMEN( value: number ) {
+    this._hennaMEN = value;
   }
 }

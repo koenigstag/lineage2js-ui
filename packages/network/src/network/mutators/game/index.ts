@@ -37,6 +37,8 @@ import ExRotationMutator from "./ExRotationMutator";
 import ExRotation from "../../incoming/game/ExRotation";
 import ExVoteSystemInfoMutator from "./ExVoteSystemInfoMutator";
 import ExVoteSystemInfo from "../../incoming/game/ExVoteSystemInfo";
+import HennaInfoMutator from "./HennaInfoMutator";
+import HennaInfo from "../../incoming/game/HennaInfo";
 import InventoryUpdateMutator from "./InventoryUpdateMutator";
 import InventoryUpdate from "../../incoming/game/InventoryUpdate";
 import ItemListMutator from "./ItemListMutator";
@@ -130,6 +132,7 @@ export default [
   [ExQuestItemListMutator.prototype, ExQuestItemList],
   [ExRotationMutator.prototype, ExRotation],
   [ExVoteSystemInfoMutator.prototype, ExVoteSystemInfo],
+  [HennaInfoMutator.prototype, HennaInfo],
   [InventoryUpdateMutator.prototype, InventoryUpdate],
   [ItemListMutator.prototype, ItemList],
   [KeyPacketMutator.prototype, KeyPacket],

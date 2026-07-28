@@ -9,6 +9,7 @@ import { SkillsContent } from "../skills/skills.window";
 import { EffectsContent } from "../effects/effects.window";
 import { ActionsContent } from "../actions/actions.window";
 import { CharInfoContent } from "../char-info/char-info.window";
+import { CharacterContent } from "../character/character.window";
 import { PartyCharInfoContent } from "../party-char-info/party-char-info.window";
 import { TargetSelectContent } from "../target-select/target-select.window";
 import { BattleLogContent } from "../battlelog/battlelog.window";
@@ -30,6 +31,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     "skills-list": () => <SkillsContent />,
     effects: () => <EffectsContent />,
     actions: () => <ActionsContent />,
+    character: () => <CharacterContent />,
     "char-info": () => <CharInfoContent />,
     "party-char-info": () => <PartyCharInfoContent onMemberClick={(member) => game.selectTarget(member)} />,
     "target-select": () => <TargetSelectContent />,

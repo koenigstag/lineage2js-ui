@@ -1,5 +1,5 @@
 # Short-term TODOs
-- Content in the character info window
+- Show curr/total exp values in a tooltip on the character window's XP bar -- needs the H5 per-level exp table (ExperienceData.java/.xml in the local L2J_Mobius_CT_2.6_HighFive reference) to compute the next-level threshold, since ExpPercent alone can't derive it
 - Hotbar features - user-added shortcuts, cooldown animation, soul-shots auto-usage
 - Inventory equip slots
 - Radar

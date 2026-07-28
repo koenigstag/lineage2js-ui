@@ -79,7 +79,7 @@ export function CharacterVitals({
         height={height}
       />
       {vitalityPercent !== undefined && (
-        <StatBar percent={vitalityPercent} color={VITALITY_COLOR} text={`${Math.round(vitalityPercent)}%`} width={width} height={height} />
+        <StatBar percent={vitalityPercent} color={VITALITY_COLOR} label={t("charInfo.vp")} width={width} height={height} />
       )}
     </div>
   );

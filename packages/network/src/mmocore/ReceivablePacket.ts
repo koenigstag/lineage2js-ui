@@ -30,6 +30,13 @@ export default abstract class ReceivablePacket extends AbstractPacket {
     return value;
   }
 
+  /** Signed byte (-128..127) -- e.g. HennaInfo's stat deltas, written server-side via Java's writeByte(int). */
+  readSignedC(): number {
+    const value = this._view.getInt8(this._offset);
+    this._offset += 1;
+    return value;
+  }
+
   readF(): number {
     const value = this._view.getFloat64(this._offset, true);
     this._offset += 8;

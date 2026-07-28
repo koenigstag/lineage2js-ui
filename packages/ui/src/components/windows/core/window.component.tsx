@@ -186,6 +186,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
   const contentStyle: CSSProperties = {
     padding: config.contentPadding ?? 8,
     backgroundColor: config.contentBackground,
+    userSelect: "none",
   };
 
   function handleFocus() {

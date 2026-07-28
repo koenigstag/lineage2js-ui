@@ -18,6 +18,7 @@ import {
   type ESystemMessage,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
+import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
 import { formatSystemMessage } from "../config/system-message-mapping";
 
@@ -51,6 +52,62 @@ export interface CharInfoSnapshot {
   sp: number;
   /** Remaining daily recommendations this character can give out, see GameStore.recommend(). */
   recommLeft: number;
+  // --- Below: only consumed by the "character" window's full stats panel
+  // (components/windows/character/character.window.tsx) -- the compact
+  // char-info/party-char-info sidebars only use the fields above.
+  /** L2Character.Title, e.g. a clan/quest title -- empty string when none set. */
+  title: string;
+  className: string;
+  /** 0 when clanless -- resolve the name via GameStore.pledgeCache, same as targetSnapshotFromCreature. */
+  clanId: number;
+  expPercent: number;
+  load: number;
+  maxLoad: number;
+  /** Recommendations this character has received so far (L2Creature.RecommHave). */
+  recommHave: number;
+  fame: number;
+  karma: number;
+  pvpKills: number;
+  pkKills: number;
+  pAtk: number;
+  pDef: number;
+  accuracy: number;
+  evasion: number;
+  critical: number;
+  atkSpd: number;
+  speed: number;
+  mAtk: number;
+  mDef: number;
+  /**
+   * Magic accuracy/evasion/critical have no source anywhere in the network
+   * layer yet -- no packet parses them (see packages/network/src/entities
+   * and network/incoming/game/UserInfo.ts), so syncCharInfo leaves these
+   * unset and character.window.tsx hides their rows entirely instead of
+   * showing a misleading 0. Demo mode fills in plausible numbers instead.
+   */
+  mAccuracy?: number;
+  mEvasion?: number;
+  mCritical?: number;
+  castingSpd: number;
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wit: number;
+  men: number;
+  /**
+   * Cumulative delta from equipped Henna dyes (see L2User.HennaSTR -- can be
+   * negative, each dye trades a bonus on one stat for a penalty on another).
+   * Arrives via a separate HennaInfo packet sent right after world-enter,
+   * not part of UserInfo/CharSelected, so these start at 0 and get filled in
+   * a moment later (see the "HennaInfo" PacketReceived listener below).
+   */
+  hennaStr: number;
+  hennaDex: number;
+  hennaCon: number;
+  hennaInt: number;
+  hennaWit: number;
+  hennaMen: number;
 }
 
 // Same demo-first treatment as hotbar/inventory/skills/buffs -- shows
@@ -69,6 +126,44 @@ function createDemoCharInfo(): CharInfoSnapshot {
     vitalityPercent: (15000 / MAX_VITALITY_POINTS) * 100,
     sp: 12500,
     recommLeft: 5,
+    title: "the Novice",
+    className: "Duelist",
+    clanId: 1001, // matches createDemoPledgeCache()'s "Aden Vanguards" entry below
+    expPercent: 42.5,
+    load: 18400,
+    maxLoad: 34500,
+    recommHave: 3,
+    fame: 120,
+    karma: 0,
+    pvpKills: 12,
+    pkKills: 0,
+    pAtk: 312,
+    pDef: 245,
+    accuracy: 34,
+    evasion: 32,
+    critical: 12,
+    atkSpd: 320,
+    speed: 128,
+    mAtk: 180,
+    mDef: 210,
+    mAccuracy: 45,
+    mEvasion: 40,
+    mCritical: 15,
+    castingSpd: 280,
+    str: 40,
+    dex: 30,
+    con: 38,
+    int: 21,
+    wit: 20,
+    men: 25,
+    // Mirrors a real dye tradeoff (see hennaList.xml dyeId=1: str +1/con -3)
+    // -- demonstrates both the positive and negative rendering branches.
+    hennaStr: 3,
+    hennaDex: 0,
+    hennaCon: -3,
+    hennaInt: 0,
+    hennaWit: 0,
+    hennaMen: 1,
   };
 }
 
@@ -282,6 +377,7 @@ export interface TargetSnapshot {
   name: string;
   hp: number;
   maxHp: number;
+  isDead: boolean;
   buffs: L2Buff[];
   // Player-specific (only set for L2Character targets -- party members, other
   // PCs). Clan/ally are only filled once a name is actually known (see
@@ -336,6 +432,7 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
     name: creature.Name,
     hp: creature.Hp,
     maxHp: creature.MaxHp,
+    isDead: creature.IsDead,
     buffs: Array.from(creature.Buffs),
   };
 
@@ -726,6 +823,44 @@ export class GameStore {
         vitalityPercent: (me.VitalityPoints / MAX_VITALITY_POINTS) * 100,
         sp: me.Sp,
         recommLeft: me.RecommLeft,
+        title: me.Title,
+        className: getClassLabel(me.ClassId),
+        clanId: me.ClanId,
+        expPercent: me.ExpPercent,
+        load: me.Load,
+        maxLoad: me.MaxLoad,
+        recommHave: me.RecommHave,
+        fame: me.Fame,
+        karma: me.Karma,
+        pvpKills: me.PvpKills,
+        pkKills: me.PkKills,
+        pAtk: me.PAtk,
+        pDef: me.PDef,
+        accuracy: me.Accuracy,
+        evasion: me.EvasionRate,
+        critical: me.Crit,
+        atkSpd: me.PAtkSpd,
+        speed: me.RunSpeed,
+        mAtk: me.MAtk,
+        mDef: me.MDef,
+        // mAccuracy/mEvasion/mCritical intentionally omitted -- see the
+        // CharInfoSnapshot field comments, not exposed by the wire.
+        castingSpd: me.MAtkSpd,
+        str: me.STR,
+        dex: me.DEX,
+        con: me.CON,
+        int: me.INT,
+        wit: me.WIT,
+        men: me.MEN,
+        // HennaInfo (see below) arrives separately and may not have landed
+        // yet -- these stay 0 until it does, same "fills in a moment later"
+        // treatment as the rest of the world-enter burst.
+        hennaStr: me.HennaSTR ?? 0,
+        hennaDex: me.HennaDEX ?? 0,
+        hennaCon: me.HennaCON ?? 0,
+        hennaInt: me.HennaINT ?? 0,
+        hennaWit: me.HennaWIT ?? 0,
+        hennaMen: me.HennaMEN ?? 0,
       };
     });
 
@@ -739,6 +874,10 @@ export class GameStore {
     client.on("PacketReceived", "ShortCutDelete", syncHotbar);
     client.on("PacketReceived", "CharSelected", syncCharInfo);
     client.on("PacketReceived", "UserInfo", syncCharInfo);
+    // Henna stat bonuses arrive via their own packet, sent right after
+    // world-enter (see EnterWorld.java in the H5 reference server) --
+    // re-snapshot once it lands instead of waiting for the next UserInfo.
+    client.on("PacketReceived", "HennaInfo", syncCharInfo);
     client.on("PacketReceived", "StatusUpdate", syncCharInfo);
     // ExVoteSystemInfo is the only packet that updates RecommLeft after
     // world-enter (sent right after a successful RequestVoteNew).

@@ -1,10 +1,14 @@
 import { ClassId, Race } from "@lineage2js/network";
 
+export type ClassRole = "tank" | "healer" | "buffer" | "rogue" | "archer" | "summoner" | "mage" | "warrior";
+
 export interface ClassTreeEntry {
   isMage: boolean;
   isSummoner: boolean;
   race: Race;
   parent: ClassId | null;
+  /** Icon category for party window. */
+  role: ClassRole;
 }
 
 // Ported from lineage2ts's own server-side class model
@@ -14,235 +18,150 @@ export interface ClassTreeEntry {
 // against its ClassId.ts and Race.ts). isMage/parent/race come straight from
 // the reference server, not inferred from a class-name heuristic.
 export const CLASS_TREE: Partial<Record<ClassId, ClassTreeEntry>> = {
-  [ClassId.Fighter]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: null },
-  [ClassId.Warrior]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Fighter },
-  [ClassId.Gladiator]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Warrior },
-  [ClassId.Warlord]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Warrior },
-  [ClassId.Knight]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Fighter },
-  [ClassId.Paladin]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Knight },
-  [ClassId.DarkAvenger]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Knight },
-  [ClassId.Rogue]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Fighter },
-  [ClassId.TreasureHunter]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Rogue },
-  [ClassId.Hawkeye]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Rogue },
+  [ClassId.Fighter]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: null, role: "warrior" },
+  [ClassId.Warrior]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Fighter, role: "warrior" },
+  [ClassId.Gladiator]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Warrior, role: "warrior" },
+  [ClassId.Warlord]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Warrior, role: "warrior" },
+  [ClassId.Knight]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Fighter, role: "tank" },
+  [ClassId.Paladin]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Knight, role: "tank" },
+  [ClassId.DarkAvenger]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Knight, role: "tank" },
+  [ClassId.Rogue]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Fighter, role: "warrior" },
+  [ClassId.TreasureHunter]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Rogue, role: "rogue" },
+  [ClassId.Hawkeye]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Rogue, role: "archer" },
 
-  [ClassId.Mage]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: null },
-  [ClassId.Wizard]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Mage },
-  [ClassId.Sorceror]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Wizard },
-  [ClassId.Necromancer]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Wizard },
-  [ClassId.Warlock]: { isMage: true, isSummoner: true, race: Race.HUMAN, parent: ClassId.Wizard },
-  [ClassId.Cleric]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Mage },
-  [ClassId.Bishop]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Cleric },
-  [ClassId.Prophet]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Cleric },
+  [ClassId.Mage]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: null, role: "mage" },
+  [ClassId.Wizard]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Mage, role: "mage" },
+  [ClassId.Sorceror]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Wizard, role: "mage" },
+  [ClassId.Necromancer]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Wizard, role: "mage" },
+  [ClassId.Warlock]: { isMage: true, isSummoner: true, race: Race.HUMAN, parent: ClassId.Wizard, role: "summoner" },
+  [ClassId.Cleric]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Mage, role: "healer" },
+  [ClassId.Bishop]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Cleric, role: "healer" },
+  [ClassId.Prophet]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Cleric, role: "buffer" },
 
-  [ClassId.ElvenFighter]: { isMage: false, isSummoner: false, race: Race.ELF, parent: null },
-  [ClassId.ElvenKnight]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenFighter },
-  [ClassId.TempleKnight]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenKnight },
-  [ClassId.SwordSinger]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenKnight },
-  [ClassId.ElvenScout]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenFighter },
-  [ClassId.PlainsWalker]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenScout },
-  [ClassId.SilverRanger]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenScout },
+  [ClassId.ElvenFighter]: { isMage: false, isSummoner: false, race: Race.ELF, parent: null, role: "warrior" },
+  [ClassId.ElvenKnight]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenFighter, role: "tank" },
+  [ClassId.TempleKnight]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenKnight, role: "tank" },
+  [ClassId.SwordSinger]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenKnight, role: "buffer" },
+  [ClassId.ElvenScout]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenFighter, role: "warrior" },
+  [ClassId.PlainsWalker]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenScout, role: "rogue" },
+  [ClassId.SilverRanger]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenScout, role: "archer" },
 
-  [ClassId.ElvenMage]: { isMage: true, isSummoner: false, race: Race.ELF, parent: null },
-  [ClassId.ElvenWizard]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenMage },
-  [ClassId.Spellsinger]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenWizard },
-  [ClassId.ElementalSummoner]: { isMage: true, isSummoner: true, race: Race.ELF, parent: ClassId.ElvenWizard },
-  [ClassId.Oracle]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenMage },
-  [ClassId.Elder]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.Oracle },
+  [ClassId.ElvenMage]: { isMage: true, isSummoner: false, race: Race.ELF, parent: null, role: "mage" },
+  [ClassId.ElvenWizard]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenMage, role: "mage" },
+  [ClassId.Spellsinger]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenWizard, role: "mage" },
+  [ClassId.ElementalSummoner]: { isMage: true, isSummoner: true, race: Race.ELF, parent: ClassId.ElvenWizard, role: "summoner" },
+  [ClassId.Oracle]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.ElvenMage, role: "healer" },
+  [ClassId.Elder]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.Oracle, role: "healer" },
 
-  [ClassId.DarkFighter]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: null },
-  [ClassId.PalusKnight]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkFighter },
-  [ClassId.ShillienKnight]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.PalusKnight },
-  [ClassId.Bladedancer]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.PalusKnight },
-  [ClassId.Assassin]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkFighter },
-  [ClassId.AbyssWalker]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Assassin },
-  [ClassId.PhantomRanger]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Assassin },
+  [ClassId.DarkFighter]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: null, role: "warrior" },
+  [ClassId.PalusKnight]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkFighter, role: "tank" },
+  [ClassId.ShillienKnight]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.PalusKnight, role: "tank" },
+  [ClassId.Bladedancer]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.PalusKnight, role: "buffer" },
+  [ClassId.Assassin]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkFighter, role: "warrior" },
+  [ClassId.AbyssWalker]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Assassin, role: "rogue" },
+  [ClassId.PhantomRanger]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Assassin, role: "archer" },
 
-  [ClassId.DarkMage]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: null },
-  [ClassId.DarkWizard]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkMage },
-  [ClassId.Spellhowler]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkWizard },
-  [ClassId.PhantomSummoner]: { isMage: true, isSummoner: true, race: Race.DARK_ELF, parent: ClassId.DarkWizard },
-  [ClassId.ShillienOracle]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkMage },
-  [ClassId.ShillenElder]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.ShillienOracle },
+  [ClassId.DarkMage]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: null, role: "mage" },
+  [ClassId.DarkWizard]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkMage, role: "mage" },
+  [ClassId.Spellhowler]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkWizard, role: "mage" },
+  [ClassId.PhantomSummoner]: { isMage: true, isSummoner: true, race: Race.DARK_ELF, parent: ClassId.DarkWizard, role: "summoner" },
+  [ClassId.ShillienOracle]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.DarkMage, role: "healer" },
+  [ClassId.ShillenElder]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.ShillienOracle, role: "healer" },
 
-  [ClassId.OrcFighter]: { isMage: false, isSummoner: false, race: Race.ORC, parent: null },
-  [ClassId.OrcRaider]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcFighter },
-  [ClassId.Destroyer]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcRaider },
-  [ClassId.OrcMonk]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcFighter },
-  [ClassId.Tyrant]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcMonk },
+  [ClassId.OrcFighter]: { isMage: false, isSummoner: false, race: Race.ORC, parent: null, role: "warrior" },
+  [ClassId.OrcRaider]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcFighter, role: "warrior" },
+  [ClassId.Destroyer]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcRaider, role: "warrior" },
+  [ClassId.OrcMonk]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcFighter, role: "warrior" },
+  [ClassId.Tyrant]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.OrcMonk, role: "warrior" },
 
-  [ClassId.OrcMage]: { isMage: true, isSummoner: false, race: Race.ORC, parent: null },
-  [ClassId.OrcShaman]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.OrcMage },
-  [ClassId.Overlord]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.OrcShaman },
-  [ClassId.Warcryer]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.OrcShaman },
+  [ClassId.OrcMage]: { isMage: true, isSummoner: false, race: Race.ORC, parent: null, role: "mage" },
+  [ClassId.OrcShaman]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.OrcMage, role: "buffer" },
+  [ClassId.Overlord]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.OrcShaman, role: "buffer" },
+  [ClassId.Warcryer]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.OrcShaman, role: "buffer" },
 
-  [ClassId.DwarvenFighter]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: null },
-  [ClassId.Scavenger]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.DwarvenFighter },
-  [ClassId.BountyHunter]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.Scavenger },
-  [ClassId.Artisan]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.DwarvenFighter },
-  [ClassId.Warsmith]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.Artisan },
+  [ClassId.DwarvenFighter]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: null, role: "warrior" },
+  [ClassId.Scavenger]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.DwarvenFighter, role: "warrior" },
+  [ClassId.BountyHunter]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.Scavenger, role: "warrior" },
+  [ClassId.Artisan]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.DwarvenFighter, role: "warrior" },
+  [ClassId.Warsmith]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.Artisan, role: "warrior" },
 
-  [ClassId.Duelist]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Gladiator },
-  [ClassId.Dreadnought]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Warlord },
-  [ClassId.PhoenixKnight]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Paladin },
-  [ClassId.HellKnight]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.DarkAvenger },
-  [ClassId.Sagittarius]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Hawkeye },
-  [ClassId.Adventurer]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.TreasureHunter },
-  [ClassId.Archmage]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Sorceror },
-  [ClassId.Soultaker]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Necromancer },
-  [ClassId.ArcanaLord]: { isMage: true, isSummoner: true, race: Race.HUMAN, parent: ClassId.Warlock },
-  [ClassId.Cardinal]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Bishop },
-  [ClassId.Hierophant]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Prophet },
+  [ClassId.Duelist]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Gladiator, role: "warrior" },
+  [ClassId.Dreadnought]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Warlord, role: "warrior" },
+  [ClassId.PhoenixKnight]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Paladin, role: "tank" },
+  [ClassId.HellKnight]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.DarkAvenger, role: "tank" },
+  [ClassId.Sagittarius]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.Hawkeye, role: "archer" },
+  [ClassId.Adventurer]: { isMage: false, isSummoner: false, race: Race.HUMAN, parent: ClassId.TreasureHunter, role: "rogue" },
+  [ClassId.Archmage]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Sorceror, role: "mage" },
+  [ClassId.Soultaker]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Necromancer, role: "mage" },
+  [ClassId.ArcanaLord]: { isMage: true, isSummoner: true, race: Race.HUMAN, parent: ClassId.Warlock, role: "summoner" },
+  [ClassId.Cardinal]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Bishop, role: "healer" },
+  [ClassId.Hierophant]: { isMage: true, isSummoner: false, race: Race.HUMAN, parent: ClassId.Prophet, role: "buffer" },
 
-  [ClassId.EvaTemplar]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.TempleKnight },
-  [ClassId.SwordMuse]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.SwordSinger },
-  [ClassId.WindRider]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.PlainsWalker },
-  [ClassId.MoonlightSentinel]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.SilverRanger },
-  [ClassId.MysticMuse]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.Spellsinger },
-  [ClassId.ElementalMaster]: { isMage: true, isSummoner: true, race: Race.ELF, parent: ClassId.ElementalSummoner },
-  [ClassId.EvaSaint]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.Elder },
+  [ClassId.EvaTemplar]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.TempleKnight, role: "tank" },
+  [ClassId.SwordMuse]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.SwordSinger, role: "buffer" },
+  [ClassId.WindRider]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.PlainsWalker, role: "rogue" },
+  [ClassId.MoonlightSentinel]: { isMage: false, isSummoner: false, race: Race.ELF, parent: ClassId.SilverRanger, role: "archer" },
+  [ClassId.MysticMuse]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.Spellsinger, role: "mage" },
+  [ClassId.ElementalMaster]: { isMage: true, isSummoner: true, race: Race.ELF, parent: ClassId.ElementalSummoner, role: "summoner" },
+  [ClassId.EvaSaint]: { isMage: true, isSummoner: false, race: Race.ELF, parent: ClassId.Elder, role: "healer" },
 
-  [ClassId.ShillienTemplar]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.ShillienKnight },
-  [ClassId.SpectralDancer]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Bladedancer },
-  [ClassId.GhostHunter]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.AbyssWalker },
-  [ClassId.GhostSentinel]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.PhantomRanger },
-  [ClassId.StormScreamer]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Spellhowler },
-  [ClassId.SpectralMaster]: { isMage: true, isSummoner: true, race: Race.DARK_ELF, parent: ClassId.PhantomSummoner },
-  [ClassId.ShillienSaint]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.ShillenElder },
+  [ClassId.ShillienTemplar]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.ShillienKnight, role: "tank" },
+  [ClassId.SpectralDancer]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Bladedancer, role: "buffer" },
+  [ClassId.GhostHunter]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.AbyssWalker, role: "rogue" },
+  [ClassId.GhostSentinel]: { isMage: false, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.PhantomRanger, role: "archer" },
+  [ClassId.StormScreamer]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.Spellhowler, role: "mage" },
+  [ClassId.SpectralMaster]: { isMage: true, isSummoner: true, race: Race.DARK_ELF, parent: ClassId.PhantomSummoner, role: "summoner" },
+  [ClassId.ShillienSaint]: { isMage: true, isSummoner: false, race: Race.DARK_ELF, parent: ClassId.ShillenElder, role: "healer" },
 
-  [ClassId.Titan]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.Destroyer },
-  [ClassId.GrandKhavatari]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.Tyrant },
-  [ClassId.Dominator]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.Overlord },
-  [ClassId.Doomcryer]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.Warcryer },
+  [ClassId.Titan]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.Destroyer, role: "warrior" },
+  [ClassId.GrandKhavatari]: { isMage: false, isSummoner: false, race: Race.ORC, parent: ClassId.Tyrant, role: "warrior" },
+  [ClassId.Dominator]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.Overlord, role: "buffer" },
+  [ClassId.Doomcryer]: { isMage: true, isSummoner: false, race: Race.ORC, parent: ClassId.Warcryer, role: "buffer" },
 
-  [ClassId.FortuneSeeker]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.BountyHunter },
-  [ClassId.Maestro]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.Warsmith },
+  [ClassId.FortuneSeeker]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.BountyHunter, role: "warrior" },
+  [ClassId.Maestro]: { isMage: false, isSummoner: false, race: Race.DWARF, parent: ClassId.Warsmith, role: "warrior" },
 
-  [ClassId.MaleSoldier]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: null },
-  [ClassId.FemaleSoldier]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: null },
-  [ClassId.Trooper]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.MaleSoldier },
-  [ClassId.Warder]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.FemaleSoldier },
-  [ClassId.Berserker]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Trooper },
-  [ClassId.MaleSoulbreaker]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Trooper },
-  [ClassId.FemaleSoulbreaker]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Warder },
-  [ClassId.Arbalester]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Warder },
-  [ClassId.Doombringer]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Berserker },
-  [ClassId.MaleSoulhound]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.MaleSoulbreaker },
-  [ClassId.FemaleSoulhound]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.FemaleSoulbreaker },
-  [ClassId.Trickster]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Arbalester },
-  [ClassId.Inspector]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Warder },
-  [ClassId.Judicator]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Inspector },
+  [ClassId.MaleSoldier]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: null, role: "warrior" },
+  [ClassId.FemaleSoldier]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: null, role: "warrior" },
+  [ClassId.Trooper]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.MaleSoldier, role: "warrior" },
+  [ClassId.Warder]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.FemaleSoldier, role: "warrior" },
+  [ClassId.Berserker]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Trooper, role: "warrior" },
+  [ClassId.MaleSoulbreaker]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Trooper, role: "warrior" },
+  [ClassId.FemaleSoulbreaker]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Warder, role: "warrior" },
+  [ClassId.Arbalester]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Warder, role: "archer" },
+  [ClassId.Doombringer]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Berserker, role: "warrior" },
+  [ClassId.MaleSoulhound]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.MaleSoulbreaker, role: "warrior" },
+  [ClassId.FemaleSoulhound]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.FemaleSoulbreaker, role: "warrior" },
+  [ClassId.Trickster]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Arbalester, role: "archer" },
+  [ClassId.Inspector]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Warder, role: "warrior" },
+  [ClassId.Judicator]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Inspector, role: "warrior" },
 };
 
-// Bow (Kamael: crossbow) as primary weapon -- the isMage:false classes above
-// don't distinguish melee from ranged, but the party window's sword/bow icon
-// needs to. Orc and Dwarf have no archer branch in retail L2, hence no
-// entries for those races here.
-const ARCHER_CLASS_IDS = new Set<ClassId>([
-  ClassId.Hawkeye,
-  ClassId.Sagittarius,
-  ClassId.SilverRanger,
-  ClassId.MoonlightSentinel,
-  ClassId.PhantomRanger,
-  ClassId.GhostSentinel,
-  ClassId.Arbalester,
-  ClassId.Trickster,
-]);
-
-export function isArcherClass(classId: ClassId): boolean {
-  return ARCHER_CLASS_IDS.has(classId);
+// L2Character.ClassId/L2User.ClassId comes back inconsistently depending on
+// which packet set it: CharSelected assigns the raw numeric wire value, while
+// UserInfo reverse-maps it through the ClassId enum first and assigns the
+// resulting string key name instead (see UserInfo.ts's
+// `(ClassId as any)[this.readD()]`) -- the same quirk toLocalRace/toLocalSex
+// handle for Race/Sex in character-races.ts. Normalizes either shape back to
+// the PascalCase key name ("FortuneSeeker").
+function classIdKeyName(classId: ClassId): string | undefined {
+  return typeof classId === "string" ? classId : ClassId[classId];
 }
 
-// Role split below this point is finer than CLASS_TREE's own isMage/isSummoner
-// flags (e.g. Paladin and Gladiator are both isMage:false but only one is a
-// tank; Dominator/SwordMuse are a mage and a physical class respectively but
-// both buffers) -- based on Lineage 2's real per-class role categorization
-// (see https://l2wiki.com/essence/guides/ess/1448.html's Tanks/Healers/
-// Buffers/Rogues groupings), not derivable from the tree's existing fields.
-// Only 2nd class onward is listed -- 1st-class roots haven't committed to a
-// branch yet and fall through to the generic warrior/mage default.
+// Human-readable class name straight from the enum's own PascalCase key
+// (FortuneSeeker -> "Fortune Seeker") -- there's no class-name table anywhere
+// in the network layer (L2Creature.ClassName/BaseClassName are declared but
+// no packet parser ever assigns them), and every real ClassId key already
+// matches the official class name once spaced out. Not localized: class
+// names are proper nouns, same treatment as skill/item names elsewhere (no
+// static per-language dictionary entries for them).
+export function getClassLabel(classId: ClassId | undefined): string {
+  const key = classId !== undefined ? classIdKeyName(classId) : undefined;
+  return key ? key.replace(/([a-z0-9])([A-Z])/g, "$1 $2") : "";
+}
 
-const TANK_CLASS_IDS = new Set<ClassId>([
-  ClassId.Knight,
-  ClassId.Paladin,
-  ClassId.PhoenixKnight,
-  ClassId.DarkAvenger,
-  ClassId.HellKnight,
-  ClassId.ElvenKnight,
-  ClassId.TempleKnight,
-  ClassId.EvaTemplar,
-  ClassId.PalusKnight,
-  ClassId.ShillienKnight,
-  ClassId.ShillienTemplar,
-]);
-
-const HEALER_CLASS_IDS = new Set<ClassId>([
-  ClassId.Cleric,
-  ClassId.Bishop,
-  ClassId.Cardinal,
-  ClassId.Oracle,
-  ClassId.Elder,
-  ClassId.EvaSaint,
-  ClassId.ShillienOracle,
-  ClassId.ShillenElder,
-  ClassId.ShillienSaint,
-]);
-
-// Prophet/Hierophant (human), SwordSinger/SwordMuse and Bladedancer/
-// SpectralDancer (physical dance-buffers, not mages), OrcShaman's two
-// branches (Overlord/Dominator, Warcryer/Doomcryer).
-const BUFFER_CLASS_IDS = new Set<ClassId>([
-  ClassId.Prophet,
-  ClassId.Hierophant,
-  ClassId.SwordSinger,
-  ClassId.SwordMuse,
-  ClassId.Bladedancer,
-  ClassId.SpectralDancer,
-  ClassId.OrcShaman,
-  ClassId.Overlord,
-  ClassId.Dominator,
-  ClassId.Warcryer,
-  ClassId.Doomcryer,
-]);
-
-const ROGUE_CLASS_IDS = new Set<ClassId>([
-  ClassId.TreasureHunter,
-  ClassId.Adventurer,
-  ClassId.PlainsWalker,
-  ClassId.WindRider,
-  ClassId.AbyssWalker,
-  ClassId.GhostHunter,
-]);
-
-export type ClassRole = "tank" | "healer" | "buffer" | "rogue" | "archer" | "summoner" | "mage" | "warrior";
-
-/**
- * Party window icon category, most specific first: tank > healer > buffer >
- * rogue > archer > summoner > mage > warrior (default, also covers the
- * close-combat DD classes -- Gladiator/Warlord/Titan/... -- which don't get
- * their own icon).
- */
+// "warrior" only as a last resort for ClassIds absent from CLASS_TREE
+// entirely (the DummyEntry3x placeholders -- no real character ever has one).
 export function getClassRole(classId: ClassId): ClassRole {
-  if (TANK_CLASS_IDS.has(classId)) {
-    return "tank";
-  }
-  if (HEALER_CLASS_IDS.has(classId)) {
-    return "healer";
-  }
-  if (BUFFER_CLASS_IDS.has(classId)) {
-    return "buffer";
-  }
-  if (ROGUE_CLASS_IDS.has(classId)) {
-    return "rogue";
-  }
-  if (isArcherClass(classId)) {
-    return "archer";
-  }
-  const entry = CLASS_TREE[classId];
-  if (entry?.isSummoner) {
-    return "summoner";
-  }
-  if (entry?.isMage) {
-    return "mage";
-  }
-  return "warrior";
+  return CLASS_TREE[classId]?.role ?? "warrior";
 }

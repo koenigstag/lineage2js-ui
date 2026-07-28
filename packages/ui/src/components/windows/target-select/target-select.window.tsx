@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { StatBar } from "../../core/stat-bar.component";
 import { Slot } from "../core/slot.component";
@@ -15,6 +16,19 @@ const BAR_WIDTH = 200;
 const BAR_HEIGHT = 14;
 
 const infoRowStyle = { color: "#a99a7a", fontSize: 11 };
+
+const closeButtonStyle: CSSProperties = {
+  position: "absolute",
+  top: -2,
+  right: 0,
+  background: "transparent",
+  border: "none",
+  color: "#a59e84",
+  cursor: "pointer",
+  fontSize: 14,
+  lineHeight: 1,
+  padding: "0 2px",
+};
 
 const levelBadgeStyle = {
   width: 20,
@@ -46,8 +60,16 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
   const isConColored = target.level !== undefined && target.creatureKind === "mob" && target.race !== "SIEGE_WEAPON";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, width: BAR_WIDTH }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+    <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 4, width: BAR_WIDTH }}>
+      <button
+        type="button"
+        onClick={() => game.clearTarget()}
+        style={closeButtonStyle}
+        aria-label={t("common.cancel")}
+      >
+        ×
+      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, paddingRight: 14 }}>
         {target.level !== undefined && <div style={levelBadgeStyle}>{target.level}</div>}
         {target.race ? (
           <CreatureRaceIcon race={target.race} />
@@ -71,6 +93,9 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
         width={BAR_WIDTH}
         height={BAR_HEIGHT}
       />
+      <div style={infoRowStyle}>
+        {t("targetSelect.isAlive")}: {target.isDead ? t("targetSelect.dead") : t("targetSelect.alive")}
+      </div>
       {target.title && <div style={infoRowStyle}>{t("targetSelect.status")}: {target.title}</div>}
       {target.clanName && <div style={infoRowStyle}>{t("targetSelect.clan")}: {target.clanName}</div>}
       {target.allyName && <div style={infoRowStyle}>{t("targetSelect.ally")}: {target.allyName}</div>}
