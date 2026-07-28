@@ -46,13 +46,19 @@ function DarkElfPath() {
   );
 }
 
-// Mouth curve with two downward tusks at the corners.
+// Brutish face -- brow ridge + eye dots, with two tusks flaring outward and
+// up from the jaw (curved, not straight, so they don't read as legs).
 function OrcPath() {
   return (
     <>
-      <path d="M4 9 Q10 13.5 16 9" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <path d="M4.5 9.3 C3.3 12 3.6 15 5 17.3 C5.9 14.7 5.9 11.5 6.6 9.7 Z" fill="currentColor" />
-      <path d="M15.5 9.3 C16.7 12 16.4 15 15 17.3 C14.1 14.7 14.1 11.5 13.4 9.7 Z" fill="currentColor" />
+      <path
+        d="M4 8 C4 4.5 6.5 2.5 10 2.5 C13.5 2.5 16 4.5 16 8 C16 9.5 15.3 10.5 14 11 C13 9.8 11.6 9.2 10 9.2 C8.4 9.2 7 9.8 6 11 C4.7 10.5 4 9.5 4 8 Z"
+        fill="currentColor"
+      />
+      <circle cx="7.3" cy="7" r="1" fill="#101010" />
+      <circle cx="12.7" cy="7" r="1" fill="#101010" />
+      <path d="M6.5 10.5 C4.3 12.3 3.2 15.3 4.3 18 C6 15.8 7.2 12.8 8.2 10.8 Z" fill="currentColor" />
+      <path d="M13.5 10.5 C15.7 12.3 16.8 15.3 15.7 18 C14 15.8 12.8 12.8 11.8 10.8 Z" fill="currentColor" />
     </>
   );
 }
@@ -124,14 +130,14 @@ function ElementalPath() {
   return <path d="M10 2 C14 8 15.5 11 15.5 13.5 C15.5 16.5 13 18 10 18 C7 18 4.5 16.5 4.5 13.5 C4.5 11 6 8 10 2 Z" fill="currentColor" />;
 }
 
-// Reptilian head profile -- triangular snout + single back horn.
+// Jagged bat-like wing -- spiked finger-bones along the top edge, unlike
+// Kamael's single smooth angular wing or Fairy's soft rounded pair.
 function DragonPath() {
   return (
-    <>
-      <path d="M3 11 L11 8 L17 10 L13 12.5 L11 15 L8 12.5 Z" fill="currentColor" />
-      <path d="M11 8 L12 3 L14 8.5 Z" fill="currentColor" />
-      <circle cx="12" cy="10" r="0.9" fill="#101010" />
-    </>
+    <path
+      d="M2 17.5 C2.3 17.5 3.2 10.5 5.2 6.5 L6.2 9.5 L8.3 4 L8.8 8.2 L11.3 2 L11.2 7.6 L14.2 3.3 L13.2 9 L17.5 5.8 C15.7 12.3 9.5 17.5 2 17.5 Z"
+      fill="currentColor"
+    />
   );
 }
 
