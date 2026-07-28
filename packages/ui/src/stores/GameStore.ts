@@ -203,8 +203,8 @@ interface DemoPartyMemberInit {
 }
 
 // Builds a real L2PartyMember, same shape PartySmallWindowAll/Add/Update would
-// produce. One of each class-role icon (warrior/mage/summoner/archer) for the
-// party window (see class-tree.ts's getClassRole()).
+// produce. One of each class-role icon (warrior/mage/summoner/archer/tank/
+// healer/buffer/rogue) for the party window (see class-tree.ts's getClassRole()).
 function demoPartyMember({
   objectId,
   name,
@@ -293,7 +293,59 @@ function createDemoParty(): L2PartyMember[] {
   warlock.Buffs.add(demoBuff(1048, 1, 1200)); // Bless the Soul
   warlock.Buffs.add(demoBuff(871, 1, 1200)); // Might
 
-  return [hero, sorc, ranger, warlock];
+  const paladin = demoPartyMember({
+    objectId: 90005,
+    name: "DemoPaladin",
+    level: 40,
+    classId: ClassId.PhoenixKnight,
+    cp: 900,
+    maxCp: 1300,
+    hp: 3200,
+    maxHp: 4000,
+    mp: 1000,
+    maxMp: 1500,
+  });
+
+  const cardinal = demoPartyMember({
+    objectId: 90006,
+    name: "DemoCardinal",
+    level: 40,
+    classId: ClassId.Cardinal,
+    cp: 0,
+    maxCp: 750,
+    hp: 1500,
+    maxHp: 2000,
+    mp: 2400,
+    maxMp: 2900,
+  });
+
+  const dancer = demoPartyMember({
+    objectId: 90007,
+    name: "DemoDancer",
+    level: 39,
+    classId: ClassId.SwordMuse,
+    cp: 300,
+    maxCp: 850,
+    hp: 1700,
+    maxHp: 2300,
+    mp: 1600,
+    maxMp: 2100,
+  });
+
+  const adventurer = demoPartyMember({
+    objectId: 90008,
+    name: "DemoAdventurer",
+    level: 39,
+    classId: ClassId.Adventurer,
+    cp: 500,
+    maxCp: 950,
+    hp: 1900,
+    maxHp: 2500,
+    mp: 1100,
+    maxMp: 1500,
+  });
+
+  return [hero, sorc, ranger, warlock, paladin, cardinal, dancer, adventurer];
 }
 
 // The character roster itself lives in SessionStore.characters (real L2User[]

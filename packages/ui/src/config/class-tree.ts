@@ -152,19 +152,97 @@ export function isArcherClass(classId: ClassId): boolean {
   return ARCHER_CLASS_IDS.has(classId);
 }
 
-export type ClassRole = "warrior" | "mage" | "summoner" | "archer";
+// Role split below this point is finer than CLASS_TREE's own isMage/isSummoner
+// flags (e.g. Paladin and Gladiator are both isMage:false but only one is a
+// tank; Dominator/SwordMuse are a mage and a physical class respectively but
+// both buffers) -- based on Lineage 2's real per-class role categorization
+// (see https://l2wiki.com/essence/guides/ess/1448.html's Tanks/Healers/
+// Buffers/Rogues groupings), not derivable from the tree's existing fields.
+// Only 2nd class onward is listed -- 1st-class roots haven't committed to a
+// branch yet and fall through to the generic warrior/mage default.
 
-/** Party window icon category: summoner (isSummoner, a mage subtype) > mage > archer (bow/crossbow) > warrior (everything else physical). */
+const TANK_CLASS_IDS = new Set<ClassId>([
+  ClassId.Knight,
+  ClassId.Paladin,
+  ClassId.PhoenixKnight,
+  ClassId.DarkAvenger,
+  ClassId.HellKnight,
+  ClassId.ElvenKnight,
+  ClassId.TempleKnight,
+  ClassId.EvaTemplar,
+  ClassId.PalusKnight,
+  ClassId.ShillienKnight,
+  ClassId.ShillienTemplar,
+]);
+
+const HEALER_CLASS_IDS = new Set<ClassId>([
+  ClassId.Cleric,
+  ClassId.Bishop,
+  ClassId.Cardinal,
+  ClassId.Oracle,
+  ClassId.Elder,
+  ClassId.EvaSaint,
+  ClassId.ShillienOracle,
+  ClassId.ShillenElder,
+  ClassId.ShillienSaint,
+]);
+
+// Prophet/Hierophant (human), SwordSinger/SwordMuse and Bladedancer/
+// SpectralDancer (physical dance-buffers, not mages), OrcShaman's two
+// branches (Overlord/Dominator, Warcryer/Doomcryer).
+const BUFFER_CLASS_IDS = new Set<ClassId>([
+  ClassId.Prophet,
+  ClassId.Hierophant,
+  ClassId.SwordSinger,
+  ClassId.SwordMuse,
+  ClassId.Bladedancer,
+  ClassId.SpectralDancer,
+  ClassId.OrcShaman,
+  ClassId.Overlord,
+  ClassId.Dominator,
+  ClassId.Warcryer,
+  ClassId.Doomcryer,
+]);
+
+const ROGUE_CLASS_IDS = new Set<ClassId>([
+  ClassId.TreasureHunter,
+  ClassId.Adventurer,
+  ClassId.PlainsWalker,
+  ClassId.WindRider,
+  ClassId.AbyssWalker,
+  ClassId.GhostHunter,
+]);
+
+export type ClassRole = "tank" | "healer" | "buffer" | "rogue" | "archer" | "summoner" | "mage" | "warrior";
+
+/**
+ * Party window icon category, most specific first: tank > healer > buffer >
+ * rogue > archer > summoner > mage > warrior (default, also covers the
+ * close-combat DD classes -- Gladiator/Warlord/Titan/... -- which don't get
+ * their own icon).
+ */
 export function getClassRole(classId: ClassId): ClassRole {
+  if (TANK_CLASS_IDS.has(classId)) {
+    return "tank";
+  }
+  if (HEALER_CLASS_IDS.has(classId)) {
+    return "healer";
+  }
+  if (BUFFER_CLASS_IDS.has(classId)) {
+    return "buffer";
+  }
+  if (ROGUE_CLASS_IDS.has(classId)) {
+    return "rogue";
+  }
+  if (isArcherClass(classId)) {
+    return "archer";
+  }
   const entry = CLASS_TREE[classId];
   if (entry?.isSummoner) {
     return "summoner";
   }
   if (entry?.isMage) {
     return "mage";
-  }
-  if (isArcherClass(classId)) {
-    return "archer";
   }
   return "warrior";
 }

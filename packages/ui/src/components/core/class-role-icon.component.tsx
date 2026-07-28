@@ -57,7 +57,62 @@ function BowPath() {
   );
 }
 
-/** Placeholder role icon for the party window -- warrior=sword, mage=staff, summoner=shepherd's crook, archer=bow (see class-tree.ts's getClassRole()). */
+function ShieldPath() {
+  return (
+    <path
+      d="M10 1 L17 4 V10 C17 14.5 13.5 17.5 10 19 C6.5 17.5 3 14.5 3 10 V4 Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
+  );
+}
+
+function DaggerPath() {
+  return (
+    <>
+      {/* Short single-edged blade, same diagonal as the sword but shorter */}
+      <line x1="14" y1="4" x2="7" y2="11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      {/* Crossguard */}
+      <line x1="5.5" y1="9.5" x2="8.5" y2="12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      {/* Handle */}
+      <line x1="6" y1="11.5" x2="4" y2="13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </>
+  );
+}
+
+function BellPath() {
+  return (
+    <>
+      <path
+        d="M10 3 V4.5 M6 15 C 6 9, 6 6, 10 6 C 14 6, 14 9, 14 15 Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <line x1="4.5" y1="15" x2="15.5" y2="15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="10" cy="17.3" r="1.2" fill="currentColor" />
+    </>
+  );
+}
+
+function CrossPath() {
+  return (
+    <>
+      <line x1="10" y1="3" x2="10" y2="17" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </>
+  );
+}
+
+/**
+ * Placeholder role icon for the party window (see class-tree.ts's
+ * getClassRole()): tank=shield, healer=cross, buffer=bell, rogue=dagger,
+ * archer=bow, summoner=shepherd's crook, mage=staff, warrior=sword.
+ */
 export function ClassRoleIcon({ role, size = 16, color = "#e6d9be" }: ClassRoleIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" style={{ color, flexShrink: 0 }}>
@@ -65,6 +120,10 @@ export function ClassRoleIcon({ role, size = 16, color = "#e6d9be" }: ClassRoleI
       {role === "mage" && <StaffPath />}
       {role === "summoner" && <ShepherdStaffPath />}
       {role === "archer" && <BowPath />}
+      {role === "tank" && <ShieldPath />}
+      {role === "healer" && <CrossPath />}
+      {role === "rogue" && <DaggerPath />}
+      {role === "buffer" && <BellPath />}
     </svg>
   );
 }
