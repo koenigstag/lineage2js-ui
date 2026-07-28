@@ -9,6 +9,40 @@ export const MAX_CHARACTERS = 7;
 
 const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + page*12 addressing
 
+// H5-era vitality system: 0-36000 raw points, shown as a single 0-100% bar
+// (not the later Vitality Herb chronicles' 140000/5-level system). Not read
+// from any packet field -- confirm against the target server if it differs.
+export const MAX_VITALITY_POINTS = 36000;
+
+export interface CharInfoSnapshot {
+  name: string;
+  level: number;
+  cp: number;
+  maxCp: number;
+  hp: number;
+  maxHp: number;
+  mp: number;
+  maxMp: number;
+  vitalityPercent: number;
+}
+
+// Same demo-first treatment as hotbar/inventory/skills/buffs -- shows
+// something reasonable in the char-info window before any real UserInfo/
+// StatusUpdate packet has arrived.
+function createDemoCharInfo(): CharInfoSnapshot {
+  return {
+    name: "DemoHero",
+    level: 40,
+    cp: 850,
+    maxCp: 1200,
+    hp: 2400,
+    maxHp: 3100,
+    mp: 900,
+    maxMp: 1400,
+    vitalityPercent: (27000 / MAX_VITALITY_POINTS) * 100,
+  };
+}
+
 // Builds a real L2Shortcut, same shape ShortCutInit/ShortCutRegister would
 // produce (Slot/Type/TargetId[/Level]). No name/icon on the entity itself --
 // resolved from the item/skill tables via config/shortcut-mapping.ts, same
@@ -156,6 +190,7 @@ export class GameStore {
   inventoryItems: L2Item[] = createDemoInventory();
   skills: L2Skill[] = createDemoSkills();
   buffs: L2Buff[] = createDemoBuffs();
+  charInfo: CharInfoSnapshot = createDemoCharInfo();
 
   constructor() {
     makeAutoObservable(this);
@@ -195,6 +230,20 @@ export class GameStore {
       });
       this.hotbarSlots = slots;
     });
+    const syncCharInfo = () => runInAction(() => {
+      const me = client.Me;
+      this.charInfo = {
+        name: me.Name,
+        level: me.Level,
+        cp: me.Cp,
+        maxCp: me.MaxCp,
+        hp: me.Hp,
+        maxHp: me.MaxHp,
+        mp: me.Mp,
+        maxMp: me.MaxMp,
+        vitalityPercent: (me.VitalityPoints / MAX_VITALITY_POINTS) * 100,
+      };
+    });
 
     client.on("PacketReceived", "ItemList", syncInventory);
     client.on("PacketReceived", "InventoryUpdate", syncInventory);
@@ -204,5 +253,8 @@ export class GameStore {
     client.on("PacketReceived", "ShortCutInit", syncHotbar);
     client.on("PacketReceived", "ShortCutRegister", syncHotbar);
     client.on("PacketReceived", "ShortCutDelete", syncHotbar);
+    client.on("PacketReceived", "CharSelected", syncCharInfo);
+    client.on("PacketReceived", "UserInfo", syncCharInfo);
+    client.on("PacketReceived", "StatusUpdate", syncCharInfo);
   }
 }

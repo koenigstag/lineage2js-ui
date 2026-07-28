@@ -80,6 +80,9 @@ export const LANG_RU_RU: LangDictionary = {
       men: "ДУХ",
     },
   },
+  charInfo: {
+    cp: "CP",
+  },
   charSelect: {
     hp: "HP",
     mp: "MP",

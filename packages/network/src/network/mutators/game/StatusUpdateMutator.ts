@@ -3,6 +3,7 @@ import GameClient from "../../GameClient";
 import StatusUpdate from "../../incoming/game/StatusUpdate";
 
 import L2User from "../../../entities/L2User";
+import L2Character from "../../../entities/L2Character";
 
 export default class StatusUpdateMutator extends IMMOClientMutator<
   GameClient,
@@ -142,10 +143,14 @@ export default class StatusUpdateMutator extends IMMOClientMutator<
             // todo
             break;
           case StatusUpdate.CUR_CP:
-            // todo
+            if (char instanceof L2Character) {
+              char.Cp = value;
+            }
             break;
           case StatusUpdate.MAX_CP:
-            // todo
+            if (char instanceof L2Character) {
+              char.MaxCp = value;
+            }
             break;
         }
       });
