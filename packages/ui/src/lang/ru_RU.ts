@@ -99,6 +99,8 @@ export const LANG_RU_RU: LangDictionary = {
     status: "Статус",
     clan: "Клан",
     ally: "Альянс",
+    recommends: "Рекомендации: {count}",
+    recommendButton: "Рекомендовать",
   },
   game: {
     grid: {

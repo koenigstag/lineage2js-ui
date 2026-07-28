@@ -140,6 +140,12 @@ export default interface ClientCommands {
    */
   nextTarget(): L2Creature | undefined;
   /**
+   * Recommend a player character (RequestVoteNew) -- spends one of this
+   * character's daily recommendations to increase the target's RecommHave.
+   * @param targetObjectId
+   */
+  recommend(targetObjectId: number): void;
+  /**
    * Request for inventory item list
    */
   inventory(): void;

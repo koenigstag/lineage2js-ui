@@ -45,6 +45,8 @@ export interface CharInfoSnapshot {
   maxMp: number;
   vitalityPercent: number;
   sp: number;
+  /** Remaining daily recommendations this character can give out, see GameStore.recommend(). */
+  recommLeft: number;
 }
 
 // Same demo-first treatment as hotbar/inventory/skills/buffs -- shows
@@ -62,6 +64,7 @@ function createDemoCharInfo(): CharInfoSnapshot {
     maxMp: 1400,
     vitalityPercent: (27000 / MAX_VITALITY_POINTS) * 100,
     sp: 12500,
+    recommLeft: 5,
   };
 }
 
@@ -290,6 +293,9 @@ export interface TargetSnapshot {
   // the wire's "no crest" value.
   clanCrestId?: number;
   allyCrestId?: number;
+  // Recommendations this player has received so far (see GameStore.recommend()) --
+  // only meaningful for player targets, hence only set alongside title/clanName/allyName.
+  recommHave?: number;
   // Non-player creature kind (L2Mob/L2Npc/L2Summon), for a type icon --
   // only set when the target is NOT a player.
   creatureKind?: CreatureKind;
@@ -338,6 +344,7 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
       allyName: pledge?.AllyName,
       clanCrestId: creature.ClanCrestId,
       allyCrestId: creature.AllyCrestId,
+      recommHave: creature.RecommHave,
     };
   }
 
@@ -428,6 +435,7 @@ function createDemoParty(): L2PartyMember[] {
     maxMp: 2600,
   });
   sorc.Buffs.add(demoBuff(1204, 1, 1200)); // Wind Walk
+  sorc.RecommHave = 12; // shows the recommend row/button in the target-select window
 
   const ranger = demoPartyMember({
     objectId: 90003,
@@ -574,6 +582,31 @@ export class GameStore {
   }
 
   /**
+   * Recommends the current target (RequestVoteNew) -- only valid for player
+   * targets (target.recommHave is only ever set for those, see
+   * targetSnapshotFromCreature) while recommLeft is still positive. When
+   * connected, the server's ExVoteSystemInfo reply is what actually updates
+   * charInfo.recommLeft (see the ExVoteSystemInfo sync handler); the
+   * target's own recommHave only refreshes next time their CharInfo/
+   * MyTargetSelected arrives, same limitation as PledgeInfoByClanId.
+   * Offline/demo mode simulates both counters locally instead.
+   */
+  recommend() {
+    const target = this.target;
+    if (!target || target.creatureKind || this.charInfo.recommLeft <= 0) {
+      return;
+    }
+
+    if (this.client?.GameClient.IsConnected) {
+      this.client.recommend(target.objectId);
+      return;
+    }
+
+    this.charInfo = { ...this.charInfo, recommLeft: this.charInfo.recommLeft - 1 };
+    this.target = { ...target, recommHave: (target.recommHave ?? 0) + 1 };
+  }
+
+  /**
    * Opens the skill's detail window and, when connected, asks the trainer
    * for its authoritative SpCost/Requirements (RequestAcquireSkillInfo) --
    * syncSkillRequirements picks up the AcquireSkillInfo reply and fills in
@@ -678,6 +711,7 @@ export class GameStore {
         maxMp: me.MaxMp,
         vitalityPercent: (me.VitalityPoints / MAX_VITALITY_POINTS) * 100,
         sp: me.Sp,
+        recommLeft: me.RecommLeft,
       };
     });
 
@@ -692,6 +726,9 @@ export class GameStore {
     client.on("PacketReceived", "CharSelected", syncCharInfo);
     client.on("PacketReceived", "UserInfo", syncCharInfo);
     client.on("PacketReceived", "StatusUpdate", syncCharInfo);
+    // ExVoteSystemInfo is the only packet that updates RecommLeft after
+    // world-enter (sent right after a successful RequestVoteNew).
+    client.on("PacketReceived", "ExVoteSystemInfo", syncCharInfo);
 
     const syncParty = () => runInAction(() => {
       this.party = Array.from(client.PartyList);

@@ -3,6 +3,7 @@ import { StatBar } from "../../core/stat-bar.component";
 import { Slot } from "../core/slot.component";
 import { CreatureKindIcon } from "../../core/creature-kind-icon.component";
 import { CreatureRaceIcon } from "../../core/creature-race-icon.component";
+import { BaseButton } from "../../core/buttons/base.button";
 import { useGameStore } from "../../../stores/StoreContext";
 import { HP_COLOR } from "../../../config/stat-colors";
 import { getSkillIconUrl } from "../../../config/icon-urls";
@@ -74,6 +75,18 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
       {target.title && <div style={infoRowStyle}>{t("targetSelect.status")}: {target.title}</div>}
       {target.clanName && <div style={infoRowStyle}>{t("targetSelect.clan")}: {target.clanName}</div>}
       {target.allyName && <div style={infoRowStyle}>{t("targetSelect.ally")}: {target.allyName}</div>}
+      {target.recommHave !== undefined && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+          <span style={infoRowStyle}>{t("targetSelect.recommends", { count: target.recommHave })}</span>
+          <BaseButton
+            onClick={() => game.recommend()}
+            disabled={game.charInfo.recommLeft <= 0}
+            style={{ padding: "2px 8px", fontSize: 11 }}
+          >
+            {t("targetSelect.recommendButton")}
+          </BaseButton>
+        </div>
+      )}
       {target.buffs.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           {target.buffs.map((buff) => (
