@@ -108,13 +108,13 @@ function DemonicPath() {
   );
 }
 
-// Halo -- a ring with radiating rays.
+// Six-pointed star (two overlapping triangles) -- a "holy/celestial" glyph,
+// distinct from the buffer role icon's 8-point sparkle elsewhere in the UI.
 function DivinePath() {
   return (
     <>
-      <ellipse cx="10" cy="6.5" rx="5.5" ry="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <line x1="10" y1="9.5" x2="10" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <line x1="6" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <polygon points="10,2 17,14 3,14" fill="currentColor" fillOpacity="0.85" />
+      <polygon points="10,18 3,6 17,6" fill="currentColor" fillOpacity="0.85" />
     </>
   );
 }
@@ -148,15 +148,19 @@ function GiantPath() {
   );
 }
 
-// Gear/cog -- mechanical.
+// Golem/robot head -- square head with two square eyes and a bolt-antenna,
+// reads as "artificial being" rather than a machine part.
 function ConstructPath() {
   return (
     <>
-      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
-        <rect key={deg} x="9.1" y="1.5" width="1.8" height="4" rx="0.5" fill="currentColor" transform={`rotate(${deg} 10 10)`} />
-      ))}
-      <circle cx="10" cy="10" r="4.6" fill="currentColor" />
-      <circle cx="10" cy="10" r="2.1" fill="#101010" />
+      <line x1="10" y1="1" x2="10" y2="3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="10" cy="1" r="1" fill="currentColor" />
+      <rect x="4" y="3.5" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="6.5" y="7" width="2.4" height="2.4" fill="currentColor" />
+      <rect x="11.1" y="7" width="2.4" height="2.4" fill="currentColor" />
+      <line x1="4" y1="10.5" x2="1.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="16" y1="10.5" x2="18.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <rect x="7" y="14.5" width="6" height="3" rx="0.5" fill="currentColor" />
     </>
   );
 }
