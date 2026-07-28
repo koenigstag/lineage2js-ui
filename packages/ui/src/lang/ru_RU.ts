@@ -71,6 +71,11 @@ export const LANG_RU_RU: LangDictionary = {
     createButton: "Создать персонажа",
     backButton: "Назад",
     baseStatsTitle: "Базовые характеристики",
+  },
+  charInfo: {
+    hp: "HP",
+    mp: "MP",
+    cp: "CP",
     stat: {
       str: "STR",
       dex: "DEX",
@@ -79,11 +84,6 @@ export const LANG_RU_RU: LangDictionary = {
       wit: "WIT",
       men: "MEN",
     },
-  },
-  charInfo: {
-    hp: "HP",
-    mp: "MP",
-    cp: "CP",
   },
   charSelect: {
     templatesFailed: "Не удалось загрузить шаблоны персонажей.",

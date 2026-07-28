@@ -71,6 +71,11 @@ export const LANG_EN_US: LangDictionary = {
     createButton: "Create character",
     backButton: "Back",
     baseStatsTitle: "Base Stats",
+  },
+  charInfo: {
+    hp: "HP",
+    mp: "MP",
+    cp: "CP",
     stat: {
       str: "STR",
       dex: "DEX",
@@ -79,11 +84,6 @@ export const LANG_EN_US: LangDictionary = {
       wit: "WIT",
       men: "MEN",
     },
-  },
-  charInfo: {
-    hp: "HP",
-    mp: "MP",
-    cp: "CP",
   },
   charSelect: {
     templatesFailed: "Could not load character templates.",

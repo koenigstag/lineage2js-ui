@@ -42,7 +42,7 @@ export const CharTemplateInfoMenu = observer(function CharTemplateInfoMenu({
       <div style={{ color: "#e8dfc8", fontSize: 13, marginBottom: 4 }}>{t("charCreate.baseStatsTitle")}</div>
       {STAT_KEYS.map((key) => (
         <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#cccccc" }}>
-          <span>{t(`charCreate.stat.${key}`)}</span>
+          <span>{t(`charInfo.stat.${key}`)}</span>
           <span>{stats[key]}</span>
         </div>
       ))}
