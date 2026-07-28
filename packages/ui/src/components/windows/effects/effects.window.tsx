@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { Slot, type IconBorder } from "../core/slot.component";
+import { Slot } from "../core/slot.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { getSkillIconUrl } from "../../../config/icon-urls";
 import { getSkillName } from "../../../config/skill-mapping";
@@ -8,8 +8,6 @@ import { t } from "../../../lang/lang";
 const SLOT_SIZE = 34;
 const BUFF_ICON_SIZE = SLOT_SIZE / 2;
 const SLOT_GAP = 2;
-
-const BUFF_ICON_BORDER: IconBorder = { from: "#7f8faf", to: "#31366f" };
 
 export const EffectsContent = observer(function EffectsContent() {
   const game = useGameStore();
@@ -21,7 +19,6 @@ export const EffectsContent = observer(function EffectsContent() {
           key={buff.Id}
           type="inventory"
           size={BUFF_ICON_SIZE}
-          iconBorder={BUFF_ICON_BORDER}
           content={{
             type: "skill",
             data: buff,
