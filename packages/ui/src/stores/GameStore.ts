@@ -43,6 +43,7 @@ export interface CharInfoSnapshot {
   mp: number;
   maxMp: number;
   vitalityPercent: number;
+  sp: number;
 }
 
 // Same demo-first treatment as hotbar/inventory/skills/buffs -- shows
@@ -59,6 +60,7 @@ function createDemoCharInfo(): CharInfoSnapshot {
     mp: 900,
     maxMp: 1400,
     vitalityPercent: (27000 / MAX_VITALITY_POINTS) * 100,
+    sp: 12500,
   };
 }
 
@@ -171,6 +173,28 @@ function createDemoSkills(): L2Skill[] {
     demoSkill({ id: 147, level: 1, isActive: false }), // Magic Resistance
     demoSkill({ id: 143, level: 1, isActive: false }), // Cubic Mastery
     demoSkill({ id: 194, level: 1, isActive: false }), // Lucky
+  ];
+}
+
+// The "Learn" tab's data source -- skills not yet acquired, with what
+// AcquireSkillList-equivalent static data (SkillLearn.xml in the L2J_Mobius
+// datapack) would carry. This codebase has no AcquireSkillList/RequestAcquire
+// packets wired at all yet (unlike items/skills/npc data, there's no real
+// wire source for this here), so it's demo-only for now, same as the rest
+// of the skill window's first pass.
+export interface LearnableSkillSnapshot {
+  id: number;
+  level: number;
+  minLevel: number;
+  costSp: number;
+  requiredItem?: { id: number; count: number };
+}
+
+function createDemoLearnableSkills(): LearnableSkillSnapshot[] {
+  return [
+    { id: 256, level: 1, minLevel: 40, costSp: 3000 }, // Accuracy
+    { id: 1191, level: 1, minLevel: 40, costSp: 5000, requiredItem: { id: 1869, count: 10 } }, // Resist Fire -- Iron Ore x10, already in the demo inventory
+    { id: 1002, level: 1, minLevel: 42, costSp: 8000, requiredItem: { id: 6622, count: 1 } }, // Flame Chant -- an item NOT in the demo inventory
   ];
 }
 
@@ -507,6 +531,10 @@ export class GameStore {
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** Combat text feed, see battlelog window and BATTLE_LOG_MESSAGE_IDS. */
   battleLog: BattleLogEntry[] = createDemoBattleLog();
+  /** Skills-list "Learn" tab data, see LearnableSkillSnapshot. */
+  learnableSkills: LearnableSkillSnapshot[] = createDemoLearnableSkills();
+  /** Currently open in the "skill" detail window, if any. */
+  selectedLearnableSkill: LearnableSkillSnapshot | undefined = undefined;
   /** Set once by bindToClient -- used by selectTarget/clearTarget to dispatch outgoing packets. */
   client: Client | undefined;
 
@@ -540,6 +568,42 @@ export class GameStore {
       this.client.cancelTarget();
     }
     this.target = undefined;
+  }
+
+  selectLearnableSkill(skill: LearnableSkillSnapshot) {
+    this.selectedLearnableSkill = skill;
+  }
+
+  clearSelectedLearnableSkill() {
+    this.selectedLearnableSkill = undefined;
+  }
+
+  hasRequiredItem(requiredItem: { id: number; count: number }): boolean {
+    return this.inventoryItems.some((item) => item.Id === requiredItem.id && item.Count >= requiredItem.count);
+  }
+
+  /**
+   * Simulates learning the selected skill locally (moves it from
+   * learnableSkills into skills, deducts its SP cost). There's no real
+   * RequestAcquireSkill-equivalent outgoing packet in this codebase yet
+   * (see LearnableSkillSnapshot's comment), so this doesn't talk to a
+   * server -- it's a self-contained demo/local simulation only.
+   */
+  learnSelectedSkill() {
+    const skill = this.selectedLearnableSkill;
+    if (!skill) {
+      return;
+    }
+    if (this.charInfo.sp < skill.costSp) {
+      return;
+    }
+    if (skill.requiredItem && !this.hasRequiredItem(skill.requiredItem)) {
+      return;
+    }
+    this.charInfo = { ...this.charInfo, sp: this.charInfo.sp - skill.costSp };
+    this.learnableSkills = this.learnableSkills.filter((s) => s !== skill);
+    this.skills = [...this.skills, demoSkill({ id: skill.id, level: skill.level, isActive: true })];
+    this.selectedLearnableSkill = undefined;
   }
 
   private recordBattleLogMessage(messageId: number, params: unknown[], paramTypes: number[]) {
@@ -590,6 +654,7 @@ export class GameStore {
         mp: me.Mp,
         maxMp: me.MaxMp,
         vitalityPercent: (me.VitalityPoints / MAX_VITALITY_POINTS) * 100,
+        sp: me.Sp,
       };
     });
 

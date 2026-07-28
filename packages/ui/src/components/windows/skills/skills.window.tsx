@@ -3,9 +3,10 @@ import { observer } from "mobx-react-lite";
 import type { L2Skill } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
-import { useGameStore } from "../../../stores/StoreContext";
+import { useGameStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import { getSkillIconUrl } from "../../../config/icon-urls";
 import { getSkillName } from "../../../config/skill-mapping";
+import type { LearnableSkillSnapshot } from "../../../stores/GameStore";
 import { t } from "../../../lang/lang";
 
 const TABS = ["Active", "Passive", "Learn"] as const;
@@ -30,6 +31,7 @@ const SKILL_ICON_BORDER: IconBorder = { from: "#7f8faf", to: "#31366f" };
 
 export const SkillsContent = observer(function SkillsContent() {
   const game = useGameStore();
+  const windowManager = useWindowManagerStore();
   const [activeTab, setActiveTab] = useState<Tab>("Active");
   const [search, setSearch] = useState("");
 
@@ -37,6 +39,17 @@ export const SkillsContent = observer(function SkillsContent() {
   const filteredSkills = game.skills.filter(
     (skill) => matchesTab(skill, activeTab) && (query === "" || getSkillName(skill).toLowerCase().includes(query))
   );
+
+  // Opens the "skill" detail window pinned to the right of this window's
+  // current (possibly user-dragged) position, rather than a static default.
+  function handleLearnableClick(skill: LearnableSkillSnapshot) {
+    game.selectLearnableSkill(skill);
+    const rect = document.getElementById("skills-list")?.getBoundingClientRect();
+    if (rect) {
+      windowManager.move("skill", rect.right + 8, rect.top);
+    }
+    windowManager.open("skill");
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -62,7 +75,35 @@ export const SkillsContent = observer(function SkillsContent() {
         ))}
       </div>
       {activeTab === "Learn" ? (
-        <div style={{ padding: "16px 8px", color: "#999999", fontSize: 12 }}>{t("skills.comingSoon")}</div>
+        <div
+          className="slot-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${GRID_COLUMNS}, ${SLOT_SIZE}px)`,
+            gridAutoRows: SLOT_SIZE,
+            gap: SLOT_GAP,
+          }}
+        >
+          {game.learnableSkills.map((skill) => (
+            <div key={`${skill.id}-${skill.level}`} onClick={() => handleLearnableClick(skill)} style={{ cursor: "pointer" }}>
+              <Slot
+                type="inventory"
+                iconBorder={SKILL_ICON_BORDER}
+                content={{
+                  type: "skill",
+                  data: skill,
+                  iconUrl: getSkillIconUrl(skill.id),
+                  tooltip: {
+                    kind: "skill",
+                    name: getSkillName({ Id: skill.id }),
+                    stats: t("tooltip.levelLabel", { level: skill.level }),
+                    id: skill.id,
+                  },
+                }}
+              />
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           <BaseInput

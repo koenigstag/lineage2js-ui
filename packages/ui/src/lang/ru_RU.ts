@@ -139,6 +139,15 @@ export const LANG_RU_RU: LangDictionary = {
     },
     comingSoon: "Скоро будет доступно",
     searchPlaceholder: "Поиск",
+    learn: {
+      level: "Уровень {level}",
+      requiredLevel: "Требуемый уровень: {level}",
+      availableSp: "Доступно SP: {sp}",
+      requiredSp: "Требуется SP: {sp}",
+      requiredItem: "Требуемый предмет",
+      learnButton: "Изучить навык",
+      closeButton: "Закрыть",
+    },
   },
   actions: {
     categories: {

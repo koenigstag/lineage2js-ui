@@ -139,6 +139,15 @@ export const LANG_EN_US: LangDictionary = {
     },
     comingSoon: "Coming soon",
     searchPlaceholder: "Search",
+    learn: {
+      level: "Level {level}",
+      requiredLevel: "Required Level: {level}",
+      availableSp: "Available SP: {sp}",
+      requiredSp: "Required SP: {sp}",
+      requiredItem: "Required Item",
+      learnButton: "Learn Skill",
+      closeButton: "Close",
+    },
   },
   actions: {
     categories: {

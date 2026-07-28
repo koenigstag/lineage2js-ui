@@ -12,6 +12,7 @@ import { CharInfoContent } from "../char-info/char-info.window";
 import { PartyCharInfoContent } from "../party-char-info/party-char-info.window";
 import { TargetSelectContent } from "../target-select/target-select.window";
 import { BattleLogContent } from "../battlelog/battlelog.window";
+import { SkillLearnContent } from "../skill/skill.window";
 import { useGameStore } from "../../../stores/StoreContext";
 
 export interface WindowsRootProps {
@@ -33,6 +34,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     "party-char-info": () => <PartyCharInfoContent onMemberClick={(member) => game.selectTarget(member)} />,
     "target-select": () => <TargetSelectContent />,
     battlelog: () => <BattleLogContent />,
+    skill: () => <SkillLearnContent />,
   };
 
   return (
@@ -45,6 +47,10 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
         }
         // No target selected -- same "collapse instead of empty frame" treatment.
         if (id === "target-select" && !game.target) {
+          return null;
+        }
+        // No skill selected from the Learn tab yet -- same treatment.
+        if (id === "skill" && !game.selectedLearnableSkill) {
           return null;
         }
 
