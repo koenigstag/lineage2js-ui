@@ -8,6 +8,8 @@ This project is a work in progress so expect bugs, missing features, and incompl
 The network protocol implementation is still incomplete, and the UI client is in early development. Contributions are welcome!
 
 ## Roadmap
+- Improve hotbar features - allow to add shortcuts, add cooldown animation, implement soul-shots auto-usage
+- Implement inventory equip slots
 - Add simple mobs radar (red dots), no minimap yet
 - Implement basic movement system on fake plain surface
 - Add temporary 3D model for all mobs (based on collision radius, no animations yet)
