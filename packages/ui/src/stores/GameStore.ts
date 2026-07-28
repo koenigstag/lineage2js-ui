@@ -39,6 +39,14 @@ const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + 
 // packages/network/README.md). Confirm against the target server if it differs.
 export const MAX_VITALITY_POINTS = 20000;
 
+// Vitality level boundaries (VitalityPointsPerLevel.{Two,Three,Four} in the
+// H5 reference server, out of MAX_VITALITY_POINTS) -- each level bumps the
+// server's XP-gain rate multiplier (PcStats.getVitalityMultiplier()). Used
+// as StatBar `dividers` for the vitality bar wherever it's shown. The
+// One/None boundary at 240 (1.2%) is skipped -- too thin to read as a
+// marker at typical bar widths.
+export const VITALITY_LEVEL_MARKERS = [2000, 13000, 17000].map((points) => (points / MAX_VITALITY_POINTS) * 100);
+
 export interface CharInfoSnapshot {
   name: string;
   level: number;
@@ -878,6 +886,11 @@ export class GameStore {
     // world-enter (see EnterWorld.java in the H5 reference server) --
     // re-snapshot once it lands instead of waiting for the next UserInfo.
     client.on("PacketReceived", "HennaInfo", syncCharInfo);
+    // Vitality regen while resting in a peace zone only pushes this packet
+    // (see VitalityTask.java), not a full UserInfo/StatusUpdate -- without
+    // this the vitality bar would sit still until some unrelated stat change
+    // happened to trigger a refresh.
+    client.on("PacketReceived", "ExVitalityPointInfo", syncCharInfo);
     client.on("PacketReceived", "StatusUpdate", syncCharInfo);
     // ExVoteSystemInfo is the only packet that updates RecommLeft after
     // world-enter (sent right after a successful RequestVoteNew).

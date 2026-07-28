@@ -1,5 +1,6 @@
 import { StatBar } from "./stat-bar.component";
 import { CP_COLOR, HP_COLOR, MP_COLOR, VITALITY_COLOR } from "../../config/stat-colors";
+import { VITALITY_LEVEL_MARKERS } from "../../stores/GameStore";
 import { t } from "../../lang/lang";
 
 export interface CharacterVitalsProps {
@@ -79,7 +80,14 @@ export function CharacterVitals({
         height={height}
       />
       {vitalityPercent !== undefined && (
-        <StatBar percent={vitalityPercent} color={VITALITY_COLOR} label={t("charInfo.vp")} width={width} height={height} />
+        <StatBar
+          percent={vitalityPercent}
+          color={VITALITY_COLOR}
+          label={t("charInfo.vp")}
+          width={width}
+          height={height}
+          dividers={VITALITY_LEVEL_MARKERS}
+        />
       )}
     </div>
   );

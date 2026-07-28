@@ -38,6 +38,7 @@ import ExShowContactList from "./ExShowContactList";
 import ExShowScreenMessage from "./ExShowScreenMessage";
 import ExStorageMaxCount from "./ExStorageMaxCount";
 import ExUISetting from "./ExUISetting";
+import ExVitalityPointInfo from "./ExVitalityPointInfo";
 import ExVoteSystemInfo from "./ExVoteSystemInfo";
 import FriendList from "./FriendList";
 import GameClientPacket from "./GameClientPacket";
@@ -171,6 +172,7 @@ export {
   ExShowScreenMessage,
   ExStorageMaxCount,
   ExUISetting,
+  ExVitalityPointInfo,
   ExVoteSystemInfo,
   FriendList,
   GameClientPacket,

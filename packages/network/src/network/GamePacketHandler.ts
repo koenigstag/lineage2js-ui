@@ -378,6 +378,9 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
             case 0x8d:
               rpk = new Packets.NpcQuestHtmlMessage();
               break;
+            case 0xa0:
+              rpk = new Packets.ExVitalityPointInfo();
+              break;
             case 0xc1:
               rpk = new Packets.ExRotation();
               break;

@@ -2,6 +2,7 @@ import { Fragment, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { StatBar } from "../../core/stat-bar.component";
 import { useGameStore } from "../../../stores/StoreContext";
+import { VITALITY_LEVEL_MARKERS } from "../../../stores/GameStore";
 import { CP_COLOR, HP_COLOR, MP_COLOR, SP_COLOR, VITALITY_COLOR, WG_COLOR, XP_COLOR } from "../../../config/stat-colors";
 import { t } from "../../../lang/lang";
 
@@ -19,6 +20,10 @@ import { t } from "../../../lang/lang";
 const PANEL_WIDTH = 330;
 const BORDER_COLOR = "#272422";
 const TEXT_SHADOW = "1px 0.5px 0 rgba(0, 0, 0, 0.9)";
+
+// Plain 10% ticks -- XP has no level-like breakpoints of its own, just a
+// steady progress readout.
+const XP_MARKERS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
 
 const panelStyle: CSSProperties = {
   backgroundColor: "#181818",
@@ -102,17 +107,20 @@ function LabeledBar({
   text,
   color,
   width,
+  dividers,
 }: {
   label: string;
   percent: number;
   text?: string;
   color: string;
   width: number;
+  /** Percentages (0-100) to draw a thin marker line at, e.g. vitality level boundaries. */
+  dividers?: number[];
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
       <span style={barLabelStyle}>{label}</span>
-      <StatBar percent={percent} color={color} text={text} width={width} height={13} />
+      <StatBar percent={percent} color={color} text={text} width={width} height={13} dividers={dividers} />
     </div>
   );
 }
@@ -235,7 +243,7 @@ export const CharacterContent = observer(function CharacterContent() {
           <div style={{ display: "flex", flexDirection: "column", gap: 3, width: 156 }}>
             <LabeledBar label={t("charInfo.hp")} percent={(info.hp / info.maxHp) * 100} text={`${info.hp}/${info.maxHp}`} color={HP_COLOR} width={128} />
             <LabeledBar label={t("charInfo.mp")} percent={(info.mp / info.maxMp) * 100} text={`${info.mp}/${info.maxMp}`} color={MP_COLOR} width={128} />
-            <LabeledBar label={t("charInfo.vp")} percent={info.vitalityPercent} color={VITALITY_COLOR} width={128} />
+            <LabeledBar label={t("charInfo.vp")} percent={info.vitalityPercent} color={VITALITY_COLOR} width={128} dividers={VITALITY_LEVEL_MARKERS} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2, width: 150 }}>
             <LabeledBar label={t("charInfo.cp")} percent={(info.cp / info.maxCp) * 100} text={`${info.cp}/${info.maxCp}`} color={CP_COLOR} width={122} />
@@ -243,7 +251,7 @@ export const CharacterContent = observer(function CharacterContent() {
             <LabeledBar label={t("charInfo.sp")} percent={100} text={`${info.sp}`} color={SP_COLOR} width={122} />
           </div>
         </div>
-        <LabeledBar label={t("charInfo.xp")} percent={info.expPercent || 0} text={formatPercent(info.expPercent)} color={XP_COLOR} width={290} />
+        <LabeledBar label={t("charInfo.xp")} percent={info.expPercent || 0} text={formatPercent(info.expPercent)} color={XP_COLOR} width={290} dividers={XP_MARKERS} />
       </div>
 
       <StatsSection
