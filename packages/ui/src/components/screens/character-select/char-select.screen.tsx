@@ -34,18 +34,19 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
   // Nothing is highlighted when the roster first arrives, which left the
   // screen looking empty: no name, no char-info panel and a disabled Start,
   // even though the characters were there in the scene. The real client
-  // preselects the character last played, which CharSelectionInfo flags for us.
+  // preselects the character last played, which CharSelectionInfo flags for
+  // us -- and only that one: with no flagged character nothing is highlighted
+  // and the player picks for themselves, rather than us guessing at the first
+  // slot.
   useEffect(() => {
     const roster = session.characters;
-    if (roster.length === 0) {
-      return;
-    }
     if (roster.some((character) => character.ObjectId === game.selectedCharacterId)) {
       return;
     }
 
-    const preselected = roster.find((character) => character.IsLastUsed) ?? roster[0];
-    game.selectCharacter(preselected.ObjectId);
+    const lastPlayed = roster.find((character) => character.IsLastUsed);
+    // Also clears a selection left over from a previous account's roster.
+    game.selectCharacter(lastPlayed?.ObjectId);
   }, [game, session.characters]);
 
   const characters = session.characters.map((character) => ({
