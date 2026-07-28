@@ -40,6 +40,11 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
     return null;
   }
 
+  // Con-color is a "is this monster worth fighting" signal -- doesn't apply
+  // to quest-giver/functional NPCs, siege weapons (catapults etc, even though
+  // they're technically attackable), or summons/pets.
+  const isConColored = target.level !== undefined && target.creatureKind === "mob" && target.race !== "SIEGE_WEAPON";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, width: BAR_WIDTH }}>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -51,7 +56,7 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
         )}
         <span
           style={{
-            color: target.level !== undefined ? getTargetLevelColor(game.charInfo.level, target.level) : "#e6d9be",
+            color: isConColored ? getTargetLevelColor(game.charInfo.level, target.level!) : "#e6d9be",
             fontSize: 13,
           }}
         >
