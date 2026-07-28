@@ -39,9 +39,9 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
         width={BAR_WIDTH}
         height={BAR_HEIGHT}
       />
-      {target.title && <div style={infoRowStyle}>{target.title}</div>}
-      {target.clanName && <div style={infoRowStyle}>{target.clanName}</div>}
-      {target.allyName && <div style={infoRowStyle}>{target.allyName}</div>}
+      {target.title && <div style={infoRowStyle}>{t("targetSelect.status")}: {target.title}</div>}
+      {target.clanName && <div style={infoRowStyle}>{t("targetSelect.clan")}: {target.clanName}</div>}
+      {target.allyName && <div style={infoRowStyle}>{t("targetSelect.ally")}: {target.allyName}</div>}
       {target.buffs.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           {target.buffs.map((buff) => (

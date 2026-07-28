@@ -7,6 +7,8 @@ export default class L2Character extends L2Creature {
   private _level!: number;
   private _clanId!: number;
   private _allyId!: number;
+  private _clanCrestId!: number;
+  private _allyCrestId!: number;
 
   public get ClanId(): number {
     return this._clanId;
@@ -19,6 +21,18 @@ export default class L2Character extends L2Creature {
   }
   public set AllyId(value: number) {
     this._allyId = value;
+  }
+  public get ClanCrestId(): number {
+    return this._clanCrestId;
+  }
+  public set ClanCrestId(value: number) {
+    this._clanCrestId = value;
+  }
+  public get AllyCrestId(): number {
+    return this._allyCrestId;
+  }
+  public set AllyCrestId(value: number) {
+    this._allyCrestId = value;
   }
 
   public get Cp(): number {

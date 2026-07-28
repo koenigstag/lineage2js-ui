@@ -95,6 +95,11 @@ export const LANG_EN_US: LangDictionary = {
     entering: "Entering...",
     startButton: "Start",
   },
+  targetSelect: {
+    status: "Status",
+    clan: "Clan",
+    ally: "Ally",
+  },
   game: {
     grid: {
       character: "Character",

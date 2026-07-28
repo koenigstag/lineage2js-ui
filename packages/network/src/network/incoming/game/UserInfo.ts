@@ -99,9 +99,9 @@ export default class UserInfo extends GameClientPacket {
 
     this.User.Title = this.readS();
     this.User.ClanId = this.readD();
-    const _clanCrestId = this.readD();
-    const _allyId = this.readD();
-    const _allyCrestId = this.readD();
+    this.User.ClanCrestId = this.readD();
+    this.User.AllyId = this.readD();
+    this.User.AllyCrestId = this.readD();
 
     // 0x40 leader rights
     // siege flags: attacker - 0x180 sword over name, defender - 0x80 shield, 0xC0 crown (|leader), 0x1C0 flag (|leader)

@@ -252,6 +252,13 @@ export interface TargetSnapshot {
   title?: string;
   clanName?: string;
   allyName?: string;
+  // Numeric crest ids, straight off the wire (see L2Character.ClanCrestId/
+  // AllyCrestId) -- not rendered yet, no crest image fetch/decode pipeline
+  // exists (crests are a raw bitmap, requested via a separate packet pair
+  // this codebase doesn't implement). Kept 0 rather than undefined to match
+  // the wire's "no crest" value.
+  clanCrestId?: number;
+  allyCrestId?: number;
   // Non-player creature kind (L2Mob/L2Npc/L2Summon), for a type icon --
   // only set when the target is NOT a player.
   creatureKind?: CreatureKind;
@@ -289,6 +296,8 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
       title: creature.Title || undefined,
       clanName: pledge?.ClanName,
       allyName: pledge?.AllyName,
+      clanCrestId: creature.ClanCrestId,
+      allyCrestId: creature.AllyCrestId,
     };
   }
 

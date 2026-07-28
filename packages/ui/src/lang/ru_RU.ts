@@ -95,6 +95,11 @@ export const LANG_RU_RU: LangDictionary = {
     entering: "Вход...",
     startButton: "Старт",
   },
+  targetSelect: {
+    status: "Статус",
+    clan: "Клан",
+    ally: "Альянс",
+  },
   game: {
     grid: {
       character: "Персонаж",
