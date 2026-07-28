@@ -20,8 +20,10 @@ const TYPE_SYSTEM_STRING = 13;
 
 // Reactive read, not a stored field: UiStore.systemMessages loads
 // asynchronously (see UiStore.loadSystemMessages()), same treatment as
-// item-mapping.ts's getItemName(). English-only for now (no server-sent
-// system message text, only numeric ids -- see AbstractMessagePacket.ts).
+// item-mapping.ts's getItemName(). The wire itself never sends message
+// text, only numeric ids (see AbstractMessagePacket.ts) -- UiStore merges
+// the English base table with the current lang's translated subset, so
+// this already reflects the active language.
 export function getSystemMessageTemplate(messageId: number): string | undefined {
   return rootStore.ui.systemMessages[messageId];
 }

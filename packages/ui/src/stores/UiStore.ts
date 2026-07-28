@@ -27,9 +27,16 @@ export class UiStore {
   /** npcId -> level, see config/npc-level-mapping.ts. Same datapack source/gap as npcRaces -- NpcInfo never sends a monster's level over the wire. */
   npcLevels: Record<string, number> = {};
   private npcLevelsRequested = false;
-  /** messageId -> template string ("$s1"/"$c1" placeholders), see config/system-message-mapping.ts. English-only -- the wire only ever sends numeric ids/params, never text. */
+  /**
+   * messageId -> template string ("$s1"/"$c1" placeholders) for the current
+   * lang, see config/system-message-mapping.ts. Only en.json has the full
+   * ~3236-entry L2J_Mobius-sourced table; other languages are a curated,
+   * hand-translated subset (currently just the battle-log whitelist) that
+   * gets merged on top of the English base, so anything untranslated still
+   * falls back to English instead of a raw "#123".
+   */
   systemMessages: Record<string, string> = {};
-  private systemMessagesRequested = false;
+  private systemMessagesCache: Partial<Record<LANG, Record<string, string>>> = {};
 
   constructor() {
     makeAutoObservable(this);
@@ -46,6 +53,7 @@ export class UiStore {
   setLang(lang: LANG) {
     this.lang = lang;
     this.loadActionNames();
+    this.loadSystemMessages();
   }
 
   setItemNames(names: Record<string, string>) {
@@ -147,16 +155,36 @@ export class UiStore {
     this.systemMessages = messages;
   }
 
-  /** Fetches public/system-messages/en.json once, same treatment as loadItemNames(). */
+  /**
+   * Fetches the English base table plus the current lang's translated
+   * subset (skipped for English itself), merges them (translated entries
+   * win, everything else stays English), and caches the merged result per
+   * language so switching languages doesn't re-fetch every time.
+   */
   async loadSystemMessages() {
-    if (this.systemMessagesRequested) return;
-    this.systemMessagesRequested = true;
+    const lang = this.lang;
+    const cached = this.systemMessagesCache[lang];
+    if (cached) {
+      this.setSystemMessages(cached);
+      return;
+    }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}system-messages/en.json`);
-      const messages: Record<string, string> = await response.json();
-      this.setSystemMessages(messages);
+      const enResponse = await fetch(`${import.meta.env.BASE_URL}system-messages/en.json`);
+      const en: Record<string, string> = await enResponse.json();
+      let merged = en;
+      if (lang !== "en") {
+        try {
+          const langResponse = await fetch(`${import.meta.env.BASE_URL}system-messages/${lang}.json`);
+          const overrides: Record<string, string> = await langResponse.json();
+          merged = { ...en, ...overrides };
+        } catch {
+          // no translation file for this lang yet -- English fallback for everything
+        }
+      }
+      this.systemMessagesCache[lang] = merged;
+      this.setSystemMessages(merged);
     } catch {
-      this.systemMessagesRequested = false;
+      // leave systemMessages as-is -- formatSystemMessage falls back to "#<id>"
     }
   }
 }
