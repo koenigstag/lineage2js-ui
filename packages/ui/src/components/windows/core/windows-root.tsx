@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { observer } from "mobx-react-lite";
 import { Window } from "./window.component";
 import { HotbarContent } from "../hotbar/hotbar.window";
 import { InventoryContent } from "../inventory/inventory.window";
@@ -9,6 +10,7 @@ import { EffectsContent } from "../effects/effects.window";
 import { ActionsContent } from "../actions/actions.window";
 import { CharInfoContent } from "../char-info/char-info.window";
 import { PartyCharInfoContent } from "../party-char-info/party-char-info.window";
+import { useGameStore } from "../../../stores/StoreContext";
 
 const CONTENT: Partial<Record<string, () => ReactNode>> = {
   hotbar: () => <HotbarContent />,
@@ -26,14 +28,24 @@ export interface WindowsRootProps {
   ids: string[];
 }
 
-export function WindowsRoot({ ids }: WindowsRootProps) {
+export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootProps) {
+  const game = useGameStore();
+
   return (
     <>
-      {ids.map((id) => (
-        <Window key={id} id={id}>
-          {CONTENT[id] ?? (() => null)}
-        </Window>
-      ))}
+      {ids.map((id) => {
+        // Not partied -- no members to show, so collapse the window entirely
+        // instead of leaving an empty frame on screen.
+        if (id === "party-char-info" && game.party.length === 0) {
+          return null;
+        }
+
+        return (
+          <Window key={id} id={id}>
+            {CONTENT[id] ?? (() => null)}
+          </Window>
+        );
+      })}
     </>
   );
-}
+});

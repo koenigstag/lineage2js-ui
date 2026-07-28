@@ -6,8 +6,7 @@ import { getClassRole } from "../../../config/class-tree";
 import { CP_COLOR, HP_COLOR, MP_COLOR } from "../../../config/stat-colors";
 
 const BAR_WIDTH = 170;
-const CP_BAR_HEIGHT = 5;
-const BAR_HEIGHT = 12;
+const BAR_HEIGHT = 5;
 
 export const PartyCharInfoContent = observer(function PartyCharInfoContent() {
   const game = useGameStore();
@@ -20,21 +19,9 @@ export const PartyCharInfoContent = observer(function PartyCharInfoContent() {
             <ClassRoleIcon role={getClassRole(member.ClassId)} />
             <span style={{ color: "#e6d9be", fontSize: 12 }}>{member.Name}</span>
           </div>
-          <StatBar percent={(member.Cp / member.MaxCp) * 100} color={CP_COLOR} width={BAR_WIDTH} height={CP_BAR_HEIGHT} />
-          <StatBar
-            percent={(member.Hp / member.MaxHp) * 100}
-            color={HP_COLOR}
-            text={`${member.Hp}/${member.MaxHp}`}
-            width={BAR_WIDTH}
-            height={BAR_HEIGHT}
-          />
-          <StatBar
-            percent={(member.Mp / member.MaxMp) * 100}
-            color={MP_COLOR}
-            text={`${member.Mp}/${member.MaxMp}`}
-            width={BAR_WIDTH}
-            height={BAR_HEIGHT}
-          />
+          <StatBar percent={(member.Cp / member.MaxCp) * 100} color={CP_COLOR} width={BAR_WIDTH} height={BAR_HEIGHT} />
+          <StatBar percent={(member.Hp / member.MaxHp) * 100} color={HP_COLOR} width={BAR_WIDTH} height={BAR_HEIGHT} />
+          <StatBar percent={(member.Mp / member.MaxMp) * 100} color={MP_COLOR} width={BAR_WIDTH} height={BAR_HEIGHT} />
         </div>
       ))}
     </div>
