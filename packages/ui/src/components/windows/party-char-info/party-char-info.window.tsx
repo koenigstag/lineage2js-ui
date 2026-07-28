@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { StatBar } from "../../core/stat-bar.component";
-import { ClassRoleIcon } from "../../core/class-role-icon.component";
+import { ClassRoleIcon, CrownIcon } from "../../core/class-role-icon.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { getClassRole } from "../../../config/class-tree";
 import { CP_COLOR, HP_COLOR, MP_COLOR } from "../../../config/stat-colors";
@@ -18,6 +18,7 @@ export const PartyCharInfoContent = observer(function PartyCharInfoContent() {
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <ClassRoleIcon role={getClassRole(member.ClassId)} />
             <span style={{ color: "#e6d9be", fontSize: 12 }}>{member.Name}</span>
+            {member.IsPartyLeader && <CrownIcon />}
           </div>
           <StatBar percent={(member.Cp / member.MaxCp) * 100} color={CP_COLOR} width={BAR_WIDTH} height={BAR_HEIGHT} />
           <StatBar percent={(member.Hp / member.MaxHp) * 100} color={HP_COLOR} width={BAR_WIDTH} height={BAR_HEIGHT} />

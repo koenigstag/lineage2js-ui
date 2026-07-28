@@ -52,3 +52,23 @@ export function ClassRoleIcon({ role, size = 16, color = "#e6d9be" }: ClassRoleI
     </svg>
   );
 }
+
+interface CrownIconProps {
+  size?: number;
+  color?: string;
+}
+
+/** Party leader badge (L2PartyMember.IsPartyLeader). */
+export function CrownIcon({ size = 14, color = "#ffd700" }: CrownIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
+      <path
+        d="M2 12.5 L1.5 6.5 L4.5 9 L8 3 L11.5 9 L14.5 6.5 L14 12.5 Z"
+        fill={color}
+        stroke={color}
+        strokeWidth="0.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
