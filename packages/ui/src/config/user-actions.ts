@@ -20,7 +20,7 @@ export function getActionName(action: Action): string {
 // Party has no Actions-enum member at all yet, so it stays empty until those
 // commands get their own place in the window.
 export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
-  basic: [{ code: Actions.SIT_STAND }, { code: Actions.WALK_RUN }, { code: Actions.MOUNT_DISMOUNT }],
+  basic: [{ code: Actions.SIT_STAND }, { code: Actions.WALK_RUN }],
   party: [],
   // Not a real client tab -- placeholder for target-related actions
   // (attack/next target/assist/pick up/exchange), still undecided which of
@@ -43,6 +43,7 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     { code: Actions.SOCIAL_SHYNESS },
   ],
   pet: [
+    { code: Actions.MOUNT_DISMOUNT },
     { code: Actions.PET_CHANGE_MOVEMENT_MODE },
     { code: Actions.PET_ATTACK },
     { code: Actions.PET_STOP },
