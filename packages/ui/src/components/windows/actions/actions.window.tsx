@@ -1,12 +1,10 @@
 import { observer } from "mobx-react-lite";
-import { Slot, type IconBorder } from "../core/slot.component";
+import { Slot } from "../core/slot.component";
 import { getActionIconUrl } from "../../../config/icon-urls";
 import { USER_ACTIONS, getActionName, type ActionCategory, type Action } from "../../../config/user-actions";
 import { t } from "../../../lang/lang";
 
 const CATEGORY_ORDER: ActionCategory[] = ["basic", "party", "target", "social", "pet"];
-
-const ACTION_ICON_BORDER: IconBorder = { from: "#7f9faf", to: "#31576f" };
 
 const SLOT_SIZE = 34;
 const SLOT_GAP = 2;
@@ -39,7 +37,6 @@ export const ActionsContent = observer(function ActionsContent() {
                   iconUrl: getActionIconUrl(action.code),
                   tooltip: { kind: "simple", name: getActionName(action) },
                 }}
-                iconBorder={ACTION_ICON_BORDER}
               />
             ))}
           </div>
