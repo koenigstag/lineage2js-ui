@@ -41,6 +41,16 @@ export default class LoginClient extends MMOClient {
   init(config: MMOConfig, connection?: IConnection): this {
     this.Connection = connection ?? new MMOConnection(SocketFactory.getSocketAdapter(config), this);
 
+    // Every connection starts its own handshake: the first packet (Init) comes
+    // in under the static Blowfish key, and only then does the server hand us
+    // the dynamic one. A LoginCrypt that already went through that transition
+    // would decrypt the new Init with the *previous* attempt's dynamic key and
+    // produce garbage, so a second login on the same Client (e.g. after a wrong
+    // password) could never get past Init without a page reload.
+    this._loginCrypt = new LoginCrypt();
+    this.resetStream();
+    this.Servers = [];
+
     this.Config = config;
 
     if (config.InitialBlowfishKey != null) {

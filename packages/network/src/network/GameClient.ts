@@ -65,9 +65,37 @@ export default class GameClient extends MMOClient {
   init(config: MMOConfig, connection?: IConnection): this {
     this.Connection = connection ?? new MMOConnection(SocketFactory.getSocketAdapter(config), this);
 
+    // Same reasoning as LoginClient.init(): GameCrypt leaves its first packet
+    // (KeyPacket) in the clear and only starts XOR-ing afterwards, so a crypt
+    // carried over from a previous connection would garble the new KeyPacket
+    // and strand the handshake.
+    this._gameCrypt = new GameCrypt();
+    this.resetStream();
+
     this.Config = config;
 
     return this;
+  }
+
+  /**
+   * Drops everything scoped to one trip into the world (active character,
+   * visible objects, inventory, skills, ...) while keeping the connection and
+   * its crypt alive. Used when going back to character selection via
+   * CommandRestart, where the socket stays up but the character does not.
+   */
+  resetWorldState(): void {
+    this.ActiveChar = new L2User();
+    this.CreaturesList.clear();
+    this.PartyList.clear();
+    this.DroppedItems.clear();
+    this.InventoryItems.clear();
+    this.SkillsList.clear();
+    this.Shortcuts.clear();
+    this.DwarfRecipeBook.clear();
+    this.CommonRecipeBook.clear();
+    this.PledgeInfoByClanId.clear();
+    this.AcquireSkillList = undefined;
+    this.AcquireSkillInfoByKey.clear();
   }
 
   encrypt(buf: Uint8Array, offset: number, size: number): void {

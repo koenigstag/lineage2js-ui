@@ -4,11 +4,22 @@ import { BaseInput } from "../../core/inputs/base.input";
 import { SelectInput, type SelectOption } from "../../core/inputs/select.input";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useAlert } from "../../core/alert-modal";
-import { useSessionStore, useUiStore } from "../../../stores/StoreContext";
+import { useGameStore, useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 import { buildNewCharacter, getAvailableBaseClassesFromTemplates, getAvailableRacesFromTemplates } from "../../../config/network-mapping";
 import { getRaceLabel, getBaseClassLabel, type Race, type BaseClass, type Sex } from "../../../config/character-races";
+import {
+  MAX_CHARACTER_NAME_LENGTH,
+  validateCharacterName,
+  type CharacterNameError,
+} from "../../../lib/character-name";
 import { t } from "../../../lang/lang";
+
+const NAME_ERROR_KEYS: Record<CharacterNameError, string> = {
+  length: "charCreate.nameErrorLength",
+  characters: "charCreate.nameErrorCharacters",
+  taken: "charCreate.nameErrorTaken",
+};
 
 const SEX_OPTIONS: Array<{ value: Sex; labelKey: string }> = [
   { value: "MALE", labelKey: "charCreate.sexMale" },
@@ -54,6 +65,7 @@ export const CharCreateMenu = observer(function CharCreateMenu({
   onBaseClassChange,
   onSexChange,
 }: CharCreateMenuProps) {
+  const game = useGameStore();
   const session = useSessionStore();
   const ui = useUiStore();
   const { alert, modal: alertModal } = useAlert();
@@ -79,13 +91,20 @@ export const CharCreateMenu = observer(function CharCreateMenu({
   const hairColorOptions: SelectOption[] = HAIR_COLOR_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }));
 
   async function handleCreateCharacter() {
-    if (!nickname.trim()) {
+    // Catch what the server would reject anyway, so the player gets a specific
+    // reason instead of a round-trip ending in a generic CharCreateFail.
+    const nameError = validateCharacterName(
+      nickname,
+      session.characters.map((character) => character.Name)
+    );
+    if (nameError) {
+      await alert(t(NAME_ERROR_KEYS[nameError]));
       return;
     }
 
     const charData = buildNewCharacter(
       {
-        nickname,
+        nickname: nickname.trim(),
         race,
         baseClass,
         sex,
@@ -96,11 +115,13 @@ export const CharCreateMenu = observer(function CharCreateMenu({
       session.characterTemplates
     );
 
-    // The new character is appended at the roster's current length -- see
-    // CommandCreateCharacter. A real client goes straight into the world
-    // after creation, so success here means "game", not back to char-select.
-    if (await session.createCharacter(charData, session.characters.length)) {
-      ui.setScreen("game");
+    // Like the real client, creating a character drops back to selection with
+    // the new one preselected rather than entering the world -- the server
+    // stays in the char-select state either way (see CommandCreateCharacter).
+    const newCharacterId = await session.createCharacter(charData);
+    if (newCharacterId !== undefined) {
+      game.selectCharacter(newCharacterId);
+      ui.setScreen("select-char");
     } else {
       await alert(session.error ?? t("charCreate.createFailed"));
     }
@@ -127,7 +148,12 @@ export const CharCreateMenu = observer(function CharCreateMenu({
         padding: 16,
       }}
     >
-      <BaseInput value={nickname} placeholder={t("charCreate.nicknamePlaceholder")} onChange={setNickname} />
+      <BaseInput
+        value={nickname}
+        placeholder={t("charCreate.nicknamePlaceholder")}
+        maxLength={MAX_CHARACTER_NAME_LENGTH}
+        onChange={setNickname}
+      />
       <SelectInput options={raceOptions} value={race} onChange={(value) => onRaceChange(value as Race)} />
       <SelectInput
         options={baseClassOptions}
@@ -139,7 +165,8 @@ export const CharCreateMenu = observer(function CharCreateMenu({
       <SelectInput options={hairOptions} value={hair} onChange={setHair} />
       <SelectInput options={hairColorOptions} value={hairColor} onChange={setHairColor} />
       <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-        <BaseButton onClick={handleCreateCharacter} disabled={!nickname.trim() || session.isConnecting}>
+        {/* Deliberately not disabled on an empty name -- validation explains why it's rejected. */}
+        <BaseButton onClick={handleCreateCharacter} disabled={session.isConnecting}>
           {session.isConnecting ? t("charCreate.creating") : t("charCreate.createButton")}
         </BaseButton>
         <BaseButton onClick={handleBack} disabled={session.isConnecting}>

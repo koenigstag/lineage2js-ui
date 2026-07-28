@@ -5,17 +5,27 @@ export interface BaseInputProps {
   placeholder?: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  maxLength?: number;
   type?: "text" | "password";
   style?: CSSProperties;
 }
 
-export function BaseInput({ value, placeholder, onChange, disabled, type = "text", style }: BaseInputProps) {
+export function BaseInput({
+  value,
+  placeholder,
+  onChange,
+  disabled,
+  maxLength,
+  type = "text",
+  style,
+}: BaseInputProps) {
   return (
     <input
       type={type}
       value={value}
       placeholder={placeholder}
       disabled={disabled}
+      maxLength={maxLength}
       onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
       style={{
         width: "100%",

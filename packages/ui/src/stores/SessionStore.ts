@@ -169,15 +169,42 @@ export class SessionStore {
     }
   }
 
-  async createCharacter(charData: L2Character, newCharSlot: number): Promise<boolean> {
+  /**
+   * Creates the character and refreshes the roster from the server's reply.
+   * Resolves with the new character's ObjectId (so the caller can preselect
+   * it on the char-select screen) or undefined on failure -- creation does
+   * not enter the world, see CommandCreateCharacter.
+   */
+  async createCharacter(charData: L2Character): Promise<number | undefined> {
     this.isConnecting = true;
     this.error = undefined;
 
     try {
-      await this.client.createCharacter(charData, newCharSlot);
-      return true;
+      const characters = await this.client.createCharacter(charData);
+      this.characters = characters;
+      return characters.find((character) => character.Name === charData.Name)?.ObjectId;
     } catch (reason) {
       this.error = describeFailure(reason, CHAR_CREATE_FAIL_MESSAGES, "Could not create character.");
+      return undefined;
+    } finally {
+      this.isConnecting = false;
+    }
+  }
+
+  /**
+   * Leaves the world back to character selection, keeping the game-server
+   * connection. Without this the server still considers the character to be
+   * in-world and silently ignores every char-select-state request that follows.
+   */
+  async restart(): Promise<boolean> {
+    this.isConnecting = true;
+    this.error = undefined;
+
+    try {
+      this.characters = await this.client.restart();
+      return true;
+    } catch (reason) {
+      this.error = describeFailure(reason, {}, "Could not return to character selection.");
       return false;
     } finally {
       this.isConnecting = false;

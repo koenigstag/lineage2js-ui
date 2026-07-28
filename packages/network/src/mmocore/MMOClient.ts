@@ -35,6 +35,16 @@ export default abstract class MMOClient extends EventEmitter implements IProcess
 
   private _buffer: Uint8Array = new Uint8Array();
 
+  /**
+   * Drops the half-received packet tail left over from a previous connection.
+   * Call from init() -- a reconnect starts a brand new byte stream, and
+   * prepending the old one's leftovers to it would desync the packet framing
+   * for the rest of the session.
+   */
+  protected resetStream(): void {
+    this._buffer = new Uint8Array();
+  }
+
   private _mts: {
     [index: string]: IMMOClientMutator<MMOClient, AbstractPacket>[];
   } = {};

@@ -25,6 +25,7 @@ import CommandRequestBypass from "./CommandRequestBypass";
 import CommandRequestDuel from "./CommandRequestDuel";
 import CommandRequestCharacterTemplates from "./CommandRequestCharacterTemplates";
 import CommandRequestJoinParty from "./CommandRequestJoinParty";
+import CommandRestart from "./CommandRestart";
 import CommandRevive from "./CommandRevive";
 import CommandSay from "./CommandSay";
 import CommandSayToAlly from "./CommandSayToAlly";
@@ -68,6 +69,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   requestCharacterTemplates: CommandRequestCharacterTemplates.prototype,
   requestDuel: CommandRequestDuel.prototype,
   requestJoinParty: CommandRequestJoinParty.prototype,
+  restart: CommandRestart.prototype,
   revive: CommandRevive.prototype,
   say: CommandSay.prototype,
   sayToAlly: CommandSayToAlly.prototype,

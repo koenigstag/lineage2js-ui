@@ -2,7 +2,8 @@ import { useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
-import { useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
+import { useAlert } from "../../core/alert-modal";
+import { useGameStore, useSessionStore, useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import characterIcon from "../../../assets/menus/game/character@64.png";
 import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
 import clanIcon from "../../../assets/menus/game/clan@64.png";
@@ -75,15 +76,30 @@ const submenuIconStyle: CSSProperties = {
 const SUBMENU_ROW_COLORS = ["#10100f", "#171717"];
 
 export const GameMenu = observer(function GameMenu() {
+  const game = useGameStore();
+  const session = useSessionStore();
   const ui = useUiStore();
   const windowManager = useWindowManagerStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { confirm, modal } = useConfirmation();
+  const { alert, modal: alertModal } = useAlert();
 
   async function handleSelectCharacter() {
     setIsMenuOpen(false);
-    if (await confirm(t("game.returnToSelectConfirm"))) {
+    if (!(await confirm(t("game.returnToSelectConfirm")))) {
+      return;
+    }
+
+    // Merely switching screens would leave the server thinking the character
+    // is still in the world, and every later char-select-state request (the
+    // char-create screen's RequestNewCharacter above all) would go unanswered.
+    if (await session.restart()) {
+      // selectedCharacterId stays put so the character we just left comes back
+      // preselected, like the real client does.
+      game.setActiveCharacter(undefined);
       ui.setScreen("select-char");
+    } else {
+      await alert(session.error ?? t("game.restartFailed"));
     }
   }
 
@@ -174,6 +190,7 @@ export const GameMenu = observer(function GameMenu() {
       )}
 
       {modal}
+      {alertModal}
     </div>
   );
 });

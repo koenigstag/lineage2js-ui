@@ -46,13 +46,20 @@ export default interface ClientCommands {
    */
   requestCharacterTemplates(): Promise<CharacterTemplate[]>;
   /**
-   * Create a character in the given slot (the existing character count from
-   * selectServer()'s result) and enter the world with it. Assumes
-   * requestCharacterTemplates() already ran for this game session.
+   * Create a character. Does not enter the world -- like the real client, the
+   * server stays in the char-select state and answers with an updated roster,
+   * which this resolves with (find the new character in it to preselect it).
+   * Assumes requestCharacterTemplates() already ran for this game session.
    * @param charData
-   * @param newCharSlot
    */
-  createCharacter(charData: L2Character, newCharSlot: number): Promise<EnterWorldResult>;
+  createCharacter(charData: L2Character): Promise<L2User[]>;
+  /**
+   * Leave the world and go back to character selection without dropping the
+   * game-server connection. Resolves with the account's characters, same
+   * shape as selectServer(). Required before any char-select-state request
+   * (e.g. requestCharacterTemplates) will be answered again.
+   */
+  restart(): Promise<L2User[]>;
 
   say(text: string): void;
   /**
