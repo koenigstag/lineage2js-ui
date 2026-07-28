@@ -23,6 +23,7 @@ TODOs are tracked in [TODO.md](./TODO.md). Known bugs/issues are tracked in [KNO
 - [`packages/network`](./packages/network) — `@lineage2js/network`: login/game protocol implementation (packets, encryption, sockets).
 - [`packages/ui`](./packages/ui) — `@lineage2js/ui`: web UI client built on top of `@lineage2js/network`.
 - [`packages/assets-server`](./packages/assets-server) — `@lineage2js/assets-server`: Express static server for game icons (skills/items/actions/classes). Keeps copyrighted art out of this repo (`assets/` is gitignored except folder structure) while making it available to the client with `Cache-Control` + `ETag` revalidation.
+- [`packages/proxy`](./packages/proxy) — `@lineage2js/proxy`: WebSocket ⇄ TCP bridge for L2 servers that only speak raw TCP. Browsers can't open TCP sockets, so the client's WebSocket traffic gets relayed to the real login/game server (packets stay encrypted end to end — the proxy just moves bytes).
 
 ## Tooling
 
@@ -61,6 +62,32 @@ Shortcuts for working on a single package without `--filter`:
 | `pnpm dev:assets-server`  | Run the assets server with hot reload                        |
 | `pnpm build:assets-server`| Build the assets server                                      |
 | `pnpm start:assets-server`| Run the built assets server (`dist/index.js`)                |
+| `pnpm dev:proxy`          | Run the WebSocket⇄TCP proxy with hot reload                  |
+| `pnpm build:proxy`        | Build the proxy                                              |
+| `pnpm start:proxy`        | Run the built proxy (`dist/index.js`)                        |
+
+## Connecting to a TCP-only L2 server
+
+The client speaks the login/game protocol over a WebSocket, because that's
+the only socket a browser can open. Servers built for the retail client
+(L2J, L2OFF, lineage2ts, ...) listen on raw TCP, so `packages/proxy` has to
+sit in front of them:
+
+```bash
+pnpm build:proxy
+PROXY_ROUTES="2106=server:2106,7777=server:7777" pnpm start:proxy
+```
+
+where `server` is the L2 server's host as seen from the proxy — `127.0.0.1`
+if they share a machine, a hostname/IP/container name otherwise.
+
+Point `VITE_LOGIN_SERVER_IP` / `VITE_LOGIN_SERVER_PORT` (see
+`packages/ui/.env.example`) at the proxy's login port. The game server's
+address comes from the login server's own `ServerList` packet, so that entry
+has to point at a proxy port too — see
+[`packages/proxy/README.md`](./packages/proxy/README.md) for the full layout,
+the URL-routed mode, and the origin/allowlist settings you want before
+exposing it publicly.
 
 ## Serving game icons
 

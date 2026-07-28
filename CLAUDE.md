@@ -21,6 +21,13 @@ pitch; this file is for working in the code.
   repo. Serves with `Cache-Control: max-age + must-revalidate` and an ETag
   from file size/mtime, so overwriting a file is enough to invalidate
   clients' caches (no URL versioning needed).
+- `packages/proxy` (`@lineage2js/proxy`) — WebSocket⇄TCP bridge for L2
+  servers that only speak raw TCP (browsers can't open TCP sockets). Node +
+  `ws`, no dependency on the other packages: it relays bytes and never
+  decrypts anything. `PROXY_ROUTES` maps a listen port to a fixed TCP target
+  (the mode the UI client works with as-is); `PROXY_DYNAMIC_PORT` takes the
+  target from the URL instead. Re-frames the TCP stream on the protocols'
+  own uint16-LE length prefix so one WebSocket message == one L2 packet.
 
 ## Commands
 
@@ -31,6 +38,8 @@ Root-level shortcuts (see package.json):
 - `pnpm dev:network` / `pnpm build:network` — same for the network package
 - `pnpm dev:assets-server` / `pnpm build:assets-server` /
   `pnpm start:assets-server` — same for the assets server
+- `pnpm dev:proxy` / `pnpm build:proxy` / `pnpm start:proxy` — same for the
+  WebSocket⇄TCP proxy
 - `pnpm build` / `pnpm dev` / `pnpm lint` / `pnpm clean` — turbo, runs across
   all packages
 

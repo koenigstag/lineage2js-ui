@@ -25,7 +25,10 @@
     "build:network": "pnpm --filter @lineage2js/network build",
     "dev:assets-server": "pnpm --filter @lineage2js/assets-server dev",
     "build:assets-server": "pnpm --filter @lineage2js/assets-server build",
-    "start:assets-server": "pnpm --filter @lineage2js/assets-server start"
+    "start:assets-server": "pnpm --filter @lineage2js/assets-server start",
+    "dev:proxy": "pnpm --filter @lineage2js/proxy dev",
+    "build:proxy": "pnpm --filter @lineage2js/proxy build",
+    "start:proxy": "pnpm --filter @lineage2js/proxy start"
   },
   "devDependencies": {
     "turbo": "^2.3.0",

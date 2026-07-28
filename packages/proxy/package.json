@@ -1,0 +1,28 @@
+{
+  "name": "@lineage2js/proxy",
+  "version": "0.0.1",
+  "description": "WebSocket <-> TCP bridge for L2 servers that only speak raw TCP -- browsers cannot open TCP sockets, so the client's WebSocket traffic gets relayed here",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "l2js-proxy": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint src/**",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
