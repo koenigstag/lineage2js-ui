@@ -1,0 +1,42 @@
+import { observer } from "mobx-react-lite";
+import { StatBar } from "../../core/stat-bar.component";
+import { ClassRoleIcon } from "../../core/class-role-icon.component";
+import { useGameStore } from "../../../stores/StoreContext";
+import { getClassRole } from "../../../config/class-tree";
+import { CP_COLOR, HP_COLOR, MP_COLOR } from "../../../config/stat-colors";
+
+const BAR_WIDTH = 170;
+const CP_BAR_HEIGHT = 5;
+const BAR_HEIGHT = 12;
+
+export const PartyCharInfoContent = observer(function PartyCharInfoContent() {
+  const game = useGameStore();
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {game.party.map((member) => (
+        <div key={member.ObjectId} style={{ display: "flex", flexDirection: "column", gap: 2, width: BAR_WIDTH }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <ClassRoleIcon role={getClassRole(member.ClassId)} />
+            <span style={{ color: "#e6d9be", fontSize: 12 }}>{member.Name}</span>
+          </div>
+          <StatBar percent={(member.Cp / member.MaxCp) * 100} color={CP_COLOR} width={BAR_WIDTH} height={CP_BAR_HEIGHT} />
+          <StatBar
+            percent={(member.Hp / member.MaxHp) * 100}
+            color={HP_COLOR}
+            text={`${member.Hp}/${member.MaxHp}`}
+            width={BAR_WIDTH}
+            height={BAR_HEIGHT}
+          />
+          <StatBar
+            percent={(member.Mp / member.MaxMp) * 100}
+            color={MP_COLOR}
+            text={`${member.Mp}/${member.MaxMp}`}
+            width={BAR_WIDTH}
+            height={BAR_HEIGHT}
+          />
+        </div>
+      ))}
+    </div>
+  );
+});

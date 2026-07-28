@@ -132,3 +132,35 @@ export const CLASS_TREE: Partial<Record<ClassId, ClassTreeEntry>> = {
   [ClassId.Inspector]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Warder },
   [ClassId.Judicator]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Inspector },
 };
+
+// Bow (Kamael: crossbow) as primary weapon -- the isMage:false classes above
+// don't distinguish melee from ranged, but the party window's sword/bow icon
+// needs to. Orc and Dwarf have no archer branch in retail L2, hence no
+// entries for those races here.
+const ARCHER_CLASS_IDS = new Set<ClassId>([
+  ClassId.Hawkeye,
+  ClassId.Sagittarius,
+  ClassId.SilverRanger,
+  ClassId.MoonlightSentinel,
+  ClassId.PhantomRanger,
+  ClassId.GhostSentinel,
+  ClassId.Arbalester,
+  ClassId.Trickster,
+]);
+
+export function isArcherClass(classId: ClassId): boolean {
+  return ARCHER_CLASS_IDS.has(classId);
+}
+
+export type ClassRole = "warrior" | "mage" | "archer";
+
+/** Party window icon category: mage (isMage) > archer (bow/crossbow) > warrior (everything else physical). */
+export function getClassRole(classId: ClassId): ClassRole {
+  if (CLASS_TREE[classId]?.isMage) {
+    return "mage";
+  }
+  if (isArcherClass(classId)) {
+    return "archer";
+  }
+  return "warrior";
+}

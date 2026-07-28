@@ -8,6 +8,7 @@ import { SkillsContent } from "../skills/skills.window";
 import { EffectsContent } from "../effects/effects.window";
 import { ActionsContent } from "../actions/actions.window";
 import { CharInfoContent } from "../char-info/char-info.window";
+import { PartyCharInfoContent } from "../party-char-info/party-char-info.window";
 
 const CONTENT: Partial<Record<string, () => ReactNode>> = {
   hotbar: () => <HotbarContent />,
@@ -18,6 +19,7 @@ const CONTENT: Partial<Record<string, () => ReactNode>> = {
   effects: () => <EffectsContent />,
   actions: () => <ActionsContent />,
   "char-info": () => <CharInfoContent />,
+  "party-char-info": () => <PartyCharInfoContent />,
 };
 
 export interface WindowsRootProps {

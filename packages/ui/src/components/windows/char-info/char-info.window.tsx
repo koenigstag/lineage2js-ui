@@ -1,15 +1,11 @@
 import { observer } from "mobx-react-lite";
 import { StatBar } from "../../core/stat-bar.component";
 import { useGameStore } from "../../../stores/StoreContext";
+import { CP_COLOR, HP_COLOR, MP_COLOR, VITALITY_COLOR } from "../../../config/stat-colors";
 import { t } from "../../../lang/lang";
 
 const BAR_WIDTH = 220;
 const BAR_HEIGHT = 16;
-
-const CP_COLOR = "linear-gradient(180deg, #ffd76a 0%, #ff8c00 100%)";
-const HP_COLOR = "linear-gradient(180deg, #ff7a6e 0%, #c22b1f 100%)";
-const MP_COLOR = "linear-gradient(180deg, #6ea9ff 0%, #1f4fc2 100%)";
-const VITALITY_COLOR = "linear-gradient(180deg, #9acd32 0%, #4c6b1a 100%)";
 
 const levelBadgeStyle = {
   width: 28,

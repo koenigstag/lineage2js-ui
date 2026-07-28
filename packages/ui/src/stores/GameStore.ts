@@ -1,5 +1,16 @@
 import { makeAutoObservable, runInAction } from "mobx";
-import { L2Item, L2Skill, L2Buff, L2Shortcut, ItemType2, ItemGrade, ShortcutType, type Client } from "@lineage2js/network";
+import {
+  L2Item,
+  L2Skill,
+  L2Buff,
+  L2Shortcut,
+  L2PartyMember,
+  ItemType2,
+  ItemGrade,
+  ShortcutType,
+  ClassId,
+  type Client,
+} from "@lineage2js/network";
 
 export interface Creature {
   id: string;
@@ -177,6 +188,93 @@ function createDemoBuffs(): L2Buff[] {
   ];
 }
 
+interface DemoPartyMemberInit {
+  objectId: number;
+  name: string;
+  level: number;
+  classId: ClassId;
+  cp: number;
+  maxCp: number;
+  hp: number;
+  maxHp: number;
+  mp: number;
+  maxMp: number;
+  isPartyLeader?: boolean;
+}
+
+// Builds a real L2PartyMember, same shape PartySmallWindowAll/Add/Update would
+// produce. One of each class-role icon (warrior/mage/archer) for the party
+// window (see class-tree.ts's getClassRole()).
+function demoPartyMember({
+  objectId,
+  name,
+  level,
+  classId,
+  cp,
+  maxCp,
+  hp,
+  maxHp,
+  mp,
+  maxMp,
+  isPartyLeader,
+}: DemoPartyMemberInit): L2PartyMember {
+  const member = new L2PartyMember();
+  member.ObjectId = objectId;
+  member.Name = name;
+  member.Level = level;
+  member.ClassId = classId;
+  member.Cp = cp;
+  member.MaxCp = maxCp;
+  member.Hp = hp;
+  member.MaxHp = maxHp;
+  member.Mp = mp;
+  member.MaxMp = maxMp;
+  member.IsPartyLeader = isPartyLeader ?? false;
+  return member;
+}
+
+function createDemoParty(): L2PartyMember[] {
+  return [
+    demoPartyMember({
+      objectId: 90001,
+      name: "DemoHero",
+      level: 40,
+      classId: ClassId.Gladiator,
+      cp: 850,
+      maxCp: 1200,
+      hp: 2400,
+      maxHp: 3100,
+      mp: 900,
+      maxMp: 1400,
+      isPartyLeader: true,
+    }),
+    demoPartyMember({
+      objectId: 90002,
+      name: "DemoSorc",
+      level: 38,
+      classId: ClassId.Sorceror,
+      cp: 0,
+      maxCp: 700,
+      hp: 1400,
+      maxHp: 1900,
+      mp: 2100,
+      maxMp: 2600,
+    }),
+    demoPartyMember({
+      objectId: 90003,
+      name: "DemoRanger",
+      level: 39,
+      classId: ClassId.SilverRanger,
+      cp: 400,
+      maxCp: 900,
+      hp: 1800,
+      maxHp: 2400,
+      mp: 1200,
+      maxMp: 1600,
+    }),
+  ];
+}
+
 // The character roster itself lives in SessionStore.characters (real L2User[]
 // from the server) -- this store only tracks which one is active, plus
 // in-game-only state that has nothing to do with the account's character list.
@@ -191,6 +289,7 @@ export class GameStore {
   skills: L2Skill[] = createDemoSkills();
   buffs: L2Buff[] = createDemoBuffs();
   charInfo: CharInfoSnapshot = createDemoCharInfo();
+  party: L2PartyMember[] = createDemoParty();
 
   constructor() {
     makeAutoObservable(this);
@@ -256,5 +355,18 @@ export class GameStore {
     client.on("PacketReceived", "CharSelected", syncCharInfo);
     client.on("PacketReceived", "UserInfo", syncCharInfo);
     client.on("PacketReceived", "StatusUpdate", syncCharInfo);
+
+    const syncParty = () => runInAction(() => {
+      this.party = Array.from(client.PartyList);
+    });
+    // "PartySmallWindow" fires for every add/add-all/update/delete/delete-all
+    // (see the PartySmallWindow*Mutators), one event instead of subscribing
+    // to each of the five packet names separately.
+    client.on("PartySmallWindow", syncParty);
+    // Solo characters never get a single PartySmallWindow* packet, so without
+    // this the demo party would linger forever -- UserInfo (world-enter) is
+    // the same "definitely in game now" signal syncCharInfo uses, and
+    // client.PartyList is correctly empty when not partied.
+    client.on("PacketReceived", "UserInfo", syncParty);
   }
 }
