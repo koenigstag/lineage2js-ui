@@ -8,6 +8,14 @@ const CATEGORY_ORDER: ActionCategory[] = ["basic", "party", "target", "social", 
 
 const ACTION_ICON_BORDER: IconBorder = { from: "#7f9faf", to: "#31576f" };
 
+const SLOT_SIZE = 34;
+const SLOT_GAP = 2;
+const ACTIONS_PER_ROW = 6;
+// Constrains the flex row to exactly ACTIONS_PER_ROW columns -- flexWrap
+// then breaks onto a new line once that width is exceeded, same technique
+// as HOTBAR_WIDTH in windows.registry.ts.
+const ROW_WIDTH = ACTIONS_PER_ROW * SLOT_SIZE + (ACTIONS_PER_ROW - 1) * SLOT_GAP;
+
 function getActionSlotType(category: ActionCategory): "action" | "pet-action" {
   return category === "pet" ? "pet-action" : "action";
 }
@@ -20,7 +28,7 @@ export const ActionsContent = observer(function ActionsContent() {
           <div style={{ fontSize: 12, color: "#c8b892", marginBottom: 4 }}>
             {t(`actions.categories.${category}`)}
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: SLOT_GAP, width: ROW_WIDTH }}>
             {USER_ACTIONS[category].map((action: Action) => (
               <Slot
                 key={action.code}
