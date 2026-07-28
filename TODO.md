@@ -1,4 +1,7 @@
 # Short-term TODOs
+- Content in the character info window
+- Hotbar features - user-added shortcuts, cooldown animation, soul-shots auto-usage
+- Inventory equip slots
 - Radar
 - Movement without animation
 - Basic 3D models for mobs
