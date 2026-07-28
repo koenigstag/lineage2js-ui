@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 import { StatBar } from "../../core/stat-bar.component";
 import { Slot } from "../core/slot.component";
 import { CreatureKindIcon } from "../../core/creature-kind-icon.component";
+import { CreatureRaceIcon } from "../../core/creature-race-icon.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { HP_COLOR } from "../../../config/stat-colors";
 import { getSkillIconUrl } from "../../../config/icon-urls";
@@ -28,7 +29,11 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, width: BAR_WIDTH }}>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        {target.creatureKind && <CreatureKindIcon kind={target.creatureKind} />}
+        {target.race ? (
+          <CreatureRaceIcon race={target.race} />
+        ) : (
+          target.creatureKind && <CreatureKindIcon kind={target.creatureKind} />
+        )}
         <span style={{ color: "#e6d9be", fontSize: 13 }}>{target.name}</span>
       </div>
       <StatBar

@@ -21,6 +21,9 @@ export class UiStore {
    */
   actionNames: Record<string, string> = {};
   private actionNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
+  /** npcId -> race code (e.g. "UNDEAD"), see config/npc-race-mapping.ts. Not localized -- these are enum codes, not display strings. */
+  npcRaces: Record<string, string> = {};
+  private npcRacesRequested = false;
 
   constructor() {
     makeAutoObservable(this);
@@ -92,6 +95,28 @@ export class UiStore {
       this.setActionNames(names);
     } catch {
       // leave actionNames as-is -- t() falls back to the raw "action.name.<id>" key
+    }
+  }
+
+  setNpcRaces(races: Record<string, string>) {
+    this.npcRaces = races;
+  }
+
+  /**
+   * Fetches public/npc-races/data.json once, same treatment as
+   * loadItemNames(). Built from L2J_Mobius's HighFive datapack (dist/game/
+   * data/stats/npcs/*.xml's <race> per npc id) -- the wire protocol never
+   * sends a monster's race, only its template id (see NpcInfo.ts).
+   */
+  async loadNpcRaces() {
+    if (this.npcRacesRequested) return;
+    this.npcRacesRequested = true;
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}npc-races/data.json`);
+      const races: Record<string, string> = await response.json();
+      this.setNpcRaces(races);
+    } catch {
+      this.npcRacesRequested = false;
     }
   }
 }
