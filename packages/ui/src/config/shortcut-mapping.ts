@@ -1,9 +1,10 @@
-import { L2Item, L2Shortcut, ShortcutType } from "@lineage2js/network";
+import { L2Item, L2Shortcut, ShortcutType, type Actions } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 import { getTypeText } from "../components/core/tooltip.component";
 import { getItemIconUrl, getSkillIconUrl, getActionIconUrl } from "./icon-urls";
 import { getItemSlotType, getItemName } from "./item-mapping";
 import { getSkillName } from "./skill-mapping";
+import { getActionName } from "./user-actions";
 
 /**
  * Icon-slot category for a hotbar shortcut. ITEM shortcuts only carry a
@@ -47,9 +48,9 @@ export function getShortcutIconUrl(shortcut: L2Shortcut): string | undefined {
 }
 
 /**
- * ACTION/MACRO/RECIPE/BOOKMARK shortcuts have no per-id name table (unlike
- * items/skills) -- there's nothing analogous to itemname/skillname CSVs for
- * generic action ids, so those fall back to the shortcut's category label.
+ * MACRO/RECIPE/BOOKMARK shortcuts have no per-id name table (unlike
+ * items/skills/actions) -- there's nothing analogous to itemname/skillname/
+ * action-names for those, so those fall back to the shortcut's category label.
  */
 export function getShortcutName(shortcut: L2Shortcut, inventoryItems: L2Item[]): string {
   switch (shortcut.Type) {
@@ -57,6 +58,8 @@ export function getShortcutName(shortcut: L2Shortcut, inventoryItems: L2Item[]):
       return getSkillName({ Id: shortcut.TargetId });
     case ShortcutType.ITEM:
       return getItemName({ Id: shortcut.TargetId });
+    case ShortcutType.ACTION:
+      return getActionName({ code: shortcut.TargetId as Actions });
     default:
       return getTypeText(getShortcutSlotType(shortcut, inventoryItems));
   }
