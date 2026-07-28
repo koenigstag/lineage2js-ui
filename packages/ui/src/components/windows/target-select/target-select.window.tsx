@@ -1,0 +1,61 @@
+import { observer } from "mobx-react-lite";
+import { StatBar } from "../../core/stat-bar.component";
+import { Slot } from "../core/slot.component";
+import { useGameStore } from "../../../stores/StoreContext";
+import { HP_COLOR } from "../../../config/stat-colors";
+import { getSkillIconUrl } from "../../../config/icon-urls";
+import { getSkillName } from "../../../config/skill-mapping";
+import { t } from "../../../lang/lang";
+import { BUFF_ICON_SIZE } from "../effects/effects.window";
+
+const BAR_WIDTH = 200;
+const BAR_HEIGHT = 14;
+
+// Shows whatever is currently targeted (attack/spell/buff target): name, HP
+// bar, effects -- see GameStore.selectTarget/target and windows-root.tsx's
+// hide-when-empty check.
+export const TargetSelectContent = observer(function TargetSelectContent() {
+  const game = useGameStore();
+  const target = game.target;
+
+  if (!target) {
+    return null;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, width: BAR_WIDTH }}>
+      <div style={{ color: "#e6d9be", fontSize: 13 }}>{target.name}</div>
+      <StatBar
+        percent={(target.hp / target.maxHp) * 100}
+        color={HP_COLOR}
+        label={t("charInfo.hp")}
+        text={`${target.hp}/${target.maxHp}`}
+        width={BAR_WIDTH}
+        height={BAR_HEIGHT}
+      />
+      {target.buffs.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+          {target.buffs.map((buff) => (
+            <Slot
+              key={buff.Id}
+              type="inventory"
+              size={BUFF_ICON_SIZE}
+              content={{
+                type: "skill",
+                data: buff,
+                iconUrl: getSkillIconUrl(buff.Id),
+                tooltip: {
+                  kind: "skill",
+                  name: getSkillName(buff),
+                  stats: t("tooltip.levelLabel", { level: buff.SkillLevel }),
+                  expiresAt: Date.now() + buff.RemainingTime * 1000,
+                  id: buff.Id,
+                },
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});

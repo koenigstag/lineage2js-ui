@@ -11,5 +11,9 @@ export default class TargetUnselectedMutator extends IMMOClientMutator<
     if (char) {
       char.Target = null;
     }
+
+    if (packet.ObjectId === this.Client.ActiveChar.ObjectId) {
+      this.fire("MyTargetUnselected");
+    }
   }
 }

@@ -5,6 +5,7 @@ import {
   L2Buff,
   L2Shortcut,
   L2PartyMember,
+  L2Creature,
   ItemType2,
   ItemGrade,
   ShortcutType,
@@ -233,6 +234,26 @@ function demoPartyMember({
   return member;
 }
 
+export interface TargetSnapshot {
+  objectId: number;
+  name: string;
+  hp: number;
+  maxHp: number;
+  buffs: L2Buff[];
+}
+
+// Target-select window's data source -- the currently targeted creature,
+// wherever it came from (party member click, or a real MyTargetSelected).
+function targetSnapshotFromCreature(creature: L2Creature): TargetSnapshot {
+  return {
+    objectId: creature.ObjectId,
+    name: creature.Name,
+    hp: creature.Hp,
+    maxHp: creature.MaxHp,
+    buffs: Array.from(creature.Buffs),
+  };
+}
+
 function createDemoParty(): L2PartyMember[] {
   const hero = demoPartyMember({
     objectId: 90001,
@@ -363,9 +384,13 @@ export class GameStore {
   buffs: L2Buff[] = createDemoBuffs();
   charInfo: CharInfoSnapshot = createDemoCharInfo();
   party: L2PartyMember[] = createDemoParty();
+  /** Currently selected attack/spell/buff target, if any -- see target-select window. */
+  target: TargetSnapshot | undefined = undefined;
+  /** Set once by bindToClient -- used by selectTarget/clearTarget to dispatch outgoing packets. */
+  client: Client | undefined;
 
   constructor() {
-    makeAutoObservable(this);
+    makeAutoObservable(this, { client: false });
   }
 
   selectCharacter(id: number | undefined) {
@@ -377,6 +402,26 @@ export class GameStore {
   }
 
   /**
+   * Selects a party member as the current target: sends the real Action
+   * (select) packet so the server knows, and immediately snapshots the
+   * already-known member data so the target-select window shows without
+   * waiting for a MyTargetSelected/StatusUpdate round-trip.
+   */
+  selectTarget(member: L2PartyMember) {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.hit(member);
+    }
+    this.target = targetSnapshotFromCreature(member);
+  }
+
+  clearTarget() {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.cancelTarget();
+    }
+    this.target = undefined;
+  }
+
+  /**
    * Mirrors the network layer's live collections (Client.InventoryItems/
    * SkillsList/BuffsList/Shortcuts -- plain Sets the mutators write into on
    * every incoming packet) into these observable arrays, replacing the demo
@@ -384,6 +429,8 @@ export class GameStore {
    * RootStore against the app's single long-lived Client instance.
    */
   bindToClient(client: Client) {
+    this.client = client;
+
     const syncInventory = () => runInAction(() => {
       this.inventoryItems = Array.from(client.InventoryItems);
     });
@@ -446,5 +493,21 @@ export class GameStore {
     // this, party members' buff icons wouldn't ever re-render after the
     // initial snapshot.
     client.on("PartySpelled", syncParty);
+
+    const syncTarget = () => runInAction(() => {
+      const targetObj = client.Me.Target;
+      this.target = targetObj instanceof L2Creature ? targetSnapshotFromCreature(targetObj) : undefined;
+    });
+    const clearTarget = () => runInAction(() => {
+      this.target = undefined;
+    });
+
+    client.on("MyTargetSelected", syncTarget);
+    client.on("MyTargetUnselected", clearTarget);
+    // Keeps the target's HP/MP bars live as StatusUpdate packets arrive for
+    // any tracked creature -- client.Me.Target is the same object reference
+    // StatusUpdateMutator mutates in place, so re-snapshotting is cheap and
+    // correct even when the update was for a different creature.
+    client.on("PacketReceived", "StatusUpdate", syncTarget);
   }
 }

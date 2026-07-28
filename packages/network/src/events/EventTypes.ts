@@ -166,6 +166,10 @@ export declare type OnMyTargetSelectedEvent = [
   "MyTargetSelected",
   (e: EMyTargetSelected) => void
 ];
+export declare type OnMyTargetUnselectedEvent = [
+  "MyTargetUnselected",
+  () => void
+];
 export declare type OnAttackedEvent = ["Attacked", (e: EAttacked) => void];
 export declare type OnRequestedDuelEvent = [
   "RequestedDuel",
@@ -226,6 +230,7 @@ export declare type EventHandlerType =
   | OnDieEvent
   | OnTargetSelectedEvent
   | OnMyTargetSelectedEvent
+  | OnMyTargetUnselectedEvent
   | OnAttackedEvent
   | OnRequestedDuelEvent
   | OnStartMovingEvent

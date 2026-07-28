@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export type WindowType = "titlebar" | "sidebar" | "only-body";
 
-export type WindowOrigin = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+export type WindowOrigin = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top-center";
 
 export interface WindowPosition {
   x: number;
@@ -24,9 +24,9 @@ export interface WindowConfig {
   draggable: boolean;
   /** Windows that are part of the persistent HUD (hotbar, chat, ...) rather than opened on demand. */
   defaultOpen?: boolean;
-  /** Corner the persisted x/y is measured from. Defaults to "top-left". */
+  /** Corner (or "top-center" for horizontal centering) the persisted x/y is measured from. Defaults to "top-left". */
   origin?: WindowOrigin;
-  /** x/y are distances from the origin corner. Defaults to screen-center when omitted. */
+  /** x/y are distances from the origin corner ("top-center": x is the horizontal offset from screen-center). Defaults to screen-center when omitted. */
   defaultPosition?: (viewport: Viewport) => WindowPosition;
   /** Overrides the content area's background color. */
   contentBackground?: string;
@@ -186,6 +186,16 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     defaultOpen: true,
     defaultPosition: () => ({ x: 10, y: 100 }),
   },
+  "target-select": {
+    id: "target-select",
+    type: "sidebar",
+    closable: false,
+    draggable: true,
+    minimizable: true,
+    defaultOpen: true,
+    origin: "top-center",
+    defaultPosition: () => ({ x: 0, y: 10 }),
+  },
 };
 
 export const GAME_WINDOW_IDS = [
@@ -209,6 +219,7 @@ export const GAME_WINDOW_IDS = [
   "radar",
   "char-info",
   "party-char-info",
+  "target-select",
 ];
 
 export const LOGIN_WINDOW_IDS = ["settings"];
