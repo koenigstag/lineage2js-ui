@@ -1,4 +1,5 @@
 export * from "./AccountKickedReason";
+export * from "./AcquireSkillType";
 export * from "./Actions";
 export * from "./CharCreateFailReason";
 export * from "./ClanPriviledge";

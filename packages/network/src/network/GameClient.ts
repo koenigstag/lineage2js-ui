@@ -16,6 +16,8 @@ import GamePacketHandler from "./GamePacketHandler";
 import GameServerPacket from "./outgoing/game/GameServerPacket";
 import L2Recipe from "../entities/L2Recipe";
 import PledgeInfo from "./incoming/game/PledgeInfo";
+import AcquireSkillList from "./incoming/game/AcquireSkillList";
+import AcquireSkillInfo from "./incoming/game/AcquireSkillInfo";
 import IConnection from "../mmocore/IConnection";
 import mutators from "./mutators/game/index";
 import SocketFactory from "../socket/SocketFactory";
@@ -35,6 +37,10 @@ export default class GameClient extends MMOClient {
   CommonRecipeBook: L2ClientObjectCollection<L2Recipe> = new L2ClientObjectCollection(this);
   /** clanId -> last PledgeInfo received for it. No outgoing request is wired to populate this on demand yet. */
   PledgeInfoByClanId: Map<number, PledgeInfo> = new Map();
+  /** Last AcquireSkillList received (the trainer's Learn-tab offering for one AcquireSkillType). */
+  AcquireSkillList: AcquireSkillList | undefined = undefined;
+  /** `${id}_${level}` -> last AcquireSkillInfo received for it (authoritative SpCost/Requirements). */
+  AcquireSkillInfoByKey: Map<string, AcquireSkillInfo> = new Map();
 
   LastConfirmMessageId!: number;
   LastConfirmMessageRequesterId!: number;

@@ -13,6 +13,7 @@ import {
   ItemGrade,
   ShortcutType,
   ClassId,
+  AcquireSkillType,
   type Client,
   type ESystemMessage,
 } from "@lineage2js/network";
@@ -176,16 +177,18 @@ function createDemoSkills(): L2Skill[] {
   ];
 }
 
-// The "Learn" tab's data source -- skills not yet acquired, with what
-// AcquireSkillList-equivalent static data (SkillLearn.xml in the L2J_Mobius
-// datapack) would carry. This codebase has no AcquireSkillList/RequestAcquire
-// packets wired at all yet (unlike items/skills/npc data, there's no real
-// wire source for this here), so it's demo-only for now, same as the rest
-// of the skill window's first pass.
+// The "Learn" tab's data source -- skills not yet acquired. Real entries
+// come from AcquireSkillList (filtered to AcquireSkillType.CLASS), which
+// carries no minimum-character-level field at all (the server simply never
+// offers a skill you're ineligible for), so minLevel is demo-only and left
+// undefined for real-synced entries. requiredItem also starts undefined for
+// real entries -- AcquireSkillList only carries a requirements *count*, the
+// actual item/quantity only arrives via AcquireSkillInfo once the skill is
+// selected (see selectLearnableSkill/syncSkillRequirements).
 export interface LearnableSkillSnapshot {
   id: number;
   level: number;
-  minLevel: number;
+  minLevel?: number;
   costSp: number;
   requiredItem?: { id: number; count: number };
 }
@@ -570,8 +573,17 @@ export class GameStore {
     this.target = undefined;
   }
 
+  /**
+   * Opens the skill's detail window and, when connected, asks the trainer
+   * for its authoritative SpCost/Requirements (RequestAcquireSkillInfo) --
+   * syncSkillRequirements picks up the AcquireSkillInfo reply and fills in
+   * requiredItem. Offline/demo mode just uses the snapshot as-is.
+   */
   selectLearnableSkill(skill: LearnableSkillSnapshot) {
     this.selectedLearnableSkill = skill;
+    if (this.client?.GameClient.IsConnected) {
+      this.client.requestAcquireSkillInfo(skill.id, skill.level, AcquireSkillType.CLASS);
+    }
   }
 
   clearSelectedLearnableSkill() {
@@ -583,11 +595,15 @@ export class GameStore {
   }
 
   /**
-   * Simulates learning the selected skill locally (moves it from
-   * learnableSkills into skills, deducts its SP cost). There's no real
-   * RequestAcquireSkill-equivalent outgoing packet in this codebase yet
-   * (see LearnableSkillSnapshot's comment), so this doesn't talk to a
-   * server -- it's a self-contained demo/local simulation only.
+   * When connected, commits to learning the skill server-side
+   * (RequestAcquireSkill) and optimistically closes the window -- the
+   * server's AcquireSkillDone/fresh SkillList/AcquireSkillList/UserInfo
+   * packets are what actually move the skill from learnableSkills into
+   * skills and deduct Sp (see the bindToClient sync handlers).
+   *
+   * Offline/demo mode has no server to do that, so it keeps simulating the
+   * same result locally (moves the skill into skills, deducts SP) exactly
+   * as before.
    */
   learnSelectedSkill() {
     const skill = this.selectedLearnableSkill;
@@ -600,6 +616,13 @@ export class GameStore {
     if (skill.requiredItem && !this.hasRequiredItem(skill.requiredItem)) {
       return;
     }
+
+    if (this.client?.GameClient.IsConnected) {
+      this.client.requestAcquireSkill(skill.id, skill.level, AcquireSkillType.CLASS);
+      this.selectedLearnableSkill = undefined;
+      return;
+    }
+
     this.charInfo = { ...this.charInfo, sp: this.charInfo.sp - skill.costSp };
     this.learnableSkills = this.learnableSkills.filter((s) => s !== skill);
     this.skills = [...this.skills, demoSkill({ id: skill.id, level: skill.level, isActive: true })];
@@ -717,5 +740,52 @@ export class GameStore {
     client.on("SystemMessage", (e: ESystemMessage) => {
       runInAction(() => this.recordBattleLogMessage(e.data.messageId, e.data.params, e.data.paramTypes));
     });
+
+    // Real Learn-tab data source -- replaces the demo learnableSkills list
+    // the moment the server sends one. Only AcquireSkillType.CLASS is shown
+    // here (fishing/pledge/transform/etc. skill-learn use the same packet
+    // but belong to other UI, not yet built).
+    const syncLearnableSkills = () => runInAction(() => {
+      const list = client.AcquireSkillList;
+      if (!list || list.Type !== AcquireSkillType.CLASS) {
+        return;
+      }
+      this.learnableSkills = list.Skills.map((entry) => ({
+        id: entry.Id,
+        level: entry.NextLevel,
+        costSp: entry.SpCost,
+      }));
+    });
+    client.on("PacketReceived", "AcquireSkillList", syncLearnableSkills);
+
+    // Fills in the authoritative SpCost/Requirements for whichever skill is
+    // currently open in the skill window, once RequestAcquireSkillInfo's
+    // reply arrives -- see selectLearnableSkill.
+    const syncSkillRequirements = () => runInAction(() => {
+      const selected = this.selectedLearnableSkill;
+      if (!selected) {
+        return;
+      }
+      const info = client.AcquireSkillInfoByKey.get(`${selected.id}_${selected.level}`);
+      if (!info) {
+        return;
+      }
+      const requirement = info.Requirements[0];
+      const updated: LearnableSkillSnapshot = {
+        ...selected,
+        costSp: info.SpCost,
+        requiredItem: requirement ? { id: requirement.ItemId, count: requirement.Count } : undefined,
+      };
+      this.selectedLearnableSkill = updated;
+      this.learnableSkills = this.learnableSkills.map((s) =>
+        s.id === updated.id && s.level === updated.level ? updated : s
+      );
+    });
+    client.on("PacketReceived", "AcquireSkillInfo", syncSkillRequirements);
+
+    // AcquireSkillDone confirms a successful RequestAcquireSkill -- the
+    // server follows up with fresh SkillList/AcquireSkillList/UserInfo
+    // packets right after, which syncSkills/syncLearnableSkills/syncCharInfo
+    // already pick up, so there's nothing else to do here.
   }
 }

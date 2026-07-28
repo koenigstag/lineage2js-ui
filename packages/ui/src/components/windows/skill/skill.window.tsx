@@ -59,7 +59,9 @@ export const SkillLearnContent = observer(function SkillLearnContent() {
         <span style={{ color: "#e6d9be", fontSize: 13 }}>{getSkillName({ Id: skill.id })}</span>
       </div>
       <div style={infoRowStyle}>{t("skills.learn.level", { level: skill.level })}</div>
-      <div style={infoRowStyle}>{t("skills.learn.requiredLevel", { level: skill.minLevel })}</div>
+      {skill.minLevel !== undefined && (
+        <div style={infoRowStyle}>{t("skills.learn.requiredLevel", { level: skill.minLevel })}</div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <div style={infoRowStyle}>{t("skills.learn.availableSp", { sp: game.charInfo.sp })}</div>
         <div style={infoRowStyle}>{t("skills.learn.requiredSp", { sp: skill.costSp })}</div>

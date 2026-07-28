@@ -6,6 +6,7 @@ import L2Object from "../entities/L2Object";
 import L2Server from "../entities/L2Server";
 import L2User from "../entities/L2User";
 import { Actions } from "../enums/Actions";
+import { AcquireSkillType } from "../enums/AcquireSkillType";
 import { RestartPoint } from "../enums/RestartPoint";
 import { ShotsType } from "../enums/ShotsType";
 import Logger from "../mmocore/Logger";
@@ -214,6 +215,24 @@ export default interface ClientCommands {
    * Send logout request
    */
   logout(): void;
+  /**
+   * Ask the trainer for a skill/level's authoritative SpCost and item
+   * requirements. Requires the player to have an active NPC trainer
+   * interaction server-side (getLastFolkNPC()).
+   * @param id
+   * @param level
+   * @param type
+   */
+  requestAcquireSkillInfo(id: number, level: number, type: AcquireSkillType): void;
+  /**
+   * Commit to learning a skill/level. Same trainer-interaction requirement
+   * as requestAcquireSkillInfo.
+   * @param id
+   * @param level
+   * @param type
+   * @param subType only used for AcquireSkillType.SUBPLEDGE
+   */
+  requestAcquireSkill(id: number, level: number, type: AcquireSkillType, subType?: number): void;
 }
 
 export default abstract class ClientCommands {

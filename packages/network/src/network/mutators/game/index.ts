@@ -1,6 +1,10 @@
 
 import AbnormalStatusUpdateMutator from "./AbnormalStatusUpdateMutator";
 import AbnormalStatusUpdate from "../../incoming/game/AbnormalStatusUpdate";
+import AcquireSkillInfoMutator from "./AcquireSkillInfoMutator";
+import AcquireSkillInfo from "../../incoming/game/AcquireSkillInfo";
+import AcquireSkillListMutator from "./AcquireSkillListMutator";
+import AcquireSkillList from "../../incoming/game/AcquireSkillList";
 import ActionFailedMutator from "./ActionFailedMutator";
 import ActionFailed from "../../incoming/game/ActionFailed";
 import AskJoinPartyMutator from "./AskJoinPartyMutator";
@@ -108,6 +112,8 @@ import ValidateLocation from "../../incoming/game/ValidateLocation";
 
 export default [
   [AbnormalStatusUpdateMutator.prototype, AbnormalStatusUpdate],
+  [AcquireSkillInfoMutator.prototype, AcquireSkillInfo],
+  [AcquireSkillListMutator.prototype, AcquireSkillList],
   [ActionFailedMutator.prototype, ActionFailed],
   [AskJoinPartyMutator.prototype, AskJoinParty],
   [AttackMutator.prototype, Attack],

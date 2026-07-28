@@ -1,6 +1,9 @@
 import AbnormalStatusUpdate from "./AbnormalStatusUpdate";
 import AbstractMessagePacket from "./AbstractMessagePacket";
 import AbstractNpcInfo from "./AbstractNpcInfo";
+import AcquireSkillDone from "./AcquireSkillDone";
+import AcquireSkillInfo from "./AcquireSkillInfo";
+import AcquireSkillList from "./AcquireSkillList";
 import ActionFailed from "./ActionFailed";
 import AskJoinParty from "./AskJoinParty";
 import Attack from "./Attack";
@@ -131,6 +134,9 @@ export {
   AbnormalStatusUpdate,
   AbstractMessagePacket,
   AbstractNpcInfo,
+  AcquireSkillDone,
+  AcquireSkillInfo,
+  AcquireSkillList,
   ActionFailed,
   AskJoinParty,
   Attack,

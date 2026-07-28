@@ -258,6 +258,15 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
         case 0x89:
           rpk = new Packets.PledgeInfo();
           break;
+        case 0x90:
+          rpk = new Packets.AcquireSkillList();
+          break;
+        case 0x91:
+          rpk = new Packets.AcquireSkillInfo();
+          break;
+        case 0x94:
+          rpk = new Packets.AcquireSkillDone();
+          break;
         case 0x9f:
           rpk = new Packets.StaticObject();
           break;

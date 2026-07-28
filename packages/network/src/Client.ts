@@ -10,6 +10,8 @@ import L2Skill from "./entities/L2Skill";
 import L2User from "./entities/L2User";
 import L2Recipe from "./entities/L2Recipe";
 import PledgeInfo from "./network/incoming/game/PledgeInfo";
+import AcquireSkillList from "./network/incoming/game/AcquireSkillList";
+import AcquireSkillInfo from "./network/incoming/game/AcquireSkillInfo";
 import { EventHandlerType } from "./events/EventTypes";
 import ClientCommands from "./commands/ClientCommands";
 
@@ -52,6 +54,12 @@ export default class Client extends ClientCommands {
   }
   get PledgeInfoByClanId(): Map<number, PledgeInfo> {
     return this.GameClient.PledgeInfoByClanId;
+  }
+  get AcquireSkillList(): AcquireSkillList | undefined {
+    return this.GameClient.AcquireSkillList;
+  }
+  get AcquireSkillInfoByKey(): Map<string, AcquireSkillInfo> {
+    return this.GameClient.AcquireSkillInfoByKey;
   }
 
   private ___event_params(...params: EventHandlerType): {
