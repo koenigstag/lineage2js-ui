@@ -22,11 +22,12 @@ function SwordPath() {
   );
 }
 
+// Same diagonal as the sword's blade, for a consistent "weapon" silhouette.
 function StaffPath() {
   return (
     <>
-      <line x1="8" y1="4" x2="8" y2="18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <circle cx="8" cy="3" r="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <line x1="15" y1="3" x2="5" y2="17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="15" cy="3" r="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
     </>
   );
 }
@@ -36,8 +37,8 @@ function StaffPath() {
 function ShepherdStaffPath() {
   return (
     <>
-      <line x1="8" y1="6" x2="8" y2="18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M8 6 C 8 1, 3 1, 3 5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="15" y1="5" x2="5" y2="19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M15 5 C 15 0.5, 10 0.5, 10 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </>
   );
 }

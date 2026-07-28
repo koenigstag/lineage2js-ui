@@ -234,57 +234,66 @@ function demoPartyMember({
 }
 
 function createDemoParty(): L2PartyMember[] {
-  return [
-    demoPartyMember({
-      objectId: 90001,
-      name: "DemoHero",
-      level: 40,
-      classId: ClassId.Gladiator,
-      cp: 850,
-      maxCp: 1200,
-      hp: 2400,
-      maxHp: 3100,
-      mp: 900,
-      maxMp: 1400,
-      isPartyLeader: true,
-    }),
-    demoPartyMember({
-      objectId: 90002,
-      name: "DemoSorc",
-      level: 38,
-      classId: ClassId.Sorceror,
-      cp: 0,
-      maxCp: 700,
-      hp: 1400,
-      maxHp: 1900,
-      mp: 2100,
-      maxMp: 2600,
-    }),
-    demoPartyMember({
-      objectId: 90003,
-      name: "DemoRanger",
-      level: 39,
-      classId: ClassId.SilverRanger,
-      cp: 400,
-      maxCp: 900,
-      hp: 1800,
-      maxHp: 2400,
-      mp: 1200,
-      maxMp: 1600,
-    }),
-    demoPartyMember({
-      objectId: 90004,
-      name: "DemoWarlock",
-      level: 38,
-      classId: ClassId.Warlock,
-      cp: 0,
-      maxCp: 650,
-      hp: 1300,
-      maxHp: 1800,
-      mp: 2000,
-      maxMp: 2500,
-    }),
-  ];
+  const hero = demoPartyMember({
+    objectId: 90001,
+    name: "DemoHero",
+    level: 40,
+    classId: ClassId.Gladiator,
+    cp: 850,
+    maxCp: 1200,
+    hp: 2400,
+    maxHp: 3100,
+    mp: 900,
+    maxMp: 1400,
+    isPartyLeader: true,
+  });
+  hero.Buffs.add(demoBuff(1086, 3, 1200)); // Haste
+  hero.Buffs.add(demoBuff(1040, 1, 1200)); // Shield
+
+  const sorc = demoPartyMember({
+    objectId: 90002,
+    name: "DemoSorc",
+    level: 38,
+    classId: ClassId.Sorceror,
+    cp: 0,
+    maxCp: 700,
+    hp: 1400,
+    maxHp: 1900,
+    mp: 2100,
+    maxMp: 2600,
+  });
+  sorc.Buffs.add(demoBuff(1204, 1, 1200)); // Wind Walk
+
+  const ranger = demoPartyMember({
+    objectId: 90003,
+    name: "DemoRanger",
+    level: 39,
+    classId: ClassId.SilverRanger,
+    cp: 400,
+    maxCp: 900,
+    hp: 1800,
+    maxHp: 2400,
+    mp: 1200,
+    maxMp: 1600,
+  });
+
+  const warlock = demoPartyMember({
+    objectId: 90004,
+    name: "DemoWarlock",
+    level: 38,
+    classId: ClassId.Warlock,
+    cp: 0,
+    maxCp: 650,
+    hp: 1300,
+    maxHp: 1800,
+    mp: 2000,
+    maxMp: 2500,
+  });
+  warlock.Buffs.add(demoBuff(1045, 1, 1200)); // Bless the Body
+  warlock.Buffs.add(demoBuff(1048, 1, 1200)); // Bless the Soul
+  warlock.Buffs.add(demoBuff(871, 1, 1200)); // Might
+
+  return [hero, sorc, ranger, warlock];
 }
 
 // The character roster itself lives in SessionStore.characters (real L2User[]
@@ -380,5 +389,10 @@ export class GameStore {
     // the same "definitely in game now" signal syncCharInfo uses, and
     // client.PartyList is correctly empty when not partied.
     client.on("PacketReceived", "UserInfo", syncParty);
+    // PartySpelledMutator mutates a member's own Buffs collection in place
+    // (clear+add), which doesn't change the party array's identity -- without
+    // this, party members' buff icons wouldn't ever re-render after the
+    // initial snapshot.
+    client.on("PartySpelled", syncParty);
   }
 }

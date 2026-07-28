@@ -6,7 +6,7 @@ import { getSkillName } from "../../../config/skill-mapping";
 import { t } from "../../../lang/lang";
 
 const SLOT_SIZE = 34;
-const BUFF_ICON_SIZE = SLOT_SIZE / 2;
+export const BUFF_ICON_SIZE = SLOT_SIZE / 2;
 const SLOT_GAP = 2;
 
 export const EffectsContent = observer(function EffectsContent() {
