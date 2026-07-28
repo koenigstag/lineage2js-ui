@@ -8,8 +8,6 @@ export const LANG_EN_US: LangDictionary = {
     connecting: "Connecting...",
     exitGameConfirm: "Exit the game?",
     settings: "Settings",
-    hp: "HP",
-    mp: "MP",
   },
   classes: {
     race: {
@@ -83,6 +81,8 @@ export const LANG_EN_US: LangDictionary = {
     },
   },
   charInfo: {
+    hp: "HP",
+    mp: "MP",
     cp: "CP",
   },
   charSelect: {

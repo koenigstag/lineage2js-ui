@@ -53,8 +53,8 @@ export const CharInfoMenu = observer(function CharInfoMenu() {
       }}
     >
       <div style={{ color: "#e8dfc8", fontSize: 14, marginBottom: 8 }}>{character.Name}</div>
-      <VitalBar label={t("common.hp")} value={character.Hp} max={character.MaxHp} color="#8a3a3a" />
-      <VitalBar label={t("common.mp")} value={character.Mp} max={character.MaxMp} color="#3a5a8a" />
+      <VitalBar label={t("charInfo.hp")} value={character.Hp} max={character.MaxHp} color="#8a3a3a" />
+      <VitalBar label={t("charInfo.mp")} value={character.Mp} max={character.MaxMp} color="#3a5a8a" />
     </div>
   );
 });
