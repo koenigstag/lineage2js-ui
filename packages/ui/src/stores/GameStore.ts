@@ -29,10 +29,14 @@ export const MAX_CHARACTERS = 7;
 
 const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + page*12 addressing
 
-// H5-era vitality system: 0-36000 raw points, shown as a single 0-100% bar
-// (not the later Vitality Herb chronicles' 140000/5-level system). Not read
-// from any packet field -- confirm against the target server if it differs.
-export const MAX_VITALITY_POINTS = 36000;
+// H5-era vitality system: raw points shown as a single 0-100% bar (not the
+// later Vitality Herb chronicles' 140000/5-level system). Matches
+// lineage2ts's VitalityPointsPerLevel.Top -- the hard cap both
+// PcStats.setVitalityPoints() and addVitalityPoints() clamp `vp` to (see
+// game-server/source/gameService/enums/VitalityLevels.ts and
+// .../models/actor/stat/PcStats.ts in the lineage2ts repo linked from
+// packages/network/README.md). Confirm against the target server if it differs.
+export const MAX_VITALITY_POINTS = 20000;
 
 export interface CharInfoSnapshot {
   name: string;
@@ -62,7 +66,7 @@ function createDemoCharInfo(): CharInfoSnapshot {
     maxHp: 3100,
     mp: 900,
     maxMp: 1400,
-    vitalityPercent: (27000 / MAX_VITALITY_POINTS) * 100,
+    vitalityPercent: (15000 / MAX_VITALITY_POINTS) * 100,
     sp: 12500,
     recommLeft: 5,
   };
