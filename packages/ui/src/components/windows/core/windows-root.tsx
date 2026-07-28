@@ -11,6 +11,7 @@ import { ActionsContent } from "../actions/actions.window";
 import { CharInfoContent } from "../char-info/char-info.window";
 import { PartyCharInfoContent } from "../party-char-info/party-char-info.window";
 import { TargetSelectContent } from "../target-select/target-select.window";
+import { BattleLogContent } from "../battlelog/battlelog.window";
 import { useGameStore } from "../../../stores/StoreContext";
 
 export interface WindowsRootProps {
@@ -31,6 +32,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     "char-info": () => <CharInfoContent />,
     "party-char-info": () => <PartyCharInfoContent onMemberClick={(member) => game.selectTarget(member)} />,
     "target-select": () => <TargetSelectContent />,
+    battlelog: () => <BattleLogContent />,
   };
 
   return (

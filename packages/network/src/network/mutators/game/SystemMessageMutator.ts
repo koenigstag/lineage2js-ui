@@ -10,6 +10,7 @@ export default class SystemMessageMutator extends IMMOClientMutator<
     this.fire("SystemMessage", {
       messageId: packet.messageId,
       params: packet.messageParams,
+      paramTypes: packet.messageParamTypes,
     });
   }
 }

@@ -109,7 +109,7 @@ export declare type EConfirmDlg = {
 };
 export declare type ESystemMessage = {
   type: string;
-  data: { messageId: number; params: [] };
+  data: { messageId: number; params: unknown[]; paramTypes: number[] };
   once: boolean;
 };
 export declare type ECreatureSay = {

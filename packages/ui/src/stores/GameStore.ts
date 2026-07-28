@@ -14,9 +14,11 @@ import {
   ShortcutType,
   ClassId,
   type Client,
+  type ESystemMessage,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getNpcLevel } from "../config/npc-level-mapping";
+import { formatSystemMessage } from "../config/system-message-mapping";
 
 export interface Creature {
   id: string;
@@ -320,6 +322,53 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
   };
 }
 
+export interface BattleLogEntry {
+  id: number;
+  text: string;
+}
+
+let nextBattleLogEntryId = 1;
+const BATTLE_LOG_MAX_ENTRIES = 200;
+
+// SystemMessage is the wire's only channel for combat text, but it's also
+// used for mail/trade/guild/etc -- real L2 routes each messageId to a chat
+// tab client-side (there's no channel tag on the wire itself). This is a
+// curated subset of combat-relevant ids standing in for that routing until
+// a fuller one exists; see public/system-messages/en.json for the full
+// L2J_Mobius-sourced id->template table this pulls display text from.
+const BATTLE_LOG_MESSAGE_IDS = new Set([
+  35, // You hit for $s1 damage.
+  36, // $c1 hit you for $s2 damage.
+  37, // $c1 hit you for $s2 damage.
+  42, // You have avoided $c1's attack.
+  43, // You have missed.
+  44, // Critical hit!
+  1280, // Magic Critical Hit!
+  1999, // $c1 dodges the attack.
+  2261, // $c1 has done $s3 points of damage to $c2.
+  2262, // $c1 has received $s3 damage from $c2.
+  2264, // $c1 has evaded $c2's attack.
+  2266, // $c1 landed a critical hit!
+  2269, // $c1 resisted $c2's magic.
+  2344, // You have been killed by an attack from $c1.
+  2345, // You have attacked and killed $c1.
+]);
+
+function demoBattleLogEntry(text: string): BattleLogEntry {
+  return { id: nextBattleLogEntryId++, text };
+}
+
+// Same demo-first treatment as everywhere else -- a few representative
+// lines before any real SystemMessage has arrived.
+function createDemoBattleLog(): BattleLogEntry[] {
+  return [
+    demoBattleLogEntry("You hit for 245 damage."),
+    demoBattleLogEntry("Critical hit!"),
+    demoBattleLogEntry("Ant Soldier has evaded your attack."),
+    demoBattleLogEntry("You have attacked and killed Ant Soldier."),
+  ];
+}
+
 function createDemoParty(): L2PartyMember[] {
   const hero = demoPartyMember({
     objectId: 90001,
@@ -456,6 +505,8 @@ export class GameStore {
   target: TargetSnapshot | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
+  /** Combat text feed, see battlelog window and BATTLE_LOG_MESSAGE_IDS. */
+  battleLog: BattleLogEntry[] = createDemoBattleLog();
   /** Set once by bindToClient -- used by selectTarget/clearTarget to dispatch outgoing packets. */
   client: Client | undefined;
 
@@ -489,6 +540,14 @@ export class GameStore {
       this.client.cancelTarget();
     }
     this.target = undefined;
+  }
+
+  private recordBattleLogMessage(messageId: number, params: unknown[], paramTypes: number[]) {
+    if (!BATTLE_LOG_MESSAGE_IDS.has(messageId)) {
+      return;
+    }
+    const text = formatSystemMessage(messageId, params, paramTypes);
+    this.battleLog = [...this.battleLog, { id: nextBattleLogEntryId++, text }].slice(-BATTLE_LOG_MAX_ENTRIES);
   }
 
   /**
@@ -589,5 +648,9 @@ export class GameStore {
       );
       syncTarget();
     }));
+
+    client.on("SystemMessage", (e: ESystemMessage) => {
+      runInAction(() => this.recordBattleLogMessage(e.data.messageId, e.data.params, e.data.paramTypes));
+    });
   }
 }

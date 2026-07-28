@@ -22,6 +22,8 @@ export default abstract class AbstractMessagePacket extends GameClientPacket {
   messageId!: number;
 
   messageParams = new Array<any>();
+  /** Wire type tag per messageParams entry (TYPE_* above) -- needed to know how to resolve/display each positional $s/$c placeholder, see config/system-message-mapping.ts. */
+  messageParamTypes = new Array<number>();
 
   readMe(): void {
     this.messageId = this.readD();
@@ -29,6 +31,7 @@ export default abstract class AbstractMessagePacket extends GameClientPacket {
 
     for (let i = 0; i < _paramsLength; i++) {
       const _paramType = this.readD();
+      this.messageParamTypes.push(_paramType);
       switch (_paramType) {
         case AbstractMessagePacket.TYPE_TEXT:
         case AbstractMessagePacket.TYPE_PLAYER_NAME:

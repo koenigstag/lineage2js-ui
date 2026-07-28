@@ -27,6 +27,9 @@ export class UiStore {
   /** npcId -> level, see config/npc-level-mapping.ts. Same datapack source/gap as npcRaces -- NpcInfo never sends a monster's level over the wire. */
   npcLevels: Record<string, number> = {};
   private npcLevelsRequested = false;
+  /** messageId -> template string ("$s1"/"$c1" placeholders), see config/system-message-mapping.ts. English-only -- the wire only ever sends numeric ids/params, never text. */
+  systemMessages: Record<string, string> = {};
+  private systemMessagesRequested = false;
 
   constructor() {
     makeAutoObservable(this);
@@ -137,6 +140,23 @@ export class UiStore {
       this.setNpcLevels(levels);
     } catch {
       this.npcLevelsRequested = false;
+    }
+  }
+
+  setSystemMessages(messages: Record<string, string>) {
+    this.systemMessages = messages;
+  }
+
+  /** Fetches public/system-messages/en.json once, same treatment as loadItemNames(). */
+  async loadSystemMessages() {
+    if (this.systemMessagesRequested) return;
+    this.systemMessagesRequested = true;
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}system-messages/en.json`);
+      const messages: Record<string, string> = await response.json();
+      this.setSystemMessages(messages);
+    } catch {
+      this.systemMessagesRequested = false;
     }
   }
 }
