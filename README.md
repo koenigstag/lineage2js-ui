@@ -2,6 +2,22 @@
 
 Monorepo for Lineage 2 JS network protocol library and web UI client.
 
+## This project is a work in progress
+
+This project is a work in progress so expect bugs, missing features, and incomplete implementations.
+The network protocol implementation is still incomplete, and the UI client is in early development. Contributions are welcome!
+
+## Roadmap
+- Add simple mobs radar (red dots), no minimap yet
+- Implement basic movement system on fake plain surface
+- Add temporary 3D model for all mobs (based on collision radius, no animations yet)
+- Add basic combat system (target, attack, skills, HP/MP/CP)
+- Add basic chat system
+
+Real landscape and buildings rendering, geodata integration, minimap, global map, location maps, and 3D models rewrite are planned for the future updates.
+
+TODOs are tracked in [TODO.md](./TODO.md). Known bugs/issues are tracked in [KNOWN-BUGS.md](./KNOWN-BUGS.md).
+
 ## Packages
 
 - [`packages/network`](./packages/network) — `@lineage2js/network`: login/game protocol implementation (packets, encryption, sockets).
