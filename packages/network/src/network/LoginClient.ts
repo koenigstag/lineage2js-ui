@@ -88,7 +88,17 @@ export default class LoginClient extends MMOClient {
   }
 
   sendPacket(lsp: LoginServerPacket): Promise<void> {
-    const sendable: Uint8Array = this.pack(lsp);
+    let sendable: Uint8Array;
+    try {
+      // write() validates as it serializes (e.g. RequestAuthLogin rejects an
+      // over-long account name). Throwing synchronously out of a method that
+      // returns a Promise put the failure somewhere no .catch() could see it:
+      // it unwound through fire() into process(), where it was logged as a
+      // warning and the awaiting command hung forever.
+      sendable = this.pack(lsp);
+    } catch (error) {
+      return Promise.reject(error);
+    }
 
     this.logger.debug("Sending ", lsp.constructor.name);
     return this.sendRaw(sendable).then(() => {

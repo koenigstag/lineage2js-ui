@@ -74,7 +74,9 @@ export default class CharSelectionInfo extends GameClientPacket {
 
       const _daysLeftBeforeDelete = this.readD();
       char.ClassId = (ClassId as any)[this.readD()];
-      const _c3AutoSelectChar = this.readD(); // is this char active - the last one used
+      // Set on whichever character has the most recent last-access time --
+      // what the real client preselects on the selection screen.
+      char.IsLastUsed = this.readD() === 1;
 
       const _enchantEffect = this.readC();
       const augmentationId = this.readD();

@@ -22,6 +22,7 @@ export default class L2User extends L2Character {
   private _recommLeft!: number;
   private _fame!: number;
   private _vitality!: number;
+  private _isLastUsed!: boolean;
   private _exp!: number;
   private _expPercent!: number;
   private _sp!: number;
@@ -164,6 +165,20 @@ export default class L2User extends L2Character {
 
   public set Vitality(value: number) {
     this._vitality = value;
+  }
+
+  /**
+   * Set on the character with the most recent last-access time in a
+   * CharSelectionInfo roster -- the one the real client preselects on the
+   * character-selection screen. Only meaningful on characters parsed from
+   * that packet.
+   */
+  public get IsLastUsed(): boolean {
+    return this._isLastUsed === true;
+  }
+
+  public set IsLastUsed(value: boolean) {
+    this._isLastUsed = value;
   }
 
   public get Exp(): number {

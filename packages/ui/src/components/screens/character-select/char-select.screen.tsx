@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { observer } from "mobx-react-lite";
 import { Screen } from "../../core/screen.component";
 import { BaseButton } from "../../core/buttons/base.button";
@@ -29,6 +30,23 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
       await alert(session.error ?? t("charSelect.enterWorldFailed"));
     }
   }
+
+  // Nothing is highlighted when the roster first arrives, which left the
+  // screen looking empty: no name, no char-info panel and a disabled Start,
+  // even though the characters were there in the scene. The real client
+  // preselects the character last played, which CharSelectionInfo flags for us.
+  useEffect(() => {
+    const roster = session.characters;
+    if (roster.length === 0) {
+      return;
+    }
+    if (roster.some((character) => character.ObjectId === game.selectedCharacterId)) {
+      return;
+    }
+
+    const preselected = roster.find((character) => character.IsLastUsed) ?? roster[0];
+    game.selectCharacter(preselected.ObjectId);
+  }, [game, session.characters]);
 
   const characters = session.characters.map((character) => ({
     id: character.ObjectId,

@@ -59,18 +59,26 @@ export default class CommandLogin extends AbstractGameCommand {
         reject(new Error("Connection closed by server"));
       });
 
+      // A step that can't even send its packet (e.g. an account name too long
+      // for RequestAuthLogin) has to end the login, not leave it waiting on a
+      // reply that will never come.
+      const fail = (reason: unknown): void => {
+        settle();
+        reject(reason);
+      };
+
       step("PacketReceived:Init", () =>
-        this.LoginClient.sendPacket(new AuthGameGuard(this.LoginClient.Session.sessionId))
+        this.LoginClient.sendPacket(new AuthGameGuard(this.LoginClient.Session.sessionId)).catch(fail)
       );
 
       step("PacketReceived:GGAuth", () =>
         this.LoginClient.sendPacket(
           new RequestAuthLogin(mergedConfig.Username, mergedConfig.Password, this.LoginClient.Session)
-        )
+        ).catch(fail)
       );
 
       step("PacketReceived:LoginOk", () =>
-        this.LoginClient.sendPacket(new RequestServerList(this.LoginClient.Session))
+        this.LoginClient.sendPacket(new RequestServerList(this.LoginClient.Session)).catch(fail)
       );
 
       step("PacketReceived:ServerList", (e) => {

@@ -89,20 +89,29 @@ export class SessionStore {
         Port: Number(import.meta.env.VITE_LOGIN_SERVER_PORT) || 2106,
         Stream: "websocket",
       });
-      this.servers = servers;
-
       addKnownAccount(username);
-      this.knownAccounts = getKnownAccounts();
-      this.session = { login: username, token: crypto.randomUUID() };
+
+      // Everything past the first await runs outside the action this method
+      // started as, so each assignment needs its own -- otherwise strict mode
+      // warns and the updates aren't batched into a single reaction.
+      runInAction(() => {
+        this.servers = servers;
+        this.knownAccounts = getKnownAccounts();
+        this.session = { login: username, token: crypto.randomUUID() };
+      });
 
       this.pingServers();
 
       return true;
     } catch (reason) {
-      this.error = describeFailure(reason, LOGIN_FAIL_MESSAGES, "Login failed.");
+      runInAction(() => {
+        this.error = describeFailure(reason, LOGIN_FAIL_MESSAGES, "Login failed.");
+      });
       return false;
     } finally {
-      this.isConnecting = false;
+      runInAction(() => {
+        this.isConnecting = false;
+      });
     }
   }
 
@@ -128,13 +137,20 @@ export class SessionStore {
     this.error = undefined;
 
     try {
-      this.characters = await this.client.selectServer(serverId);
+      const characters = await this.client.selectServer(serverId);
+      runInAction(() => {
+        this.characters = characters;
+      });
       return true;
     } catch (reason) {
-      this.error = describeFailure(reason, PLAY_FAIL_MESSAGES, "Could not connect to that server.");
+      runInAction(() => {
+        this.error = describeFailure(reason, PLAY_FAIL_MESSAGES, "Could not connect to that server.");
+      });
       return false;
     } finally {
-      this.isConnecting = false;
+      runInAction(() => {
+        this.isConnecting = false;
+      });
     }
   }
 
@@ -146,10 +162,14 @@ export class SessionStore {
       await this.client.selectCharacter(slotIndex);
       return true;
     } catch (reason) {
-      this.error = describeFailure(reason, {}, "Could not enter the world.");
+      runInAction(() => {
+        this.error = describeFailure(reason, {}, "Could not enter the world.");
+      });
       return false;
     } finally {
-      this.isConnecting = false;
+      runInAction(() => {
+        this.isConnecting = false;
+      });
     }
   }
 
@@ -159,13 +179,20 @@ export class SessionStore {
     this.error = undefined;
 
     try {
-      this.characterTemplates = await this.client.requestCharacterTemplates();
+      const templates = await this.client.requestCharacterTemplates();
+      runInAction(() => {
+        this.characterTemplates = templates;
+      });
       return true;
     } catch (reason) {
-      this.error = describeFailure(reason, {}, "Could not load character templates.");
+      runInAction(() => {
+        this.error = describeFailure(reason, {}, "Could not load character templates.");
+      });
       return false;
     } finally {
-      this.isConnecting = false;
+      runInAction(() => {
+        this.isConnecting = false;
+      });
     }
   }
 
@@ -181,13 +208,19 @@ export class SessionStore {
 
     try {
       const characters = await this.client.createCharacter(charData);
-      this.characters = characters;
+      runInAction(() => {
+        this.characters = characters;
+      });
       return characters.find((character) => character.Name === charData.Name)?.ObjectId;
     } catch (reason) {
-      this.error = describeFailure(reason, CHAR_CREATE_FAIL_MESSAGES, "Could not create character.");
+      runInAction(() => {
+        this.error = describeFailure(reason, CHAR_CREATE_FAIL_MESSAGES, "Could not create character.");
+      });
       return undefined;
     } finally {
-      this.isConnecting = false;
+      runInAction(() => {
+        this.isConnecting = false;
+      });
     }
   }
 
@@ -201,13 +234,20 @@ export class SessionStore {
     this.error = undefined;
 
     try {
-      this.characters = await this.client.restart();
+      const characters = await this.client.restart();
+      runInAction(() => {
+        this.characters = characters;
+      });
       return true;
     } catch (reason) {
-      this.error = describeFailure(reason, {}, "Could not return to character selection.");
+      runInAction(() => {
+        this.error = describeFailure(reason, {}, "Could not return to character selection.");
+      });
       return false;
     } finally {
-      this.isConnecting = false;
+      runInAction(() => {
+        this.isConnecting = false;
+      });
     }
   }
 

@@ -122,7 +122,14 @@ export default class GameClient extends MMOClient {
   }
 
   sendPacket(gsp: GameServerPacket): Promise<void> {
-    const sendable: Uint8Array = this.pack(gsp);
+    let sendable: Uint8Array;
+    try {
+      // Same reasoning as LoginClient.sendPacket: keep serialization failures
+      // inside the returned promise so callers can actually catch them.
+      sendable = this.pack(gsp);
+    } catch (error) {
+      return Promise.reject(error);
+    }
 
     this.logger.debug("Sending ", gsp.constructor.name);
     return this.sendRaw(sendable).then(() => {
