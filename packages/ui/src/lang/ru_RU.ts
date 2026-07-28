@@ -72,12 +72,12 @@ export const LANG_RU_RU: LangDictionary = {
     backButton: "Назад",
     baseStatsTitle: "Базовые характеристики",
     stat: {
-      str: "СИЛ",
-      dex: "ЛОВ",
-      con: "ТЕЛ",
-      int: "ИНТ",
-      wit: "МУД",
-      men: "ДУХ",
+      str: "STR",
+      dex: "DEX",
+      con: "CON",
+      int: "INT",
+      wit: "WIT",
+      men: "MEN",
     },
   },
   charInfo: {
