@@ -8,6 +8,8 @@ export const LANG_EN_US: LangDictionary = {
     connecting: "Connecting...",
     exitGameConfirm: "Exit the game?",
     settings: "Settings",
+    hp: "HP",
+    mp: "MP",
   },
   classes: {
     race: {
@@ -84,8 +86,6 @@ export const LANG_EN_US: LangDictionary = {
     cp: "CP",
   },
   charSelect: {
-    hp: "HP",
-    mp: "MP",
     templatesFailed: "Could not load character templates.",
     logoutConfirm: "Logout to the login screen?",
     loading: "Loading...",

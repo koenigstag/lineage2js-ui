@@ -45,7 +45,7 @@ export const CharInfoContent = observer(function CharInfoContent() {
       <StatBar
         percent={(info.hp / info.maxHp) * 100}
         color={HP_COLOR}
-        label={t("charSelect.hp")}
+        label={t("common.hp")}
         text={`${info.hp}/${info.maxHp}`}
         width={BAR_WIDTH}
         height={BAR_HEIGHT}
@@ -53,7 +53,7 @@ export const CharInfoContent = observer(function CharInfoContent() {
       <StatBar
         percent={(info.mp / info.maxMp) * 100}
         color={MP_COLOR}
-        label={t("charSelect.mp")}
+        label={t("common.mp")}
         text={`${info.mp}/${info.maxMp}`}
         width={BAR_WIDTH}
         height={BAR_HEIGHT}
