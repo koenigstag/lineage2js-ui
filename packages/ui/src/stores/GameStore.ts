@@ -390,6 +390,16 @@ const BATTLE_LOG_MESSAGE_IDS = new Set([
   2269, // $c1 resisted $c2's magic.
   2344, // You have been killed by an attack from $c1.
   2345, // You have attacked and killed $c1.
+
+  // Vitality level changes (confirmed against lineage2ts's PcStats.ts --
+  // sent from updateVitalityLevel() only, i.e. NOT on every ordinary solo
+  // kill's vitality drain (that path calls addVitalityPoints with
+  // sendUpdate=false); real triggers are the periodic online regen tick,
+  // party-kill vitality gains, and Vitality Herb-style skill effects).
+  2314, // Your Vitality is at maximum.
+  2315, // Your Vitality has increased.
+  2316, // Your Vitality has decreased.
+  2317, // Your Vitality is fully exhausted.
 ]);
 
 function demoBattleLogEntry(text: string): BattleLogEntry {
