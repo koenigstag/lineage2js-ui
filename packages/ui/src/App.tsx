@@ -23,6 +23,7 @@ export const App = observer(function App() {
     ui.loadSkillNames();
     ui.loadActionNames();
     ui.loadNpcRaces();
+    ui.loadNpcLevels();
   }, [ui]);
 
   useResetShortcut(() => windowManager.resetPositions());

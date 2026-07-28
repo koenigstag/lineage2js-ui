@@ -7,6 +7,7 @@ import { useGameStore } from "../../../stores/StoreContext";
 import { HP_COLOR } from "../../../config/stat-colors";
 import { getSkillIconUrl } from "../../../config/icon-urls";
 import { getSkillName } from "../../../config/skill-mapping";
+import { getTargetLevelColor } from "../../../config/target-level-color";
 import { t } from "../../../lang/lang";
 import { BUFF_ICON_SIZE } from "../effects/effects.window";
 
@@ -14,6 +15,19 @@ const BAR_WIDTH = 200;
 const BAR_HEIGHT = 14;
 
 const infoRowStyle = { color: "#a99a7a", fontSize: 11 };
+
+const levelBadgeStyle = {
+  width: 20,
+  height: 20,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#1a1a1a",
+  border: "1px solid #6f5c31",
+  color: "#e6d9be",
+  fontSize: 11,
+  fontWeight: "bold" as const,
+};
 
 // Shows whatever is currently targeted (attack/spell/buff target): [creature
 // icon +] name, HP bar, [title/clan/ally if a player], effects -- see
@@ -29,12 +43,20 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, width: BAR_WIDTH }}>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {target.level !== undefined && <div style={levelBadgeStyle}>{target.level}</div>}
         {target.race ? (
           <CreatureRaceIcon race={target.race} />
         ) : (
           target.creatureKind && <CreatureKindIcon kind={target.creatureKind} />
         )}
-        <span style={{ color: "#e6d9be", fontSize: 13 }}>{target.name}</span>
+        <span
+          style={{
+            color: target.level !== undefined ? getTargetLevelColor(game.charInfo.level, target.level) : "#e6d9be",
+            fontSize: 13,
+          }}
+        >
+          {target.name}
+        </span>
       </div>
       <StatBar
         percent={(target.hp / target.maxHp) * 100}

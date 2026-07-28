@@ -24,6 +24,9 @@ export class UiStore {
   /** npcId -> race code (e.g. "UNDEAD"), see config/npc-race-mapping.ts. Not localized -- these are enum codes, not display strings. */
   npcRaces: Record<string, string> = {};
   private npcRacesRequested = false;
+  /** npcId -> level, see config/npc-level-mapping.ts. Same datapack source/gap as npcRaces -- NpcInfo never sends a monster's level over the wire. */
+  npcLevels: Record<string, number> = {};
+  private npcLevelsRequested = false;
 
   constructor() {
     makeAutoObservable(this);
@@ -117,6 +120,23 @@ export class UiStore {
       this.setNpcRaces(races);
     } catch {
       this.npcRacesRequested = false;
+    }
+  }
+
+  setNpcLevels(levels: Record<string, number>) {
+    this.npcLevels = levels;
+  }
+
+  /** Fetches public/npc-levels/data.json once, same source/treatment as loadNpcRaces(). */
+  async loadNpcLevels() {
+    if (this.npcLevelsRequested) return;
+    this.npcLevelsRequested = true;
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}npc-levels/data.json`);
+      const levels: Record<string, number> = await response.json();
+      this.setNpcLevels(levels);
+    } catch {
+      this.npcLevelsRequested = false;
     }
   }
 }

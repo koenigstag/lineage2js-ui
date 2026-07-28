@@ -16,6 +16,7 @@ import {
   type Client,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
+import { getNpcLevel } from "../config/npc-level-mapping";
 
 export interface Creature {
   id: string;
@@ -268,6 +269,10 @@ export interface TargetSnapshot {
   // table (mostly Monster-type npcs; Folk/quest-givers usually have none).
   // Falls back to creatureKind's icon when this is undefined.
   race?: NpcRace;
+  // Non-player level only (see config/npc-level-mapping.ts) -- intentionally
+  // not set for L2Character targets (players already show their own level
+  // via char-info/party-char-info, and their nameplate isn't con-colored).
+  level?: number;
 }
 
 export interface PledgeSnapshot {
@@ -311,6 +316,7 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
     ...base,
     creatureKind: creature instanceof L2Mob ? "mob" : creature instanceof L2Summon ? "summon" : "npc",
     race: getNpcRace(creature.Id),
+    level: getNpcLevel(creature.Id),
   };
 }
 
