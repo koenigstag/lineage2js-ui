@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react-lite";
 import type { L2Skill } from "@lineage2js/network";
-import { Slot, type IconBorder } from "../core/slot.component";
+import { Slot } from "../core/slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
 import { useGameStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import { getSkillIconUrl } from "../../../config/icon-urls";
@@ -26,8 +26,6 @@ function matchesTab(skill: L2Skill, tab: Tab): boolean {
 const GRID_COLUMNS = 8;
 const SLOT_SIZE = 34;
 const SLOT_GAP = 2;
-
-const SKILL_ICON_BORDER: IconBorder = { from: "#7f8faf", to: "#31366f" };
 
 export const SkillsContent = observer(function SkillsContent() {
   const game = useGameStore();
@@ -88,7 +86,6 @@ export const SkillsContent = observer(function SkillsContent() {
             <div key={`${skill.id}-${skill.level}`} onClick={() => handleLearnableClick(skill)} style={{ cursor: "pointer" }}>
               <Slot
                 type="inventory"
-                iconBorder={SKILL_ICON_BORDER}
                 content={{
                   type: "skill",
                   data: skill,
@@ -125,7 +122,6 @@ export const SkillsContent = observer(function SkillsContent() {
               <Slot
                 key={skill.Id}
                 type="inventory"
-                iconBorder={SKILL_ICON_BORDER}
                 content={{
                   type: "skill",
                   data: skill,
