@@ -10,9 +10,15 @@ export class UiStore {
   /** id -> name, see lang.ts's "item.name.<id>" special case. English-only for now (no server-sent item names, see network's readItem()). */
   itemNames: Record<string, string> = {};
   private itemNamesRequested = false;
-  /** id -> name, see lang.ts's "skill.name.<id>" special case. Same gap as items -- SkillList/AcquireSkillInfo never send skill name strings. */
+  /**
+   * id -> name for the current lang, see lang.ts's "skill.name.<id>" special
+   * case. The server never sends skill name strings (SkillList/
+   * AcquireSkillInfo are id/level only) -- sourced from adrenalinebot.com's
+   * HighFive database instead (public/skill-names/<lang>.json), same
+   * per-language caching as actionNames/classNames.
+   */
   skillNames: Record<string, string> = {};
-  private skillNamesRequested = false;
+  private skillNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /**
    * id -> name for the current lang, see lang.ts's "action.name.<id>" special
    * case. Unlike items/skills, sourced ourselves (not server-sent) in both
@@ -57,6 +63,7 @@ export class UiStore {
     this.lang = lang;
     this.loadActionNames();
     this.loadClassNames();
+    this.loadSkillNames();
     this.loadSystemMessages();
   }
 
@@ -81,16 +88,21 @@ export class UiStore {
     this.skillNames = names;
   }
 
-  /** Fetches the skill-name table once (public/skill-names/en.json), same treatment as loadItemNames(). */
+  /** Fetches public/skill-names/<lang>.json for the current lang, caching each language in memory once loaded -- same treatment as loadActionNames(). */
   async loadSkillNames() {
-    if (this.skillNamesRequested) return;
-    this.skillNamesRequested = true;
+    const lang = this.lang;
+    const cached = this.skillNamesCache[lang];
+    if (cached) {
+      this.setSkillNames(cached);
+      return;
+    }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}skill-names/en.json`);
+      const response = await fetch(`${import.meta.env.BASE_URL}skill-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
+      this.skillNamesCache[lang] = names;
       this.setSkillNames(names);
     } catch {
-      this.skillNamesRequested = false;
+      // leave skillNames as-is -- t() falls back to the raw "skill.name.<id>" key
     }
   }
 
