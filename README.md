@@ -7,10 +7,30 @@ Monorepo for Lineage 2 JS network protocol library and web UI client.
 This project is a work in progress so expect bugs, missing features, and incomplete implementations.
 The network protocol implementation is still incomplete, and the UI client is in early development. Contributions are welcome!
 
+## Contributing
+
+
+
+## Already implemented features
+- Login, re-login and real game server connection
+- Character selection and creation with demo 3d models and real data from the server
+- Detailed character info window with stats - real info from server, not demo data
+- Draggable windows system like in the original game client
+- Char info window (Lvl, Nickname, CP/HP/MP/VP) - draggable
+- Active effects window (buffs/debuffs) - draggable
+- Party members window (Nicknames, Role/Leader icons, CP/HP/MP stats) - draggable
+- Selected target window with real info - draggable, click on character/mob/party member to target them
+- Inventory window - WIP, draggable, only display, no equip slots yet
+- Hotbar - WIP, only display
+- Skill list window - WIP, only display
+- Learn skill window - WIP
+- Actions window - clickable actions, WIP
+- Chat - contains demo text, network/commands/tabs are WIP
+
 ## Roadmap
 - Flesh out the in-game windows — character info, hotbar, inventory equipment
-- Put the player in the world — movement, a mob radar, stand-in 3D models
-- Core gameplay systems — combat, chat, quests
+- Put the player in the world — fake surface, send movement to server, show mob radar, use demo 3D models
+- Core gameplay systems — movement, combat, chat, quests, party
 
 Real landscape and buildings rendering, geodata integration, minimap, global map, location maps, and 3D models rewrite are planned for the future updates.
 
