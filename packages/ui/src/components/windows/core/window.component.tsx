@@ -368,6 +368,14 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
       }}
       onPointerDown={(event) => {
         handleFocus();
+        // only-body has no separate drag-handle strip (unlike titlebar/
+        // sidebar), so it drags from anywhere in the content -- except
+        // interactive controls, where handleDragStart's preventDefault()
+        // would otherwise swallow the pointerdown that focuses them (e.g.
+        // chat's message input, which needed this window type draggable).
+        if ((event.target as HTMLElement).closest("input, select, textarea, button")) {
+          return;
+        }
         handleDragStart(event);
       }}
     >

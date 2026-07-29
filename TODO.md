@@ -11,6 +11,7 @@
 - Basic combat system
 - Basic Chat system
 - Basic Quests system
+- Add NPC dialog system -- render engine and actions
 
 
 # Long-term TODOs

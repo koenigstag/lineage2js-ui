@@ -14,8 +14,10 @@ import {
   ShortcutType,
   ClassId,
   AcquireSkillType,
+  ChatType,
   type Client,
   type ESystemMessage,
+  type ECreatureSay,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
@@ -519,6 +521,31 @@ function demoBattleLogEntry(text: string): BattleLogEntry {
   return { id: nextBattleLogEntryId++, text };
 }
 
+export interface ChatMessage {
+  id: number;
+  channel: number;
+  senderName: string;
+  text: string;
+}
+
+let nextChatMessageId = 1;
+const CHAT_MAX_ENTRIES = 200;
+
+function demoChatMessage(channel: number, senderName: string, text: string): ChatMessage {
+  return { id: nextChatMessageId++, channel, senderName, text };
+}
+
+// Same demo-first treatment as battleLog -- a few representative lines
+// across channels before any real CreatureSay has arrived.
+function createDemoChatMessages(): ChatMessage[] {
+  return [
+    demoChatMessage(ChatType.GENERAL, "DemoRanger", "anyone selling soulshots?"),
+    demoChatMessage(ChatType.TRADE, "DemoWarlock", "WTS Blessed Enchant Weapon A x3"),
+    demoChatMessage(ChatType.CLAN, "DemoSorc", "raid at 20:00, be online"),
+    demoChatMessage(ChatType.PARTY, "DemoHero", "pulling next pack, heal up"),
+  ];
+}
+
 // Same demo-first treatment as everywhere else -- a few representative
 // lines before any real SystemMessage has arrived.
 function createDemoBattleLog(): BattleLogEntry[] {
@@ -669,6 +696,8 @@ export class GameStore {
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** Combat text feed, see battlelog window and BATTLE_LOG_MESSAGE_IDS. */
   battleLog: BattleLogEntry[] = createDemoBattleLog();
+  /** Chat log feed, see chat window and recordChatMessage/sendChatMessage. */
+  chatMessages: ChatMessage[] = createDemoChatMessages();
   /** Skills-list "Learn" tab data, see LearnableSkillSnapshot. */
   learnableSkills: LearnableSkillSnapshot[] = createDemoLearnableSkills();
   /** Currently open in the "skill" detail window, if any. */
@@ -795,6 +824,65 @@ export class GameStore {
     }
     const text = formatSystemMessage(messageId, params, paramTypes);
     this.battleLog = [...this.battleLog, { id: nextBattleLogEntryId++, text }].slice(-BATTLE_LOG_MAX_ENTRIES);
+  }
+
+  private recordChatMessage(channel: number, senderName: string, text: string) {
+    this.chatMessages = [...this.chatMessages, { id: nextChatMessageId++, channel, senderName, text }].slice(
+      -CHAT_MAX_ENTRIES
+    );
+  }
+
+  /**
+   * Sends a chat message on the given channel. When connected, dispatches
+   * the matching ClientCommands say/shout/tell/... call and relies on the
+   * server echoing the message back via its own CreatureSay (real L2 always
+   * includes the sender in a channel's broadcast, including the "->target"
+   * echo TypeTell.ts sends for whispers) -- no local echo needed. Offline/
+   * demo mode has no server to echo from, so it appends locally instead,
+   * same dual-path treatment as the rest of this store.
+   */
+  sendChatMessage(text: string, channel: number, target?: string) {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    if (this.client?.GameClient.IsConnected) {
+      switch (channel) {
+        case ChatType.SHOUT:
+          this.client.shout(trimmed);
+          break;
+        case ChatType.WHISPER:
+          if (target) {
+            this.client.tell(trimmed, target);
+          }
+          break;
+        case ChatType.PARTY:
+          this.client.sayToParty(trimmed);
+          break;
+        case ChatType.CLAN:
+          this.client.sayToClan(trimmed);
+          break;
+        case ChatType.TRADE:
+          this.client.sayToTrade(trimmed);
+          break;
+        case ChatType.ALLIANCE:
+          this.client.sayToAlly(trimmed);
+          break;
+        case ChatType.GENERAL:
+        default:
+          this.client.say(trimmed);
+          break;
+      }
+      return;
+    }
+
+    const senderName = this.charInfo.name || "You";
+    if (channel === ChatType.WHISPER && target) {
+      this.recordChatMessage(channel, `->${target}`, trimmed);
+      return;
+    }
+    this.recordChatMessage(channel, senderName, trimmed);
   }
 
   /**
@@ -950,6 +1038,11 @@ export class GameStore {
 
     client.on("SystemMessage", (e: ESystemMessage) => {
       runInAction(() => this.recordBattleLogMessage(e.data.messageId, e.data.params, e.data.paramTypes));
+    });
+
+    client.on("CreatureSay", (e: ECreatureSay) => {
+      const text = e.data.messages.join(" ");
+      runInAction(() => this.recordChatMessage(e.data.type, e.data.charName, text));
     });
 
     // Real Learn-tab data source -- replaces the demo learnableSkills list

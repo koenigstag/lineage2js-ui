@@ -148,7 +148,9 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     draggable: true,
     defaultOpen: true,
     origin: "bottom-left",
-    defaultPosition: () => ({ x: 10, y: 70 }),
+    // Stacked above the chat window's default box (bottom-left, ~210px tall
+    // with its log + send row) so the two don't overlap on first launch.
+    defaultPosition: () => ({ x: 10, y: 230 }),
   },
   effects: {
     id: "effects",

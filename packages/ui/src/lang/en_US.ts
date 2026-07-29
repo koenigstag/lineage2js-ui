@@ -209,6 +209,21 @@ export const LANG_EN_US: LangDictionary = {
     macro: "Macro",
     map: "Map",
   },
+  chat: {
+    channels: {
+      all: "All",
+      general: "General",
+      shout: "!Shout",
+      whisper: "\"Whisper",
+      trade: "+Trade",
+      party: "#Party",
+      clan: "@Clan",
+      alliance: "$Alliance",
+      hero: "%Hero",
+    },
+    messagePlaceholder: "Type a message...",
+    whisperTargetPlaceholder: "Player name",
+  },
   tooltip: {
     types: {
       skill: "Skill",

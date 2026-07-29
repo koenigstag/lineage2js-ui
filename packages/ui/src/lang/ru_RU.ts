@@ -209,6 +209,21 @@ export const LANG_RU_RU: LangDictionary = {
     macro: "Макрос",
     map: "Карта",
   },
+  chat: {
+    channels: {
+      all: "All",
+      general: "General",
+      shout: "!Shout",
+      whisper: "\"Whisper",
+      trade: "+Trade",
+      party: "#Party",
+      clan: "@Clan",
+      alliance: "$Alliance",
+      hero: "%Hero",
+    },
+    messagePlaceholder: "Введите сообщение...",
+    whisperTargetPlaceholder: "Имя игрока",
+  },
   tooltip: {
     types: {
       skill: "Навык",
