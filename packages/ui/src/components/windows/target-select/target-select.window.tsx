@@ -99,12 +99,6 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
       {target.title && <div style={infoRowStyle}>{t("targetSelect.status")}: {target.title}</div>}
       {target.clanName && <div style={infoRowStyle}>{t("targetSelect.clan")}: {target.clanName}</div>}
       {target.allyName && <div style={infoRowStyle}>{t("targetSelect.ally")}: {target.allyName}</div>}
-      {/* recommHave is player-only (see TargetSnapshot) -- the action itself now lives in
-          the Actions window's "basic" category (see config/user-actions.ts's RECOMMEND_ACTION),
-          this stays a read-only info row like title/clan/ally above. */}
-      {!target.creatureKind && (
-        <div style={infoRowStyle}>{t("targetSelect.recommends", { count: target.recommHave ?? 0 })}</div>
-      )}
       {target.buffs.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           {target.buffs.map((buff) => (

@@ -134,7 +134,6 @@ export const LANG_RU_RU: LangDictionary = {
     isAlive: "Состояние",
     alive: "Жив",
     dead: "Мёртв",
-    recommends: "Рекомендации: {count}",
     recommendButton: "Рекомендовать",
   },
   game: {

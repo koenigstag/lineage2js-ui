@@ -134,7 +134,6 @@ export const LANG_EN_US: LangDictionary = {
     isAlive: "Is Alive",
     alive: "Alive",
     dead: "Dead",
-    recommends: "Recommends: {count}",
     recommendButton: "Recommend",
   },
   game: {
