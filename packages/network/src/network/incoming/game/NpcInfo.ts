@@ -17,10 +17,8 @@ export default class NpcInfo extends AbstractNpcInfo {
 
     if (this.IsAttackable) {
       this.Creature = new L2Mob();
-      this.Creature.Name = `Mob #${_idTemplate}`;
     } else {
       this.Creature = new L2Npc();
-      this.Creature.Name = `NPC #${_idTemplate}`;
     }
 
     this.Creature.Id = _idTemplate;
@@ -65,8 +63,19 @@ export default class NpcInfo extends AbstractNpcInfo {
     const _isSummoned = this.readC() === 2; // invisible ?? 0=false 1=true 2=summoned (only works if model has a summon animation)
 
     const _unkn2 = this.readD();
-    // this.Creature.Name = this.readS();
-    const _name = this.readS();
+    // Real wire name -- previously discarded into a throwaway `_name`, with
+    // a "Mob #<id>"/"NPC #<id>" placeholder assigned above instead. Confirmed
+    // against both L2J_Mobius's AbstractNpcInfo.java (`_name = _npc.getName();
+    // buffer.writeString(_name);` right before the title write) and
+    // lineage2ts's NpcInfo.ts (`.writeS(name).writeS(title)`, same order) --
+    // both write name then title at exactly this position. Some templates
+    // deliberately send an empty string here (lineage2ts's
+    // isUsingServerSideName() flag) and expect the client to resolve the
+    // display name itself from its own id->name table -- see
+    // config/npc-name-mapping.ts's getNpcName() in the UI package, which
+    // falls back to the old placeholder when this is empty AND the id isn't
+    // in that table either.
+    this.Creature.Name = this.readS();
     const _unkn3 = this.readD();
     this.Creature.Title = this.readS();
 

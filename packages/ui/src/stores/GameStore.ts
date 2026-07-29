@@ -20,6 +20,7 @@ import {
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
+import { getNpcName } from "../config/npc-name-mapping";
 import { formatSystemMessage } from "../config/system-message-mapping";
 
 export interface Creature {
@@ -437,7 +438,6 @@ function createDemoPledgeCache(): Map<number, PledgeSnapshot> {
 function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<number, PledgeSnapshot>): TargetSnapshot {
   const base = {
     objectId: creature.ObjectId,
-    name: creature.Name,
     hp: creature.Hp,
     maxHp: creature.MaxHp,
     isDead: creature.IsDead,
@@ -448,6 +448,9 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
     const pledge = creature.ClanId ? pledgeCache.get(creature.ClanId) : undefined;
     return {
       ...base,
+      // Players always have a real name from CharSelected/CharSelectionInfo/
+      // PartySmallWindow -- no fallback needed here.
+      name: creature.Name,
       title: creature.Title || undefined,
       clanName: pledge?.ClanName,
       allyName: pledge?.AllyName,
@@ -457,9 +460,14 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
     };
   }
 
+  const isAttackable = creature instanceof L2Mob;
   return {
     ...base,
-    creatureKind: creature instanceof L2Mob ? "mob" : creature instanceof L2Summon ? "summon" : "npc",
+    // NpcInfo's own wire name can come back empty for templates that expect
+    // the client to resolve it locally (see NpcInfo.ts's comment) -- fall
+    // back to the id->name table for those.
+    name: creature.Name || getNpcName(creature.Id, isAttackable),
+    creatureKind: isAttackable ? "mob" : creature instanceof L2Summon ? "summon" : "npc",
     race: getNpcRace(creature.Id),
     level: getNpcLevel(creature.Id),
   };

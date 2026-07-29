@@ -31,6 +31,15 @@ export class UiStore {
   /** classId -> name for the current lang (public/class-names/<lang>.json, sourced from adrenalinebot.com's HighFive database -- see class-tree.ts's getClassLabel()). Same per-language caching as actionNames. */
   classNames: Record<string, string> = {};
   private classNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
+  /**
+   * npcId -> name for the current lang, see config/npc-name-mapping.ts's
+   * getNpcName(). Only used as a fallback when NpcInfo's own wire name comes
+   * back empty (some templates deliberately omit it, see NpcInfo.ts) --
+   * sourced from adrenalinebot.com's HighFive database, same per-language
+   * caching as itemNames/skillNames.
+   */
+  npcNames: Record<string, string> = {};
+  private npcNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /** npcId -> race code (e.g. "UNDEAD"), see config/npc-race-mapping.ts. Not localized -- these are enum codes, not display strings. */
   npcRaces: Record<string, string> = {};
   private npcRacesRequested = false;
@@ -66,6 +75,7 @@ export class UiStore {
     this.loadClassNames();
     this.loadSkillNames();
     this.loadItemNames();
+    this.loadNpcNames();
     this.loadSystemMessages();
   }
 
@@ -154,6 +164,28 @@ export class UiStore {
       this.setClassNames(names);
     } catch {
       // leave classNames as-is -- getClassLabel() falls back to deriving from the ClassId enum key
+    }
+  }
+
+  setNpcNames(names: Record<string, string>) {
+    this.npcNames = names;
+  }
+
+  /** Fetches public/npc-names/<lang>.json for the current lang, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  async loadNpcNames() {
+    const lang = this.lang;
+    const cached = this.npcNamesCache[lang];
+    if (cached) {
+      this.setNpcNames(cached);
+      return;
+    }
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}npc-names/${lang}.json`);
+      const names: Record<string, string> = await response.json();
+      this.npcNamesCache[lang] = names;
+      this.setNpcNames(names);
+    } catch {
+      // leave npcNames as-is -- getNpcName() falls back to the "Mob #<id>"/"NPC #<id>" placeholder
     }
   }
 

@@ -23,6 +23,7 @@ export const App = observer(function App() {
     ui.loadSkillNames();
     ui.loadActionNames();
     ui.loadClassNames();
+    ui.loadNpcNames();
     ui.loadNpcRaces();
     ui.loadNpcLevels();
     ui.loadSystemMessages();
