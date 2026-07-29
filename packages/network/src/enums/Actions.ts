@@ -20,6 +20,7 @@ export enum Actions {
   DISMISS_PARTY_MEMBER = 9, // Dismiss Party Member
 
   PRIVATE_STORE_SELL = 10, // Private Store - Sell
+  SERVITOR_SPECIAL_SKILL = 27, // Special skill (Servitors)
   PRIVATE_STORE_BUY = 28, // Private Store - Buy
   PRIVATE_STORE_PACKAGE_SELL = 61, // Private Store Package Sell
 
@@ -31,7 +32,11 @@ export enum Actions {
 
   PET_STOP = 17, // Stop (Pets)
 
+  PET_PICKUP = 18, // Pickup (Pets)
+
   PET_UNSUMMON = 19, // Unsummon Pet
+
+  PET_SPECIAL_SKILL = 20, // Special skill (Pets)
 
   SERVITOR_CHANGE_MOVEMENT_MODE = 21, // Change Movement Mode (Servitors)
 
@@ -78,6 +83,8 @@ export enum Actions {
 
   GOLEM_MECH_CANNON = 48, // Mechanic Golem - Mech. Cannon
 
+  WILD_TEMPER = 49, // Wild Temper
+
   GENERAL_MANUFACTURE = 51, // General Manufacture
 
   SERVITOR_UNSUMMON = 52, // Unsummon Servitor
@@ -85,6 +92,22 @@ export enum Actions {
   SERVITOR_MOVE_TO_TARGET = 53, // Move to target (Servitors)
 
   PET_MOVE_TO_TARGET = 54, // Move to target (Pets)
+
+  RECORD_REPLAY = 55, // Start/End Recording Replay
+
+  COMMAND_CHANNEL_INVITATION = 56, // Command Channel Invitation
+
+  FIND_STORE = 57, // Find Store
+
+  DUEL = 58, // Duel
+
+  WITHDRAW = 59, // Withdraw
+
+  PARTY_DUEL = 60, // Party Duel
+
+  MINI_GAME = 63, // Mini-Game
+
+  MY_TELEPORTS = 64, // My Teleports
 
   BOT_REPORT = 65, // Bot Report Button
 
@@ -96,9 +119,11 @@ export enum Actions {
 
   EXIT_AIRSHIP = 70, // Exit Airship
 
-  COUPLE_SOCIAL_16 = 71, // Couple Social (16)
-  COUPLE_SOCIAL_17 = 72, // Couple Social (17)
-  COUPLE_SOCIAL_18 = 73, // Couple Social (18)
+  // Previously placeholder-named COUPLE_SOCIAL_16/17/18 -- real names per
+  // the HighFive action table (see packages/network/README.md).
+  EXCHANGE_BOWS = 71, // Exchange Bows
+  HIGH_FIVE = 72, // High Five
+  COUPLE_DANCE = 73, // Couple Dance
 
   SIEGE_GOLEM_HAMMER = 1000, // Siege Golem - Siege Hammer
 
