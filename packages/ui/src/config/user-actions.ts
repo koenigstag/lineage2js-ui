@@ -49,6 +49,9 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     { code: Actions.PRIVATE_STORE_SELL },
     { code: Actions.PRIVATE_STORE_BUY },
     { code: Actions.PRIVATE_STORE_PACKAGE_SELL },
+    { code: Actions.FIND_STORE },
+    { code: Actions.DUEL },
+    { code: Actions.MINI_GAME },
     RECOMMEND,
   ],
   party: [
@@ -56,6 +59,7 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     { code: Actions.LEAVE_PARTY },
     { code: Actions.DISMISS_PARTY_MEMBER },
     { code: Actions.CHANGE_PARTY_LEADER },
+    { code: Actions.PARTY_DUEL },
   ],
   // Not a real client tab -- placeholder for target-related actions
   // (attack/next target/assist/pick up/exchange), still undecided which of
