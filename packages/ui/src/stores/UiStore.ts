@@ -7,9 +7,15 @@ export class UiStore {
   connectionStatus: "disconnected" | "connecting" | "connected" = "disconnected";
   screen: Screen = "login";
   lang: LANG = "en";
-  /** id -> name, see lang.ts's "item.name.<id>" special case. English-only for now (no server-sent item names, see network's readItem()). */
+  /**
+   * id -> name for the current lang, see lang.ts's "item.name.<id>" special
+   * case. The server never sends item name strings (ItemList/InventoryUpdate
+   * are id/count/etc only) -- sourced from adrenalinebot.com's HighFive
+   * database instead (public/item-names/<lang>.json), same per-language
+   * caching as skillNames/actionNames/classNames.
+   */
   itemNames: Record<string, string> = {};
-  private itemNamesRequested = false;
+  private itemNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /**
    * id -> name for the current lang, see lang.ts's "skill.name.<id>" special
    * case. The server never sends skill name strings (SkillList/
@@ -19,12 +25,7 @@ export class UiStore {
    */
   skillNames: Record<string, string> = {};
   private skillNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
-  /**
-   * id -> name for the current lang, see lang.ts's "action.name.<id>" special
-   * case. Unlike items/skills, sourced ourselves (not server-sent) in both
-   * en/ru, so it's cached per-language and reloaded on setLang() instead of
-   * being a one-shot English-only fetch.
-   */
+  /** id -> name for the current lang, see lang.ts's "action.name.<id>" special case. Same source/caching as itemNames/skillNames. */
   actionNames: Record<string, string> = {};
   private actionNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /** classId -> name for the current lang (public/class-names/<lang>.json, sourced from adrenalinebot.com's HighFive database -- see class-tree.ts's getClassLabel()). Same per-language caching as actionNames. */
@@ -64,6 +65,7 @@ export class UiStore {
     this.loadActionNames();
     this.loadClassNames();
     this.loadSkillNames();
+    this.loadItemNames();
     this.loadSystemMessages();
   }
 
@@ -71,16 +73,21 @@ export class UiStore {
     this.itemNames = names;
   }
 
-  /** Fetches the item-name table once (public/item-names/en.json) and caches it in memory for the session -- the browser's own HTTP cache covers repeat page loads. */
+  /** Fetches public/item-names/<lang>.json for the current lang, caching each language in memory once loaded -- same treatment as loadActionNames(). */
   async loadItemNames() {
-    if (this.itemNamesRequested) return;
-    this.itemNamesRequested = true;
+    const lang = this.lang;
+    const cached = this.itemNamesCache[lang];
+    if (cached) {
+      this.setItemNames(cached);
+      return;
+    }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}item-names/en.json`);
+      const response = await fetch(`${import.meta.env.BASE_URL}item-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
+      this.itemNamesCache[lang] = names;
       this.setItemNames(names);
     } catch {
-      this.itemNamesRequested = false;
+      // leave itemNames as-is -- t() falls back to the raw "item.name.<id>" key
     }
   }
 
