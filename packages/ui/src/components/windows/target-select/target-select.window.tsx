@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { StatBar } from "../../core/stat-bar.component";
 import { Slot } from "../core/slot.component";
+import { BaseButton } from "../../core/buttons/base.button";
 import { CreatureKindIcon } from "../../core/creature-kind-icon.component";
 import { CreatureRaceIcon } from "../../core/creature-race-icon.component";
 import { useGameStore } from "../../../stores/StoreContext";
@@ -28,6 +29,11 @@ const closeButtonStyle: CSSProperties = {
   fontSize: 14,
   lineHeight: 1,
   padding: "0 2px",
+};
+
+const recommendButtonStyle: CSSProperties = {
+  fontSize: 11,
+  padding: "2px 8px",
 };
 
 const levelBadgeStyle = {
@@ -99,6 +105,18 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
       {target.title && <div style={infoRowStyle}>{t("targetSelect.status")}: {target.title}</div>}
       {target.clanName && <div style={infoRowStyle}>{t("targetSelect.clan")}: {target.clanName}</div>}
       {target.allyName && <div style={infoRowStyle}>{t("targetSelect.ally")}: {target.allyName}</div>}
+      {!target.creatureKind && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <span style={infoRowStyle}>{t("targetSelect.recommends", { count: target.recommHave ?? 0 })}</span>
+          <BaseButton
+            onClick={() => game.recommend()}
+            disabled={game.charInfo.recommLeft <= 0}
+            style={recommendButtonStyle}
+          >
+            {t("targetSelect.recommendButton")}
+          </BaseButton>
+        </div>
+      )}
       {target.buffs.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           {target.buffs.map((buff) => (
