@@ -50,9 +50,9 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     { code: Actions.PRIVATE_STORE_BUY },
     { code: Actions.PRIVATE_STORE_PACKAGE_SELL },
     { code: Actions.FIND_STORE },
+    RECOMMEND,
     { code: Actions.DUEL },
     { code: Actions.MINI_GAME },
-    RECOMMEND,
   ],
   party: [
     { code: Actions.INVITE },
@@ -86,6 +86,7 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     { code: Actions.PET_CHANGE_MOVEMENT_MODE },
     { code: Actions.PET_ATTACK },
     { code: Actions.PET_STOP },
+    { code: Actions.PET_PICKUP },
     { code: Actions.PET_UNSUMMON },
     { code: Actions.PET_MOVE_TO_TARGET },
     { code: Actions.SERVITOR_CHANGE_MOVEMENT_MODE },
