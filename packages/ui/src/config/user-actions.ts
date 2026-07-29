@@ -1,10 +1,24 @@
 import { Actions } from "@lineage2js/network";
+import type { GameStore } from "../stores/GameStore";
 import { t } from "../lang/lang";
 
 export type ActionCategory = "basic" | "party" | "target" | "social" | "pet";
 
+/**
+ * Every entry has a real Actions-enum id (icon/name always resolve via
+ * getActionIconUrl/getActionName off `code`), but `code` alone doesn't mean
+ * it's dispatched via RequestActionUse -- Attack/Next Target/Trade/Pick Up/
+ * Assist/private-store/party/Recommend actions all have their own dedicated
+ * packets/commands elsewhere in this codebase (CommandAttack,
+ * CommandNextTarget, CommandRequestJoinParty, GameStore.recommend(), ...),
+ * same as real L2. `dispatch`/`isEnabled` are only set for the ones actually
+ * wired to a click here; the rest stay icon/tooltip-only for now (see
+ * slot.component.tsx).
+ */
 export interface Action {
   code: Actions;
+  dispatch?(game: GameStore): void;
+  isEnabled?(game: GameStore): boolean;
 }
 
 /** Display name for an action, from the id->name table loaded by UiStore.loadActionNames() (see lang.ts's "action.name.<id>" special case). */
@@ -12,15 +26,17 @@ export function getActionName(action: Action): string {
   return t(`action.name.${action.code}`);
 }
 
-// Not every entry here is actually dispatched via client.action()
-// (RequestActionUse) once clicks are wired up -- Attack/Next Target/Trade/
-// Pick Up/Assist/private-store/party actions all have their own dedicated
-// packets/commands in this codebase (CommandAttack, CommandNextTarget,
-// CommandRequestJoinParty, ...) rather than RequestActionUse(Actions.code),
-// same as real L2. They're still listed by Actions-enum code here purely for
-// icon/name lookup (getActionIconUrl/getActionName) -- no slot in this
-// window has click dispatch wired yet (see slot.component.tsx), so this is
-// icon/tooltip-only for now regardless.
+const RECOMMEND: Action = {
+  // Not handled by RequestActionUse in the H5 reference server -- sent via
+  // RequestVoteNew instead (see Actions.RECOMMEND's own comment and
+  // GameStore.recommend()).
+  code: Actions.RECOMMEND,
+  dispatch: (game) => game.recommend(),
+  // Mirrors GameStore.recommend()'s own guard (player target + recomms left)
+  // so the slot visibly dims instead of silently no-opping on click.
+  isEnabled: (game) => Boolean(game.target && !game.target.creatureKind) && game.charInfo.recommLeft > 0,
+};
+
 export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
   basic: [
     { code: Actions.SIT_STAND },
@@ -33,6 +49,7 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     { code: Actions.PRIVATE_STORE_SELL },
     { code: Actions.PRIVATE_STORE_BUY },
     { code: Actions.PRIVATE_STORE_PACKAGE_SELL },
+    RECOMMEND,
   ],
   party: [
     { code: Actions.INVITE },

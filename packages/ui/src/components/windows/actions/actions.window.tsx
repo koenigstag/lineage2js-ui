@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 import { Slot } from "../core/slot.component";
 import { getActionIconUrl } from "../../../config/icon-urls";
 import { USER_ACTIONS, getActionName, type ActionCategory, type Action } from "../../../config/user-actions";
+import { useGameStore } from "../../../stores/StoreContext";
 import { t } from "../../../lang/lang";
 
 const CATEGORY_ORDER: ActionCategory[] = ["basic", "party", "target", "social", "pet"];
@@ -19,6 +20,8 @@ function getActionSlotType(category: ActionCategory): "action" | "pet-action" {
 }
 
 export const ActionsContent = observer(function ActionsContent() {
+  const game = useGameStore();
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {CATEGORY_ORDER.map((category) => (
@@ -27,18 +30,30 @@ export const ActionsContent = observer(function ActionsContent() {
             {t(`actions.categories.${category}`)}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: SLOT_GAP, width: ROW_WIDTH }}>
-            {USER_ACTIONS[category].map((action: Action) => (
-              <Slot
-                key={action.code}
-                type="hotbar"
-                content={{
-                  type: getActionSlotType(category),
-                  data: action,
-                  iconUrl: getActionIconUrl(action.code),
-                  tooltip: { kind: "simple", name: getActionName(action) },
-                }}
-              />
-            ))}
+            {USER_ACTIONS[category].map((action: Action) => {
+              // Most entries have no click dispatch wired yet (see Action's
+              // own doc comment) -- only ones with `dispatch` set are clickable here.
+              const enabled = action.isEnabled ? action.isEnabled(game) : true;
+              const onClick = action.dispatch ? () => enabled && action.dispatch!(game) : undefined;
+
+              return (
+                <div
+                  key={action.code}
+                  onClick={onClick}
+                  style={onClick ? { opacity: enabled ? 1 : 0.5, cursor: enabled ? "pointer" : "not-allowed" } : undefined}
+                >
+                  <Slot
+                    type="hotbar"
+                    content={{
+                      type: getActionSlotType(category),
+                      data: action,
+                      iconUrl: getActionIconUrl(action.code),
+                      tooltip: { kind: "simple", name: getActionName(action) },
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}

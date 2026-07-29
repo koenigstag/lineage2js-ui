@@ -54,6 +54,14 @@ export enum Actions {
 
   SOULLESS_PARASITE_BURST = 39, // Soulless - Parasite Burst
 
+  // Not handled by RequestActionUse in the H5 reference server (its switch
+  // jumps straight from case 39 to case 41) -- dispatched via its own
+  // RequestVoteNew packet instead (see GameStore.recommend()). Still a real
+  // client-side action id though, confirmed against the HighFive action
+  // table (see packages/network/README.md), used here purely for icon/name
+  // lookup.
+  RECOMMEND = 40, // Recommend
+
   WILD_HOG_ATTACK = 41, // Wild Hog Cannon - Attack
 
   KAI_SELF_SHIELD = 42, // Kai the Cat - Self Damage Shield

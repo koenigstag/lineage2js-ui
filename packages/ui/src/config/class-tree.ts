@@ -1,4 +1,5 @@
 import { ClassId, Race } from "@lineage2js/network";
+import { rootStore } from "../stores/RootStore";
 
 export type ClassRole = "tank" | "healer" | "buffer" | "rogue" | "archer" | "summoner" | "mage" | "warrior";
 
@@ -144,20 +145,32 @@ export const CLASS_TREE: Partial<Record<ClassId, ClassTreeEntry>> = {
 // `(ClassId as any)[this.readD()]`) -- the same quirk toLocalRace/toLocalSex
 // handle for Race/Sex in character-races.ts. Normalizes either shape back to
 // the PascalCase key name ("FortuneSeeker").
-function classIdKeyName(classId: ClassId): string | undefined {
-  return typeof classId === "string" ? classId : ClassId[classId];
+// L2Character.ClassId/L2User.ClassId comes back inconsistently depending on
+// which packet set it: CharSelected assigns the raw numeric wire value, while
+// UserInfo reverse-maps it through the ClassId enum first and assigns the
+// resulting string key name instead (see UserInfo.ts's
+// `(ClassId as any)[this.readD()]`) -- the same quirk toLocalRace/toLocalSex
+// handle for Race/Sex in character-races.ts. Normalizes either shape back to
+// the numeric id, needed to index into UiStore.classNames (keyed numerically,
+// straight off adrenalinebot.com's HighFive Classes table -- see
+// public/class-names/*.json).
+function classIdNumeric(classId: ClassId): number | undefined {
+  if (typeof classId === "number") return classId;
+  const numeric = ClassId[classId as keyof typeof ClassId];
+  return typeof numeric === "number" ? numeric : undefined;
 }
 
-// Human-readable class name straight from the enum's own PascalCase key
-// (FortuneSeeker -> "Fortune Seeker") -- there's no class-name table anywhere
-// in the network layer (L2Creature.ClassName/BaseClassName are declared but
-// no packet parser ever assigns them), and every real ClassId key already
-// matches the official class name once spaced out. Not localized: class
-// names are proper nouns, same treatment as skill/item names elsewhere (no
-// static per-language dictionary entries for them).
+// Sourced entirely from public/class-names/<lang>.json (loaded by
+// UiStore.loadClassNames() -- see its own comment for provenance:
+// adrenalinebot.com's HighFive Classes table, which covers every real
+// ClassId 1:1, confirmed against this project's own enum). No derived
+// fallback -- L2Creature.ClassName/BaseClassName are declared in the network
+// layer but no packet parser ever assigns them, so the table is the only
+// source; a missing id is a gap in the table to fix, not something to paper
+// over with a guessed name.
 export function getClassLabel(classId: ClassId | undefined): string {
-  const key = classId !== undefined ? classIdKeyName(classId) : undefined;
-  return key ? key.replace(/([a-z0-9])([A-Z])/g, "$1 $2") : "";
+  const id = classId !== undefined ? classIdNumeric(classId) : undefined;
+  return (id !== undefined && rootStore.ui.classNames[id]) || "";
 }
 
 // "warrior" only as a last resort for ClassIds absent from CLASS_TREE

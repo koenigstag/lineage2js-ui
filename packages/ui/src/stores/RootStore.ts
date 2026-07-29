@@ -15,3 +15,8 @@ export class RootStore {
 }
 
 export const rootStore = new RootStore();
+
+// Dev-only console access (window.__rootStore) for manual browser verification.
+if (import.meta.env.DEV) {
+  (window as unknown as { __rootStore: RootStore }).__rootStore = rootStore;
+}

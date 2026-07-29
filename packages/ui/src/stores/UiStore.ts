@@ -21,6 +21,9 @@ export class UiStore {
    */
   actionNames: Record<string, string> = {};
   private actionNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
+  /** classId -> name for the current lang (public/class-names/<lang>.json, sourced from adrenalinebot.com's HighFive database -- see class-tree.ts's getClassLabel()). Same per-language caching as actionNames. */
+  classNames: Record<string, string> = {};
+  private classNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /** npcId -> race code (e.g. "UNDEAD"), see config/npc-race-mapping.ts. Not localized -- these are enum codes, not display strings. */
   npcRaces: Record<string, string> = {};
   private npcRacesRequested = false;
@@ -53,6 +56,7 @@ export class UiStore {
   setLang(lang: LANG) {
     this.lang = lang;
     this.loadActionNames();
+    this.loadClassNames();
     this.loadSystemMessages();
   }
 
@@ -109,6 +113,28 @@ export class UiStore {
       this.setActionNames(names);
     } catch {
       // leave actionNames as-is -- t() falls back to the raw "action.name.<id>" key
+    }
+  }
+
+  setClassNames(names: Record<string, string>) {
+    this.classNames = names;
+  }
+
+  /** Fetches public/class-names/<lang>.json for the current lang, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  async loadClassNames() {
+    const lang = this.lang;
+    const cached = this.classNamesCache[lang];
+    if (cached) {
+      this.setClassNames(cached);
+      return;
+    }
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}class-names/${lang}.json`);
+      const names: Record<string, string> = await response.json();
+      this.classNamesCache[lang] = names;
+      this.setClassNames(names);
+    } catch {
+      // leave classNames as-is -- getClassLabel() falls back to deriving from the ClassId enum key
     }
   }
 
