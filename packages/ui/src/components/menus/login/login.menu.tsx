@@ -46,6 +46,12 @@ export const LoginMenu = observer(
       }
     }
 
+    async function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+      if (event.key === "Enter") {
+        await handleLogin();
+      }
+    }
+
     return (
       <div
         style={{
@@ -65,7 +71,7 @@ export const LoginMenu = observer(
         }}
       >
         <BaseInput value={account} placeholder={t("login.idPlaceholder")} onChange={setAccount} />
-        <BaseInput value={password} placeholder={t("login.pwdPlaceholder")} onChange={setPassword} type="password" />
+        <BaseInput value={password} placeholder={t("login.pwdPlaceholder")} onChange={setPassword} type="password" onKeyDown={handleKeyDown} />
         <div style={{ display: "flex", gap: 8 }}>
           <BaseButton onClick={handleLogin} disabled={session.isConnecting}>
             {session.isConnecting ? t("common.connecting") : t("login.loginButton")}
