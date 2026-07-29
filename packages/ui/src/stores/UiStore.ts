@@ -46,6 +46,9 @@ export class UiStore {
   /** npcId -> level, see config/npc-level-mapping.ts. Same datapack source/gap as npcRaces -- NpcInfo never sends a monster's level over the wire. */
   npcLevels: Record<string, number> = {};
   private npcLevelsRequested = false;
+  /** questId -> name for the current lang, see config/quest-mapping.ts's getQuestName(). Forward-looking -- no quest window built yet. Same source/caching as itemNames/skillNames. */
+  questNames: Record<string, string> = {};
+  private questNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /**
    * messageId -> template string ("$s1"/"$c1" placeholders) for the current
    * lang, see config/system-message-mapping.ts. Only en.json has the full
@@ -76,6 +79,7 @@ export class UiStore {
     this.loadSkillNames();
     this.loadItemNames();
     this.loadNpcNames();
+    this.loadQuestNames();
     this.loadSystemMessages();
   }
 
@@ -186,6 +190,28 @@ export class UiStore {
       this.setNpcNames(names);
     } catch {
       // leave npcNames as-is -- getNpcName() falls back to the "Mob #<id>"/"NPC #<id>" placeholder
+    }
+  }
+
+  setQuestNames(names: Record<string, string>) {
+    this.questNames = names;
+  }
+
+  /** Fetches public/quest-names/<lang>.json for the current lang, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  async loadQuestNames() {
+    const lang = this.lang;
+    const cached = this.questNamesCache[lang];
+    if (cached) {
+      this.setQuestNames(cached);
+      return;
+    }
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}quest-names/${lang}.json`);
+      const names: Record<string, string> = await response.json();
+      this.questNamesCache[lang] = names;
+      this.setQuestNames(names);
+    } catch {
+      // leave questNames as-is -- getQuestName() falls back to "Quest #<id>"
     }
   }
 
