@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import type { Camera } from "three";
+import { l2ToThree } from "../../../../utils/coords";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 
-const MOVE_SPEED = 400; // world units / second
-const CAMERA_HEIGHT = 600;
-const CAMERA_BACK_OFFSET = 600;
+const MOVE_SPEED = 400; // L2 world units / second
+// Camera rig offsets are in three.js meters (post-conversion), matching the
+// human/character scale used by the other r3f scenes in this app.
+const CAMERA_HEIGHT_M = 6;
+const CAMERA_BACK_OFFSET_M = 6;
 
 interface CameraFollowProps {
   worldX: number;
@@ -15,8 +18,9 @@ interface CameraFollowProps {
 /** Keeps the camera trailing above/behind the test position every frame. */
 function CameraFollow({ worldX, worldY }: CameraFollowProps) {
   useFrame(({ camera }: { camera: Camera }) => {
-    camera.position.set(worldX, CAMERA_HEIGHT, worldY + CAMERA_BACK_OFFSET);
-    camera.lookAt(worldX, 0, worldY);
+    const target = l2ToThree(worldX, worldY, 0);
+    camera.position.set(target.x, CAMERA_HEIGHT_M, target.z + CAMERA_BACK_OFFSET_M);
+    camera.lookAt(target.x, 0, target.z);
   });
   return null;
 }
@@ -63,7 +67,7 @@ export function GeoTerrainDebugScene() {
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      <Canvas camera={{ position: [0, CAMERA_HEIGHT, CAMERA_BACK_OFFSET], fov: 60, near: 1, far: 10000 }}>
+      <Canvas camera={{ position: [0, CAMERA_HEIGHT_M, CAMERA_BACK_OFFSET_M], fov: 60, near: 0.1, far: 2000 }}>
         <ambientLight intensity={0.8} />
         <CameraFollow worldX={position.x} worldY={position.y} />
         <GeoTerrainField worldX={position.x} worldY={position.y} />

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { GEO_CELL_SIZE, GEO_TILE_SIZE } from "../../../../config/geodata";
+import { l2ToThree } from "../../../../utils/coords";
 import type { GeoTile } from "../../../../utils/geodata/geo-tile.types";
 
 interface GeoTerrainTileProps {
@@ -9,23 +10,23 @@ interface GeoTerrainTileProps {
   tile: GeoTile;
 }
 
-/**
- * Wireframe mesh for one geodata tile. L2's (x, y) horizontal / z-height
- * axes map to three.js's (x, z) horizontal / y-up, so tile.heights (L2 Z)
- * become the mesh's Y coordinate.
- */
+/** Wireframe mesh for one geodata tile, converted from L2 world space to three.js via utils/coords. */
 export function GeoTerrainTile({ tileX, tileY, tile }: GeoTerrainTileProps) {
   const geometry = useMemo(() => {
     const { cellsX, cellsY, heights } = tile;
     const geo = new THREE.BufferGeometry();
 
     const positions = new Float32Array(cellsX * cellsY * 3);
+    const v = new THREE.Vector3();
     for (let y = 0; y < cellsY; y++) {
       for (let x = 0; x < cellsX; x++) {
         const i = y * cellsX + x;
-        positions[i * 3] = x * GEO_CELL_SIZE;
-        positions[i * 3 + 1] = heights[i];
-        positions[i * 3 + 2] = y * GEO_CELL_SIZE;
+        const l2X = tileX * GEO_TILE_SIZE + x * GEO_CELL_SIZE;
+        const l2Y = tileY * GEO_TILE_SIZE + y * GEO_CELL_SIZE;
+        l2ToThree(l2X, l2Y, heights[i], v);
+        positions[i * 3] = v.x;
+        positions[i * 3 + 1] = v.y;
+        positions[i * 3 + 2] = v.z;
       }
     }
 
@@ -45,10 +46,10 @@ export function GeoTerrainTile({ tileX, tileY, tile }: GeoTerrainTileProps) {
     geo.computeVertexNormals();
 
     return geo;
-  }, [tile]);
+  }, [tileX, tileY, tile]);
 
   return (
-    <mesh position={[tileX * GEO_TILE_SIZE, 0, tileY * GEO_TILE_SIZE]} geometry={geometry}>
+    <mesh geometry={geometry}>
       <meshBasicMaterial color="#3fae63" wireframe />
     </mesh>
   );
