@@ -95,18 +95,33 @@ export function GeoTerrainDebugScene() {
       last = now;
 
       setCharacter((prev) => {
+        let inputForward = 0; // W = +1, S = -1
+        let inputRight = 0; // D = +1, A = -1
+        if (keys.has("w")) inputForward += 1;
+        if (keys.has("s")) inputForward -= 1;
+        if (keys.has("d")) inputRight += 1;
+        if (keys.has("a")) inputRight -= 1;
+
         let dx = 0;
         let dy = 0;
         let maxStep = MOVE_SPEED * dt;
 
-        if (keys.has("w")) dy -= 1;
-        if (keys.has("s")) dy += 1;
-        if (keys.has("a")) dx -= 1;
-        if (keys.has("d")) dx += 1;
-
-        if (dx !== 0 || dy !== 0) {
+        if (inputForward !== 0 || inputRight !== 0) {
           // Keyboard input always overrides a pending click-to-move order.
           moveTargetRef.current = null;
+
+          // Camera-relative: "forward" is whatever direction the orbit
+          // camera is currently looking (see CameraFollow's azimuth math),
+          // not a fixed L2 world direction -- otherwise W/S would stop
+          // matching the view the moment the camera gets rotated (only A/D
+          // happened to look right before, and only by coincidence at the
+          // default azimuth). Same three.js-forward -> L2 mapping l2ToThree
+          // uses (x stays x, three z is -L2 y), just applied to a direction.
+          const azimuth = orbitRef.current.azimuth;
+          const sinAz = Math.sin(azimuth);
+          const cosAz = Math.cos(azimuth);
+          dx = inputForward * -sinAz + inputRight * cosAz;
+          dy = inputForward * cosAz + inputRight * sinAz;
         } else if (moveTargetRef.current) {
           const toX = moveTargetRef.current.x - prev.x;
           const toY = moveTargetRef.current.y - prev.y;

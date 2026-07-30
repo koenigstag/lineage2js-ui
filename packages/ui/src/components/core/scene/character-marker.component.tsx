@@ -58,6 +58,14 @@ export function CharacterMarker({
         <mesh position={[0, 1.52, 0]} scale={[1 / widthScale, 1 / heightScale, 1 / widthScale]}>
           <sphereGeometry args={[0.21, 16, 16]} />
           <meshStandardMaterial color={skinColor} roughness={0.8} />
+          {/* "Nose" -- the capsule+sphere body is otherwise rotationally
+              symmetric, so this is the only visual cue for which way
+              angleToCenter (local +Z, after the group's yaw rotation) actually
+              points. Sits just outside the head sphere's 0.21 radius. */}
+          <mesh position={[0, 0, 0.2]}>
+            <sphereGeometry args={[0.05, 8, 8]} />
+            <meshBasicMaterial color="#1a1a1a" />
+          </mesh>
         </mesh>
 
         {hasCape && (
