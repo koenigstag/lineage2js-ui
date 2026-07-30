@@ -14,7 +14,7 @@ function buildIconUrl(baseUrl: string | undefined, id: string | number | undefin
 
 /** Icon URL by skill.id. */
 export function getSkillIconUrl(skillId: string | number | undefined): string | undefined {
-  return buildIconUrl(SKILL_ICON_BASE_URL, skillId);
+  return buildIconUrl(SKILL_ICON_BASE_URL, String(skillId).padStart(4, "0"));
 }
 
 /** Icon URL by item.id. */
