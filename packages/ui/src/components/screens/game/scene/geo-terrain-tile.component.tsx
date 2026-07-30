@@ -9,12 +9,12 @@ interface GeoTerrainTileProps {
   tileX: number;
   tileY: number;
   tile: GeoTile;
-  /** Right-click on the terrain surface -- fired with the raycast hit point (three.js space). */
-  onGroundContextMenu?: (event: ThreeEvent<MouseEvent>) => void;
+  /** Left-click on the terrain surface -- fired with the raycast hit point (three.js space). */
+  onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
 }
 
 /** Wireframe mesh for one geodata tile, converted from L2 world space to three.js via utils/coords. */
-export function GeoTerrainTile({ tileX, tileY, tile, onGroundContextMenu }: GeoTerrainTileProps) {
+export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick }: GeoTerrainTileProps) {
   const geometry = useMemo(() => {
     const { cellsX, cellsY, heights } = tile;
     const geo = new THREE.BufferGeometry();
@@ -54,12 +54,11 @@ export function GeoTerrainTile({ tileX, tileY, tile, onGroundContextMenu }: GeoT
   return (
     <mesh
       geometry={geometry}
-      onContextMenu={
-        onGroundContextMenu &&
+      onClick={
+        onGroundClick &&
         ((event) => {
-          event.nativeEvent.preventDefault();
           event.stopPropagation();
-          onGroundContextMenu(event);
+          onGroundClick(event);
         })
       }
     >

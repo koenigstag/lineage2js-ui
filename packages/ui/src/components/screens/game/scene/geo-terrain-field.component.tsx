@@ -4,21 +4,15 @@ import { GeoTerrainTile } from "./geo-terrain-tile.component";
 
 interface GeoTerrainFieldProps {
   tiles: LoadedGeoTile[];
-  onGroundContextMenu?: (event: ThreeEvent<MouseEvent>) => void;
+  onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
 }
 
 /** Renders a set of loaded geodata tiles as wireframe meshes. */
-export function GeoTerrainField({ tiles, onGroundContextMenu }: GeoTerrainFieldProps) {
+export function GeoTerrainField({ tiles, onGroundClick }: GeoTerrainFieldProps) {
   return (
     <>
       {tiles.map(({ tileX, tileY, tile }) => (
-        <GeoTerrainTile
-          key={`${tileX}_${tileY}`}
-          tileX={tileX}
-          tileY={tileY}
-          tile={tile}
-          onGroundContextMenu={onGroundContextMenu}
-        />
+        <GeoTerrainTile key={`${tileX}_${tileY}`} tileX={tileX} tileY={tileY} tile={tile} onGroundClick={onGroundClick} />
       ))}
     </>
   );
