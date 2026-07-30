@@ -25,8 +25,24 @@ import { getNpcLevel } from "../config/npc-level-mapping";
 import { getNpcName } from "../config/npc-name-mapping";
 import { formatSystemMessage } from "../config/system-message-mapping";
 
-export interface Creature {
-  id: string;
+/** A nearby NPC/mob/other player as reported by NpcInfo/CharInfo, for the world scene (not the target-select window -- see TargetSnapshot for that). */
+export interface WorldCreatureSnapshot {
+  objectId: number;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  heading: number;
+  kind: "player" | "mob" | "summon" | "npc";
+  isDead: boolean;
+}
+
+/** Own character's live world position, kept fresh by the same poll that refreshes WorldCreatureSnapshot positions (see bindToClient). */
+export interface MyPositionSnapshot {
+  x: number;
+  y: number;
+  z: number;
+  heading: number;
 }
 
 export const MAX_CHARACTERS = 7;
@@ -475,6 +491,29 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
   };
 }
 
+/** Same name-resolution rule as targetSnapshotFromCreature, but for the world scene's WorldCreatureSnapshot (position, not stats). */
+function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureSnapshot {
+  const isAttackable = creature instanceof L2Mob;
+  const kind: WorldCreatureSnapshot["kind"] = creature instanceof L2Character
+    ? "player"
+    : isAttackable
+      ? "mob"
+      : creature instanceof L2Summon
+        ? "summon"
+        : "npc";
+
+  return {
+    objectId: creature.ObjectId,
+    name: creature instanceof L2Character ? creature.Name : creature.Name || getNpcName(creature.Id, isAttackable),
+    x: creature.X,
+    y: creature.Y,
+    z: creature.Z,
+    heading: creature.Heading,
+    kind,
+    isDead: creature.IsDead,
+  };
+}
+
 export interface BattleLogEntry {
   id: number;
   text: string;
@@ -679,7 +718,10 @@ function createDemoParty(): L2PartyMember[] {
 // from the server) -- this store only tracks which one is active, plus
 // in-game-only state that has nothing to do with the account's character list.
 export class GameStore {
-  creatures = new Map<string, Creature>();
+  /** ObjectId -> nearby creature, see bindToClient's syncCreatures. */
+  creatures: Map<number, WorldCreatureSnapshot> = new Map();
+  /** Own character's live position, see bindToClient's syncCreatures. */
+  myPosition: MyPositionSnapshot | undefined = undefined;
   /** ObjectId of the character entered world with, once Start actually succeeds. */
   me: number | undefined = undefined;
   /** ObjectId of the character highlighted on the char-select screen. */
@@ -967,6 +1009,45 @@ export class GameStore {
         hennaMen: me.HennaMEN ?? 0,
       };
     });
+    // World-scene creatures (NPCs/mobs/other players) + our own live
+    // position, for the 3D scene -- separate from the target-select
+    // window's TargetSnapshot (stats-focused, one creature at a time).
+    // client.CreaturesList is kept consistent by the network layer's own
+    // mutators (NpcInfoMutator/CharInfoMutator/DeleteObjectMutator/etc), so
+    // re-reading it whole on each relevant packet is simpler and more
+    // robust than tracking incremental add/remove/move ourselves.
+    const syncCreatures = () => runInAction(() => {
+      // Guards the 150ms poll below from doing pointless work (and touching
+      // client.Me.ObjectId, which is a real but meaningless default L2User
+      // instance -- see GameClient.ActiveChar) on the login/char-select
+      // screens, before any game-server socket exists at all.
+      if (!client.GameClient.IsConnected) {
+        return;
+      }
+
+      const myObjectId = client.Me.ObjectId;
+      const next = new Map<number, WorldCreatureSnapshot>();
+      for (const creature of client.CreaturesList) {
+        if (creature.ObjectId === myObjectId) {
+          continue;
+        }
+        next.set(creature.ObjectId, worldCreatureSnapshotFromCreature(creature));
+      }
+      this.creatures = next;
+
+      const me = client.Me;
+      this.myPosition = { x: me.X, y: me.Y, z: me.Z, heading: me.Heading };
+    });
+
+    client.on("PacketReceived", "NpcInfo", syncCreatures);
+    client.on("PacketReceived", "CharInfo", syncCreatures);
+    client.on("PacketReceived", "DeleteObject", syncCreatures);
+    client.on("PacketReceived", "UserInfo", syncCreatures);
+    // Positions keep ticking internally between packets (L2Creature's own
+    // setMovingTo 100ms interval, see the network package) -- poll so
+    // rendered positions stay live while anything (including ourselves) is
+    // walking, not just on spawn/despawn.
+    setInterval(syncCreatures, 150);
 
     client.on("PacketReceived", "ItemList", syncInventory);
     client.on("PacketReceived", "InventoryUpdate", syncInventory);
