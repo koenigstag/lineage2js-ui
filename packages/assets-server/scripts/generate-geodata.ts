@@ -30,7 +30,9 @@ const NSWE_SOUTH = 4;
 const NSWE_NORTH = 8;
 const NSWE_ALL = NSWE_EAST | NSWE_WEST | NSWE_SOUTH | NSWE_NORTH;
 
-const HEIGHT_SCALE = 500; // rough +/- world-unit height range for rolling hills
+// 0 = flat demo landscape (easier to judge movement/orientation against);
+// bump back up for a rolling-hills test of the heightmap pipeline itself.
+const HEIGHT_SCALE = 0;
 const NOISE_FREQUENCY = 1 / 96; // cells per noise-lattice unit
 
 function hash2(x: number, y: number): number {

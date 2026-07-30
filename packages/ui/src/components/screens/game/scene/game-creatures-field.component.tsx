@@ -15,25 +15,19 @@ const COLOR_BY_KIND: Record<string, string> = {
  * CharInfo, see GameStore.bindToClient's syncCreatures), nickname above
  * each one via CharacterMarker.
  *
- * Positioned RELATIVE to the own character's real world position
- * (myPosition), not absolute L2 coordinates: there's no real geodata for
- * arbitrary regions yet (see utils/geodata), so this keeps creatures
- * visible near the scene's origin regardless of where in the world the
- * character actually is. Renders nothing until a real session has reported
- * its own position at least once.
+ * Positioned at their ABSOLUTE L2 world coordinates via l2ToThree. Note this
+ * is a separate coordinate frame from GeoTerrainDebugScene's WASD/click test
+ * rig (which still starts at the world origin, independent of any real
+ * session) -- so these markers won't necessarily be near the test camera's
+ * default view until that's tied together.
  */
 export const GameCreaturesField = observer(function GameCreaturesField() {
   const gameStore = useGameStore();
-  const myPosition = gameStore.myPosition;
-
-  if (!myPosition) {
-    return null;
-  }
 
   return (
     <>
       {Array.from(gameStore.creatures.values()).map((creature) => {
-        const pos = l2ToThree(creature.x - myPosition.x, creature.y - myPosition.y, creature.z);
+        const pos = l2ToThree(creature.x, creature.y, creature.z);
         return (
           <CharacterMarker
             key={creature.objectId}

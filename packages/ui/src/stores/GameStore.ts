@@ -1035,6 +1035,8 @@ export class GameStore {
       }
       this.creatures = next;
 
+      console.log("syncCreatures: myObjectId", myObjectId, "creatures", this.creatures.size);
+
       const me = client.Me;
       this.myPosition = { x: me.X, y: me.Y, z: me.Z, heading: me.Heading };
     });
