@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useEffect, useRef, useState } from "react";
+import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type { Camera } from "three";
 import { CharacterMarker } from "../../../core/scene/character-marker.component";
-import { l2ToThree } from "../../../../utils/coords";
+import { l2ToThree, threeToL2 } from "../../../../utils/coords";
 import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 
 const MOVE_SPEED = 400; // L2 world units / second
+// Once within this distance of a click-to-move target, stop instead of
+// jittering back and forth around it.
+const ARRIVE_EPSILON = 8; // L2 units
 // Camera rig offsets and the ground grid are in three.js meters
 // (post-conversion), matching the human/character scale used by the other
 // r3f scenes in this app.
@@ -19,6 +22,11 @@ interface TestCharacterState {
   x: number;
   y: number;
   yaw: number;
+}
+
+interface MoveTarget {
+  x: number;
+  y: number;
 }
 
 interface CameraFollowProps {
@@ -37,14 +45,17 @@ function CameraFollow({ worldX, worldY }: CameraFollowProps) {
 }
 
 /**
- * Dev-only harness: a WASD-movable test character driving geodata tile
- * streaming, so loading/eviction behavior can be watched without a real
- * player-position feed from the server yet. Stands a placeholder
- * CharacterMarker on the loaded terrain, snapped to its height.
+ * Dev-only harness: a WASD- or right-click-movable test character driving
+ * geodata tile streaming, so loading/eviction behavior can be watched
+ * without a real player-position feed from the server yet. Stands a
+ * placeholder CharacterMarker on the loaded terrain, snapped to its height.
  */
 export function GeoTerrainDebugScene() {
   const [character, setCharacter] = useState<TestCharacterState>({ x: 0, y: 0, yaw: 0 });
   const tiles = useGeoTiles(character.x, character.y);
+  // A ref, not state: only read inside the rAF loop below, so updating it on
+  // right-click shouldn't itself trigger a render.
+  const moveTargetRef = useRef<MoveTarget | null>(null);
 
   useEffect(() => {
     const keys = new Set<string>();
@@ -61,26 +72,44 @@ export function GeoTerrainDebugScene() {
       setCharacter((prev) => {
         let dx = 0;
         let dy = 0;
+        let maxStep = MOVE_SPEED * dt;
+
         if (keys.has("w")) dy -= 1;
         if (keys.has("s")) dy += 1;
         if (keys.has("a")) dx -= 1;
         if (keys.has("d")) dx += 1;
 
+        if (dx !== 0 || dy !== 0) {
+          // Keyboard input always overrides a pending click-to-move order.
+          moveTargetRef.current = null;
+        } else if (moveTargetRef.current) {
+          const toX = moveTargetRef.current.x - prev.x;
+          const toY = moveTargetRef.current.y - prev.y;
+          const dist = Math.hypot(toX, toY);
+          if (dist <= ARRIVE_EPSILON) {
+            moveTargetRef.current = null;
+          } else {
+            dx = toX / dist;
+            dy = toY / dist;
+            maxStep = Math.min(maxStep, dist); // don't overshoot the target
+          }
+        }
+
         if (dx === 0 && dy === 0) {
           return prev;
         }
 
-        // Normalize so diagonal movement isn't faster than axis-aligned.
+        // Normalize so diagonal WASD movement isn't faster than axis-aligned
+        // (click-to-move's dx/dy are already a unit vector, so this is a no-op there).
         const length = Math.hypot(dx, dy);
-        const step = MOVE_SPEED * dt;
 
         // Angle doesn't depend on L2_TO_THREE_SCALE (cancels out in atan2),
         // so the raw (dx, dy) direction can go straight through l2ToThree.
         const facing = l2ToThree(dx, dy, 0);
 
         return {
-          x: prev.x + (dx / length) * step,
-          y: prev.y + (dy / length) * step,
+          x: prev.x + (dx / length) * maxStep,
+          y: prev.y + (dy / length) * maxStep,
           yaw: Math.atan2(facing.x, facing.z),
         };
       });
@@ -95,11 +124,16 @@ export function GeoTerrainDebugScene() {
     };
   }, []);
 
+  function handleGroundContextMenu(event: ThreeEvent<MouseEvent>) {
+    const target = threeToL2(event.point);
+    moveTargetRef.current = { x: target.x, y: target.y };
+  }
+
   const groundHeight = heightAtWorld(tiles, character.x, character.y) ?? 0;
   const characterPos = l2ToThree(character.x, character.y, groundHeight);
 
   return (
-    <div style={{ position: "absolute", inset: 0 }}>
+    <div style={{ position: "absolute", inset: 0 }} onContextMenu={(e) => e.preventDefault()}>
       <Canvas camera={{ position: [0, CAMERA_HEIGHT_M, CAMERA_BACK_OFFSET_M], fov: 60, near: 0.1, far: 2000 }}>
         <ambientLight intensity={0.8} />
         <directionalLight position={[5, 10, 5]} intensity={0.6} />
@@ -109,7 +143,7 @@ export function GeoTerrainDebugScene() {
             "down" and fills the gap while neighboring tiles are still loading. */}
         <gridHelper args={[GROUND_GRID_SIZE_M, 40, "#3a4a3f", "#25302a"]} />
 
-        <GeoTerrainField tiles={tiles} />
+        <GeoTerrainField tiles={tiles} onGroundContextMenu={handleGroundContextMenu} />
 
         <CharacterMarker x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={character.yaw} color="#5b8fd6" />
       </Canvas>
