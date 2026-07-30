@@ -54,9 +54,16 @@ export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick }: GeoTerrain
   return (
     <mesh
       geometry={geometry}
-      onClick={
+      onPointerDown={
         onGroundClick &&
         ((event) => {
+          // Native "click" only fires after a matching pointerdown+pointerup
+          // pair with no drag in between -- pointerdown is more direct and
+          // can't be swallowed by that. Left button only (button 0); the
+          // right button is reserved for the orbit-camera drag.
+          if (event.nativeEvent.button !== 0) {
+            return;
+          }
           event.stopPropagation();
           onGroundClick(event);
         })

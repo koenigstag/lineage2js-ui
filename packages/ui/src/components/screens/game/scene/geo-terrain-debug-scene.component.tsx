@@ -198,8 +198,10 @@ export function GeoTerrainDebugScene() {
         <CameraFollow worldX={character.x} worldY={character.y} groundHeightM={characterPos.y} orbitRef={orbitRef} />
 
         {/* Reference ground plane -- gives the wireframe terrain a visible
-            "down" and fills the gap while neighboring tiles are still loading. */}
-        <gridHelper args={[GROUND_GRID_SIZE_M, 40, "#3a4a3f", "#25302a"]} />
+            "down" and fills the gap while neighboring tiles are still loading.
+            raycast={() => null} excludes it from pointer events so it can't
+            steal ground-click hits meant for the terrain mesh underneath it. */}
+        <gridHelper args={[GROUND_GRID_SIZE_M, 40, "#3a4a3f", "#25302a"]} raycast={() => null} />
 
         <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} />
 
