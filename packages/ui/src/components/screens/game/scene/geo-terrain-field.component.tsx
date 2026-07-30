@@ -1,15 +1,12 @@
-import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
+import type { LoadedGeoTile } from "../../../../utils/geodata/use-geo-tiles";
 import { GeoTerrainTile } from "./geo-terrain-tile.component";
 
 interface GeoTerrainFieldProps {
-  worldX: number;
-  worldY: number;
+  tiles: LoadedGeoTile[];
 }
 
-/** Renders the geodata tiles currently loaded around a world position as wireframe meshes. */
-export function GeoTerrainField({ worldX, worldY }: GeoTerrainFieldProps) {
-  const tiles = useGeoTiles(worldX, worldY);
-
+/** Renders a set of loaded geodata tiles as wireframe meshes. */
+export function GeoTerrainField({ tiles }: GeoTerrainFieldProps) {
   return (
     <>
       {tiles.map(({ tileX, tileY, tile }) => (
