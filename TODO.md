@@ -13,7 +13,7 @@
 - Basic combat system
 - Basic Quests system
 - Add NPC dialog system -- render engine and actions
-- Add item/skill/action descriptions -- no per-id description table exists yet (only name tables); real client sources this from local data files the server never sends, so it needs sourcing/curating like item/skill/action-names. L2Buff/L2Mail already have an unused Description field on the entity that nothing parses. Full-detail tooltips (inventory/skills-list) would show it, hotbar's short tooltip would still stay name-only.
+- Add item/skill/action descriptions -- no per-id table exists yet
 
 
 # Long-term TODOs
