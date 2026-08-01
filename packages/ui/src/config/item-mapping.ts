@@ -1,6 +1,7 @@
 import { L2Item, ItemType2, ItemGrade } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 import type { SlotContent } from "../components/windows/core/slot.component";
+import type { TooltipDetail } from "../components/core/tooltip.component";
 import { getItemIconUrl } from "./icon-urls";
 import { t } from "../lang/lang";
 
@@ -74,10 +75,12 @@ export interface ItemSlotParams {
   count?: number;
   grade?: string;
   isEquipped?: boolean;
+  /** "full" is reserved for the inventory window (the item's own domain). Defaults to "short" -- see TooltipDetail. */
+  detail?: TooltipDetail;
 }
 
 /** Builds the Slot component's content for an item icon -- the one place assembling the "item" tooltip shape (see inventory.window.tsx and skill.window.tsx's required-item slot). */
-export function getItemSlotContent({ id, slotType, count, grade, isEquipped }: ItemSlotParams): SlotContent {
+export function getItemSlotContent({ id, slotType, count, grade, isEquipped, detail = "short" }: ItemSlotParams): SlotContent {
   return {
     type: slotType,
     data: { id, count },
@@ -91,6 +94,7 @@ export function getItemSlotContent({ id, slotType, count, grade, isEquipped }: I
       count,
       grade,
       isEquipped,
+      detail,
     },
   };
 }

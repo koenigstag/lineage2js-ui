@@ -1,4 +1,5 @@
 import type { SlotContent } from "../components/windows/core/slot.component";
+import type { TooltipDetail } from "../components/core/tooltip.component";
 import { getSkillIconUrl } from "./icon-urls";
 import { t } from "../lang/lang";
 
@@ -20,6 +21,8 @@ export interface SkillSlotParams {
   cost?: number;
   /** Countdown target (Date.now() + remaining ms), see tooltip.component.tsx's expiresAt handling. */
   expiresAt?: number;
+  /** "full" is reserved for the skills-list window (the skill's own domain). Defaults to "short" -- see TooltipDetail. */
+  detail?: TooltipDetail;
 }
 
 /**
@@ -29,7 +32,7 @@ export interface SkillSlotParams {
  * is the one place that shape gets assembled instead of each window
  * duplicating it (see effects/skill/skills/target-select windows).
  */
-export function getSkillSlotContent({ id, level, name, cost, expiresAt }: SkillSlotParams): SlotContent {
+export function getSkillSlotContent({ id, level, name, cost, expiresAt, detail = "short" }: SkillSlotParams): SlotContent {
   return {
     type: "skill",
     data: { id, level },
@@ -41,6 +44,7 @@ export function getSkillSlotContent({ id, level, name, cost, expiresAt }: SkillS
       cost,
       expiresAt,
       id,
+      detail,
     },
   };
 }

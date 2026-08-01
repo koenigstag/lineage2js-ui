@@ -83,7 +83,7 @@ export const SkillsContent = observer(function SkillsContent() {
         >
           {game.learnableSkills.map((skill) => (
             <div key={`${skill.id}-${skill.level}`} onClick={() => handleLearnableClick(skill)} style={{ cursor: "pointer" }}>
-              <Slot type="inventory" content={getSkillSlotContent({ id: skill.id, level: skill.level })} />
+              <Slot type="inventory" content={getSkillSlotContent({ id: skill.id, level: skill.level, detail: "full" })} />
             </div>
           ))}
         </div>
@@ -113,6 +113,7 @@ export const SkillsContent = observer(function SkillsContent() {
                   level: skill.Level,
                   cost: skill.Mp,
                   expiresAt: skill.IsReady ? undefined : Date.now() + skill.Remaining,
+                  detail: "full",
                 })}
               />
             ))}

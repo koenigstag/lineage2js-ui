@@ -22,12 +22,21 @@ export function getTypeText(type: IconSlotType): string {
   return t(`tooltip.types.${TYPE_KEYS[type] ?? type}`);
 }
 
+/**
+ * "full" shows grade/equipped/cost/id -- reserved for the item/skill's own
+ * domain window (inventory / skills-list), where that detail is the point.
+ * Every other slot referencing the same item/skill (hotbar, buffs, a
+ * skill's required-item preview, ...) uses "short".
+ */
+export type TooltipDetail = "full" | "short";
+
 export type TooltipInfo =
   | {
       kind: "item";
       name: string;
       type: IconSlotType;
       id: string | number;
+      detail: TooltipDetail;
       count?: number;
       grade?: string;
       isEquipped?: boolean;
@@ -36,10 +45,11 @@ export type TooltipInfo =
       kind: "skill";
       name: string;
       stats: string;
+      id: string | number;
+      detail: TooltipDetail;
       cost?: number;
       /** Countdown target (Date.now() + remaining ms), captured once at hover-start -- see the "skill" case below. */
       expiresAt?: number;
-      id: string | number;
     }
   | { kind: "simple"; name: string };
 
@@ -80,30 +90,32 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
 
   switch (info.kind) {
     case "item": {
+      const isFull = info.detail === "full";
       const countSuffix = info.count && info.count > 1 ? ` (${info.count})` : "";
-      const gradeSuffix = info.grade ? ` [${info.grade}]` : "";
+      const gradeSuffix = isFull && info.grade ? ` [${info.grade}]` : "";
       return (
         <>
           <div>{info.name}{countSuffix}{gradeSuffix}</div>
           <div>{getTypeText(info.type)}</div>
-          {info.isEquipped && <div style={{ marginTop: 6 }}>{t("tooltip.equippedLabel")}</div>}
-          <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>
+          {isFull && info.isEquipped && <div style={{ marginTop: 6 }}>{t("tooltip.equippedLabel")}</div>}
+          {isFull && <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>}
         </>
       );
     }
     case "skill": {
+      const isFull = info.detail === "full";
       const remainingMs = info.expiresAt !== undefined ? Math.max(0, info.expiresAt - now) : undefined;
       return (
         <>
           <div>{info.name}</div>
           <div style={{ marginTop: 6 }}>{info.stats}</div>
-          {info.cost !== undefined && (
+          {isFull && info.cost !== undefined && (
             <div style={{ marginTop: 6 }}>{t("tooltip.costLabel", { cost: info.cost })}</div>
           )}
           {remainingMs !== undefined && (
             <div style={{ marginTop: 6 }}>{t("tooltip.remainingLabel", { ms: remainingMs })}</div>
           )}
-          <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>
+          {isFull && <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>}
         </>
       );
     }

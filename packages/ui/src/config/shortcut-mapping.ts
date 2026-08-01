@@ -76,6 +76,8 @@ export function getShortcutName(shortcut: L2Shortcut, inventoryItems: L2Item[]):
   }
 }
 
+// Hotbar shortcuts are never the item/skill's own domain window -- always
+// "short" (see TooltipDetail), regardless of type.
 function getShortcutTooltip(shortcut: L2Shortcut, inventoryItems: L2Item[]): TooltipInfo {
   const name = getShortcutName(shortcut, inventoryItems);
 
@@ -87,10 +89,17 @@ function getShortcutTooltip(shortcut: L2Shortcut, inventoryItems: L2Item[]): Too
         name,
         type: getShortcutSlotType(shortcut, inventoryItems),
         id: item?.Id ?? shortcut.TargetId,
+        detail: "short",
       };
     }
     case ShortcutType.SKILL:
-      return { kind: "skill", name, stats: t("tooltip.levelLabel", { level: shortcut.Level }), id: shortcut.TargetId };
+      return {
+        kind: "skill",
+        name,
+        stats: t("tooltip.levelLabel", { level: shortcut.Level }),
+        id: shortcut.TargetId,
+        detail: "short",
+      };
     default:
       return { kind: "simple", name };
   }

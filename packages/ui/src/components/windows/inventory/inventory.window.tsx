@@ -114,6 +114,7 @@ export const InventoryContent = observer(function InventoryContent() {
                         count: item.Count,
                         grade: getItemGradeLabel(item),
                         isEquipped: item.IsEquipped,
+                        detail: "full",
                       })
                     : undefined
                 }
