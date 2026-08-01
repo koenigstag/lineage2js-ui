@@ -96,7 +96,7 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
       return (
         <>
           <div>{info.name}{countSuffix}{gradeSuffix}</div>
-          <div>{getTypeText(info.type)}</div>
+          {isFull && <div>{getTypeText(info.type)}</div>}
           {isFull && info.isEquipped && <div style={{ marginTop: 6 }}>{t("tooltip.equippedLabel")}</div>}
           {isFull && <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>}
         </>
@@ -108,7 +108,7 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
       return (
         <>
           <div>{info.name}</div>
-          <div style={{ marginTop: 6 }}>{info.stats}</div>
+          {isFull && <div style={{ marginTop: 6 }}>{info.stats}</div>}
           {isFull && info.cost !== undefined && (
             <div style={{ marginTop: 6 }}>{t("tooltip.costLabel", { cost: info.cost })}</div>
           )}
