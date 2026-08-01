@@ -1,24 +1,31 @@
 import { L2Item, L2Shortcut, ShortcutType, type Actions } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
-import { getTypeText } from "../components/core/tooltip.component";
+import { getTypeText, type TooltipInfo } from "../components/core/tooltip.component";
+import type { SlotContent } from "../components/windows/core/slot.component";
 import { getItemIconUrl, getSkillIconUrl, getActionIconUrl } from "./icon-urls";
 import { getItemSlotType, getItemName } from "./item-mapping";
 import { getSkillName } from "./skill-mapping";
 import { getActionName } from "./user-actions";
+import { t } from "../lang/lang";
 
 /**
- * Icon-slot category for a hotbar shortcut. ITEM shortcuts only carry a
- * TargetId (item template id), not the full L2Item (equip category needs
- * Type2/BodyPart) -- crossed-referenced against the current inventory list
- * when available, falling back to the generic "item-misc" gradient
- * otherwise (e.g. the item isn't in the demo inventory).
+ * ITEM shortcuts carry the inventory item's ObjectId in TargetId, not its
+ * template Id -- same instance-vs-template split as everywhere else L2Item
+ * shows up on the wire (see GameClientPacket.readItem()). Resolves the real
+ * L2Item so callers can read its template Id/Type2/BodyPart for icon/name/tab.
  */
+export function resolveShortcutItem(shortcut: L2Shortcut, inventoryItems: L2Item[]): L2Item | undefined {
+  return shortcut.Type === ShortcutType.ITEM
+    ? inventoryItems.find((candidate) => candidate.ObjectId === shortcut.TargetId)
+    : undefined;
+}
+
 export function getShortcutSlotType(shortcut: L2Shortcut, inventoryItems: L2Item[]): IconSlotType {
   switch (shortcut.Type) {
     case ShortcutType.SKILL:
       return "skill";
     case ShortcutType.ITEM: {
-      const item = inventoryItems.find((candidate) => candidate.Id === shortcut.TargetId);
+      const item = resolveShortcutItem(shortcut, inventoryItems);
       return item ? getItemSlotType(item) : "item-misc";
     }
     case ShortcutType.MACRO:
@@ -31,12 +38,14 @@ export function getShortcutSlotType(shortcut: L2Shortcut, inventoryItems: L2Item
   }
 }
 
-export function getShortcutIconUrl(shortcut: L2Shortcut): string | undefined {
+export function getShortcutIconUrl(shortcut: L2Shortcut, inventoryItems: L2Item[]): string | undefined {
   switch (shortcut.Type) {
     case ShortcutType.SKILL:
       return getSkillIconUrl(shortcut.TargetId);
-    case ShortcutType.ITEM:
-      return getItemIconUrl(shortcut.TargetId);
+    case ShortcutType.ITEM: {
+      const item = resolveShortcutItem(shortcut, inventoryItems);
+      return item ? getItemIconUrl(item.Id) : undefined;
+    }
     case ShortcutType.ACTION:
     case ShortcutType.MACRO:
     case ShortcutType.RECIPE:
@@ -56,11 +65,43 @@ export function getShortcutName(shortcut: L2Shortcut, inventoryItems: L2Item[]):
   switch (shortcut.Type) {
     case ShortcutType.SKILL:
       return getSkillName({ Id: shortcut.TargetId });
-    case ShortcutType.ITEM:
-      return getItemName({ Id: shortcut.TargetId });
+    case ShortcutType.ITEM: {
+      const item = resolveShortcutItem(shortcut, inventoryItems);
+      return item ? getItemName(item) : getTypeText("item-misc");
+    }
     case ShortcutType.ACTION:
       return getActionName({ code: shortcut.TargetId as Actions });
     default:
       return getTypeText(getShortcutSlotType(shortcut, inventoryItems));
   }
+}
+
+function getShortcutTooltip(shortcut: L2Shortcut, inventoryItems: L2Item[]): TooltipInfo {
+  const name = getShortcutName(shortcut, inventoryItems);
+
+  switch (shortcut.Type) {
+    case ShortcutType.ITEM: {
+      const item = resolveShortcutItem(shortcut, inventoryItems);
+      return {
+        kind: "item",
+        name,
+        type: getShortcutSlotType(shortcut, inventoryItems),
+        id: item?.Id ?? shortcut.TargetId,
+      };
+    }
+    case ShortcutType.SKILL:
+      return { kind: "skill", name, stats: t("tooltip.levelLabel", { level: shortcut.Level }), id: shortcut.TargetId };
+    default:
+      return { kind: "simple", name };
+  }
+}
+
+/** Single place resolving a hotbar shortcut (TargetId, real id or ITEM's ObjectId) against the current inventory into the Slot component's content. */
+export function getShortcutSlotContent(shortcut: L2Shortcut, inventoryItems: L2Item[]): SlotContent {
+  return {
+    type: getShortcutSlotType(shortcut, inventoryItems),
+    data: shortcut,
+    iconUrl: getShortcutIconUrl(shortcut, inventoryItems),
+    tooltip: getShortcutTooltip(shortcut, inventoryItems),
+  };
 }

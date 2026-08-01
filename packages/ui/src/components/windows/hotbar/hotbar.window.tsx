@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { ShortcutType, type L2Item, type L2Shortcut } from "@lineage2js/network";
-import { Slot, type IconBorder } from "../core/slot.component";
-import type { TooltipInfo } from "../../core/tooltip.component";
+import type { IconBorder } from "../core/slot.component";
+import { ShortcutSlot } from "./shortcut-slot.component";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
-import { getShortcutSlotType, getShortcutIconUrl, getShortcutName } from "../../../config/shortcut-mapping";
-import { t } from "../../../lang/lang";
+import { resolveShortcutItem } from "../../../config/shortcut-mapping";
 
 const ROW_1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
 const ROW_2 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "[", "]"];
@@ -41,19 +40,6 @@ function resolveSlotIndex(key: string, ctrlPressed: boolean): number | undefined
 
 const HOTBAR_ICON_BORDER: IconBorder = { from: "#a9af7f", to: "#6f5c31" };
 
-function getShortcutTooltip(shortcut: L2Shortcut, inventoryItems: L2Item[]): TooltipInfo {
-  const name = getShortcutName(shortcut, inventoryItems);
-
-  switch (shortcut.Type) {
-    case ShortcutType.ITEM:
-      return { kind: "item", name, type: getShortcutSlotType(shortcut, inventoryItems), id: shortcut.TargetId };
-    case ShortcutType.SKILL:
-      return { kind: "skill", name, stats: t("tooltip.levelLabel", { level: shortcut.Level }), id: shortcut.TargetId };
-    default:
-      return { kind: "simple", name };
-  }
-}
-
 /** Sends the network request a hotbar shortcut maps to. No-ops for types that have no client command yet (ACTION/MACRO/RECIPE/BOOKMARK). */
 function activateShortcut(shortcut: L2Shortcut, client: ReturnType<typeof useSessionStore>["client"], inventoryItems: L2Item[]) {
   if (!client.GameClient.IsConnected) {
@@ -65,7 +51,7 @@ function activateShortcut(shortcut: L2Shortcut, client: ReturnType<typeof useSes
       client.cast(shortcut.TargetId);
       break;
     case ShortcutType.ITEM: {
-      const item = inventoryItems.find((candidate) => candidate.Id === shortcut.TargetId);
+      const item = resolveShortcutItem(shortcut, inventoryItems);
       if (item) {
         client.useItem(item);
       }
@@ -114,21 +100,11 @@ export const HotbarContent = observer(function HotbarContent() {
             const slotIndex = rowIndex * COLUMNS + columnIndex;
             const shortcut = game.hotbarSlots[slotIndex];
             return (
-              <Slot
+              <ShortcutSlot
                 key={slotKey}
-                type="hotbar"
                 slotKey={slotKey}
+                shortcut={shortcut}
                 pressed={pressedSlot === slotIndex}
-                content={
-                  shortcut
-                    ? {
-                        type: getShortcutSlotType(shortcut, game.inventoryItems),
-                        data: shortcut,
-                        iconUrl: getShortcutIconUrl(shortcut),
-                        tooltip: getShortcutTooltip(shortcut, game.inventoryItems),
-                      }
-                    : undefined
-                }
                 iconBorder={HOTBAR_ICON_BORDER}
               />
             );

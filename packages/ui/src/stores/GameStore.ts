@@ -210,16 +210,22 @@ function demoShortcut(slot: number, type: ShortcutType, targetId: number, level?
 }
 
 // One example of every real ShortcutType, referencing the same demo
-// item/skill ids as createDemoInventory()/createDemoSkills().
-function createDemoHotbarShortcuts(): (L2Shortcut | undefined)[] {
+// item/skill ids as createDemoInventory()/createDemoSkills(). ITEM shortcuts'
+// TargetId is the inventory item's ObjectId, not its template id (see
+// config/shortcut-mapping.ts's resolveShortcutItem), so this looks the
+// ObjectId up from the already-built demo inventory instead of hardcoding it.
+function createDemoHotbarShortcuts(inventoryItems: L2Item[]): (L2Shortcut | undefined)[] {
+  const objectIdForItem = (itemId: number): number =>
+    inventoryItems.find((item) => item.Id === itemId)?.ObjectId ?? itemId;
+
   const slots: (L2Shortcut | undefined)[] = new Array(HOTBAR_SLOT_COUNT).fill(undefined);
   slots[0] = demoShortcut(0, ShortcutType.SKILL, 3, 1); // Power Strike
   slots[1] = demoShortcut(1, ShortcutType.ACTION, 0);
   slots[2] = demoShortcut(2, ShortcutType.MACRO, 0);
-  slots[3] = demoShortcut(3, ShortcutType.ITEM, 727); // Healing Potion (item-misc)
-  slots[4] = demoShortcut(4, ShortcutType.ITEM, 2); // Long Sword (item-weapon)
-  slots[5] = demoShortcut(5, ShortcutType.ITEM, 44); // Leather Helmet (item-armor)
-  slots[6] = demoShortcut(6, ShortcutType.ITEM, 875); // Ring of Knowledge (item-jewelry)
+  slots[3] = demoShortcut(3, ShortcutType.ITEM, objectIdForItem(727)); // Healing Potion (item-misc)
+  slots[4] = demoShortcut(4, ShortcutType.ITEM, objectIdForItem(2)); // Long Sword (item-weapon)
+  slots[5] = demoShortcut(5, ShortcutType.ITEM, objectIdForItem(44)); // Leather Helmet (item-armor)
+  slots[6] = demoShortcut(6, ShortcutType.ITEM, objectIdForItem(875)); // Ring of Knowledge (item-jewelry)
   return slots;
 }
 
@@ -726,8 +732,8 @@ export class GameStore {
   me: number | undefined = undefined;
   /** ObjectId of the character highlighted on the char-select screen. */
   selectedCharacterId: number | undefined = undefined;
-  hotbarSlots: (L2Shortcut | undefined)[] = createDemoHotbarShortcuts();
   inventoryItems: L2Item[] = createDemoInventory();
+  hotbarSlots: (L2Shortcut | undefined)[] = createDemoHotbarShortcuts(this.inventoryItems);
   skills: L2Skill[] = createDemoSkills();
   buffs: L2Buff[] = createDemoBuffs();
   charInfo: CharInfoSnapshot = createDemoCharInfo();
