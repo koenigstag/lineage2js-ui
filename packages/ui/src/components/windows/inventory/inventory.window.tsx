@@ -5,12 +5,12 @@ import { Slot, type IconBorder } from "../core/slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
-import { getItemIconUrl } from "../../../config/icon-urls";
 import {
   EQUIPMENT_SLOT_TYPES,
   getItemSlotType,
   getItemGradeLabel,
   getItemName,
+  getItemSlotContent,
   getMiscItemCategory,
 } from "../../../config/item-mapping";
 import { t } from "../../../lang/lang";
@@ -108,21 +108,13 @@ export const InventoryContent = observer(function InventoryContent() {
                 type="inventory"
                 content={
                   item && slotType
-                    ? {
-                        type: slotType,
-                        data: item,
+                    ? getItemSlotContent({
+                        id: item.Id,
+                        slotType,
                         count: item.Count,
-                        iconUrl: getItemIconUrl(item.Id),
-                        tooltip: {
-                          kind: "item",
-                          name: getItemName(item),
-                          type: slotType,
-                          id: item.Id,
-                          count: item.Count,
-                          grade: getItemGradeLabel(item),
-                          isEquipped: item.IsEquipped,
-                        },
-                      }
+                        grade: getItemGradeLabel(item),
+                        isEquipped: item.IsEquipped,
+                      })
                     : undefined
                 }
                 // iconBorder={INVENTORY_ICON_BORDER}

@@ -6,8 +6,7 @@ import { CreatureKindIcon } from "../../core/creature-kind-icon.component";
 import { CreatureRaceIcon } from "../../core/creature-race-icon.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { HP_COLOR } from "../../../config/stat-colors";
-import { getSkillIconUrl } from "../../../config/icon-urls";
-import { getSkillName } from "../../../config/skill-mapping";
+import { getSkillSlotContent } from "../../../config/skill-mapping";
 import { getTargetLevelColor } from "../../../config/target-level-color";
 import { t } from "../../../lang/lang";
 import { BUFF_ICON_SIZE } from "../effects/effects.window";
@@ -106,18 +105,11 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
               key={buff.Id}
               type="inventory"
               size={BUFF_ICON_SIZE}
-              content={{
-                type: "skill",
-                data: buff,
-                iconUrl: getSkillIconUrl(buff.Id),
-                tooltip: {
-                  kind: "skill",
-                  name: getSkillName(buff),
-                  stats: t("tooltip.levelLabel", { level: buff.SkillLevel }),
-                  expiresAt: Date.now() + buff.RemainingTime * 1000,
-                  id: buff.Id,
-                },
-              }}
+              content={getSkillSlotContent({
+                id: buff.Id,
+                level: buff.SkillLevel,
+                expiresAt: Date.now() + buff.RemainingTime * 1000,
+              })}
             />
           ))}
         </div>

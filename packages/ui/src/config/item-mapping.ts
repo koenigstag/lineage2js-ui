@@ -1,5 +1,7 @@
 import { L2Item, ItemType2, ItemGrade } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
+import type { SlotContent } from "../components/windows/core/slot.component";
+import { getItemIconUrl } from "./icon-urls";
 import { t } from "../lang/lang";
 
 // Reactive read, not a stored field: UiStore.itemNames loads asynchronously
@@ -63,4 +65,32 @@ const GRADE_LABELS: Partial<Record<ItemGrade, string>> = {
 /** No label for ItemGrade.None/unset -- nothing to show in the tooltip. */
 export function getItemGradeLabel(item: L2Item): string | undefined {
   return GRADE_LABELS[item.Grade];
+}
+
+export interface ItemSlotParams {
+  id: number;
+  /** Icon-slot category -- callers with a full L2Item pass getItemSlotType(item); placeholder items (e.g. a skill's required-item) that don't carry Type2/BodyPart pass "item-misc" directly. */
+  slotType: IconSlotType;
+  count?: number;
+  grade?: string;
+  isEquipped?: boolean;
+}
+
+/** Builds the Slot component's content for an item icon -- the one place assembling the "item" tooltip shape (see inventory.window.tsx and skill.window.tsx's required-item slot). */
+export function getItemSlotContent({ id, slotType, count, grade, isEquipped }: ItemSlotParams): SlotContent {
+  return {
+    type: slotType,
+    data: { id, count },
+    count,
+    iconUrl: getItemIconUrl(id),
+    tooltip: {
+      kind: "item",
+      name: getItemName({ Id: id }),
+      type: slotType,
+      id,
+      count,
+      grade,
+      isEquipped,
+    },
+  };
 }

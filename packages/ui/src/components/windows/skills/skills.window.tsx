@@ -4,8 +4,7 @@ import type { L2Skill } from "@lineage2js/network";
 import { Slot } from "../core/slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
 import { useGameStore, useWindowManagerStore } from "../../../stores/StoreContext";
-import { getSkillIconUrl } from "../../../config/icon-urls";
-import { getSkillName } from "../../../config/skill-mapping";
+import { getSkillName, getSkillSlotContent } from "../../../config/skill-mapping";
 import type { LearnableSkillSnapshot } from "../../../stores/GameStore";
 import { t } from "../../../lang/lang";
 
@@ -84,20 +83,7 @@ export const SkillsContent = observer(function SkillsContent() {
         >
           {game.learnableSkills.map((skill) => (
             <div key={`${skill.id}-${skill.level}`} onClick={() => handleLearnableClick(skill)} style={{ cursor: "pointer" }}>
-              <Slot
-                type="inventory"
-                content={{
-                  type: "skill",
-                  data: skill,
-                  iconUrl: getSkillIconUrl(skill.id),
-                  tooltip: {
-                    kind: "skill",
-                    name: getSkillName({ Id: skill.id }),
-                    stats: t("tooltip.levelLabel", { level: skill.level }),
-                    id: skill.id,
-                  },
-                }}
-              />
+              <Slot type="inventory" content={getSkillSlotContent({ id: skill.id, level: skill.level })} />
             </div>
           ))}
         </div>
@@ -122,19 +108,12 @@ export const SkillsContent = observer(function SkillsContent() {
               <Slot
                 key={skill.Id}
                 type="inventory"
-                content={{
-                  type: "skill",
-                  data: skill,
-                  iconUrl: getSkillIconUrl(skill.Id),
-                  tooltip: {
-                    kind: "skill",
-                    name: getSkillName(skill),
-                    stats: t("tooltip.levelLabel", { level: skill.Level }),
-                    cost: skill.Mp,
-                    expiresAt: skill.IsReady ? undefined : Date.now() + skill.Remaining,
-                    id: skill.Id,
-                  },
-                }}
+                content={getSkillSlotContent({
+                  id: skill.Id,
+                  level: skill.Level,
+                  cost: skill.Mp,
+                  expiresAt: skill.IsReady ? undefined : Date.now() + skill.Remaining,
+                })}
               />
             ))}
           </div>
