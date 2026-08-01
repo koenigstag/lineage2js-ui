@@ -15,7 +15,7 @@
 - Add NPC dialog system -- render engine and actions
 - Add item/skill/action descriptions -- no per-id table exists yet
 - Parse ExBasicActionList (see Unhandled packets) and use it to drive the Actions window's per-slot enabled state -- currently each action's availability is a hand-written isEnabled(game) predicate (user-actions.ts), not the server's actual allowed-action-id list, so it can't reflect e.g. a transform's restricted action set
-- Split game.buffs into Buff/Song-Dance/Toggle/Debuff rows in effects.window.tsx (Short buff already has its own row) -- AbnormalStatusUpdate's wire format has no per-entry type tag, so this needs a local skill-type table (same gap as item/skill/action descriptions) to classify each id the way lineage2ts's Skill.isDance()/isToggle()/isDebuff do server-side
+- Split game.buffs into per-EffectCategory rows in effects.window.tsx (see network's enums/EffectCategory.ts; Short buff already has its own row) -- AbnormalStatusUpdate's wire format has no per-entry category tag, so this needs a skill id -> EffectCategory table (same data-sourcing gap as item/skill/action descriptions) before it can classify each buff the way lineage2ts's Skill.isDance()/isToggle()/isDebuff do server-side
 
 
 # Long-term TODOs

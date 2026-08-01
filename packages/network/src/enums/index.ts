@@ -7,6 +7,7 @@ export * from "./ClanPriviledge";
 export * from "./ClassId";
 export * from "./ConfirmDlgType";
 export * from "./CraftType";
+export * from "./EffectCategory";
 export * from "./Element";
 export * from "./Face";
 export * from "./HairColor";
