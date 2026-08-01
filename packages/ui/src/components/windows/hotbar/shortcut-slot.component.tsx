@@ -5,8 +5,8 @@ import { SkillSlot } from "../core/skill-slot.component";
 import { ItemSlot } from "../core/item-slot.component";
 import { ActionSlot } from "../core/action-slot.component";
 import { useGameStore } from "../../../stores/StoreContext";
-import { resolveShortcutItem, getShortcutFallbackContent } from "../../../config/shortcut-mapping";
-import { getItemSlotType } from "../../../config/item-mapping";
+import { resolveShortcutItem, resolveShortcutSkill, getShortcutFallbackContent } from "../../../config/shortcut-mapping";
+import { getItemSlotType, getItemGradeLabel } from "../../../config/item-mapping";
 
 interface ShortcutSlotProps {
   slotKey?: string;
@@ -37,6 +37,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
         <SkillSlot
           id={shortcut.TargetId}
           level={shortcut.Level}
+          cost={resolveShortcutSkill(shortcut, game.skills)?.Mp}
           detail="short"
           slotKey={slotKey}
           pressed={pressed}
@@ -56,6 +57,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
           id={item.Id}
           slotType={getItemSlotType(item)}
           count={item.Count}
+          grade={getItemGradeLabel(item)}
           detail="short"
           slotKey={slotKey}
           pressed={pressed}

@@ -1,4 +1,4 @@
-import { L2Item, L2Shortcut, ShortcutType } from "@lineage2js/network";
+import { L2Item, L2Shortcut, L2Skill, ShortcutType } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 import { getTypeText } from "../components/core/tooltip.component";
 import type { SlotContent } from "../components/windows/core/slot.component";
@@ -12,6 +12,17 @@ import type { SlotContent } from "../components/windows/core/slot.component";
 export function resolveShortcutItem(shortcut: L2Shortcut, inventoryItems: L2Item[]): L2Item | undefined {
   return shortcut.Type === ShortcutType.ITEM
     ? inventoryItems.find((candidate) => candidate.ObjectId === shortcut.TargetId)
+    : undefined;
+}
+
+/**
+ * SKILL shortcuts only carry Id/Level on the wire (see readShortcut()) --
+ * no MP cost. Resolves the matching L2Skill from the character's known
+ * skill list so callers can read its Mp for the tooltip's "Cost" line.
+ */
+export function resolveShortcutSkill(shortcut: L2Shortcut, skills: L2Skill[]): L2Skill | undefined {
+  return shortcut.Type === ShortcutType.SKILL
+    ? skills.find((candidate) => candidate.Id === shortcut.TargetId)
     : undefined;
 }
 

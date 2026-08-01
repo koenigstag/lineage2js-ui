@@ -92,7 +92,7 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
     case "item": {
       const isFull = info.detail === "full";
       const countSuffix = info.count && info.count > 1 ? ` (${info.count})` : "";
-      const gradeSuffix = isFull && info.grade ? ` [${info.grade}]` : "";
+      const gradeSuffix = info.grade ? ` [${info.grade}]` : "";
       return (
         <>
           <div>{info.name}{countSuffix}{gradeSuffix}</div>
@@ -109,7 +109,7 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
         <>
           <div>{info.name}</div>
           {isFull && <div style={{ marginTop: 6 }}>{info.stats}</div>}
-          {isFull && info.cost !== undefined && (
+          {info.cost !== undefined && (
             <div style={{ marginTop: 6 }}>{t("tooltip.costLabel", { cost: info.cost })}</div>
           )}
           {remainingMs !== undefined && (
