@@ -10,7 +10,7 @@ export const EffectsContent = observer(function EffectsContent() {
   const game = useGameStore();
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: SLOT_GAP }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: SLOT_GAP, minHeight: BUFF_ICON_SIZE }}>
       {game.buffs.map((buff) => (
         <SkillSlot
           key={buff.Id}
