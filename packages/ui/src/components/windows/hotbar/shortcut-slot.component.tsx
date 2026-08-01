@@ -16,11 +16,13 @@ interface ShortcutSlotProps {
 }
 
 /**
- * Dispatches a hotbar shortcut to the matching domain slot component --
- * always the "short" tooltip (hotbar is never the item/skill/action's own
- * domain window, see TooltipDetail). MACRO/RECIPE/BOOKMARK and an
- * unresolved ITEM (target no longer in inventory) have no dedicated
- * component, so those fall back to a plain category-labelled Slot.
+ * Dispatches a hotbar shortcut to the matching domain slot component,
+ * explicitly passing detail="short" (hotbar is never the item/skill's own
+ * domain window, see TooltipDetail) -- not left to SkillSlot/ItemSlot's own
+ * default, so this invariant doesn't silently break if that default ever
+ * changes. MACRO/RECIPE/BOOKMARK and an unresolved ITEM (target no longer in
+ * inventory) have no dedicated component, so those fall back to a plain
+ * category-labelled Slot.
  */
 export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, pressed, iconBorder }: ShortcutSlotProps) {
   const game = useGameStore();
@@ -31,7 +33,16 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
 
   switch (shortcut.Type) {
     case ShortcutType.SKILL:
-      return <SkillSlot id={shortcut.TargetId} level={shortcut.Level} slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} />;
+      return (
+        <SkillSlot
+          id={shortcut.TargetId}
+          level={shortcut.Level}
+          detail="short"
+          slotKey={slotKey}
+          pressed={pressed}
+          iconBorder={iconBorder}
+        />
+      );
 
     case ShortcutType.ITEM: {
       const item = resolveShortcutItem(shortcut, game.inventoryItems);
@@ -45,6 +56,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
           id={item.Id}
           slotType={getItemSlotType(item)}
           count={item.Count}
+          detail="short"
           slotKey={slotKey}
           pressed={pressed}
           iconBorder={iconBorder}
