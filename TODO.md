@@ -16,6 +16,9 @@
 - Add item/skill/action descriptions -- no per-id table exists yet
 
 
+# Unhandled packets
+
+
 # Long-term TODOs
 - Landscape render and textures
 - Geodata system
