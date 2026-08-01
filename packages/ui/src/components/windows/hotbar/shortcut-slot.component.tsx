@@ -1,8 +1,12 @@
 import { observer } from "mobx-react-lite";
-import type { L2Shortcut } from "@lineage2js/network";
+import { ShortcutType, type Actions, type L2Shortcut } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
+import { SkillSlot } from "../core/skill-slot.component";
+import { ItemSlot } from "../core/item-slot.component";
+import { ActionSlot } from "../core/action-slot.component";
 import { useGameStore } from "../../../stores/StoreContext";
-import { getShortcutSlotContent } from "../../../config/shortcut-mapping";
+import { resolveShortcutItem, getShortcutFallbackContent } from "../../../config/shortcut-mapping";
+import { getItemSlotType } from "../../../config/item-mapping";
 
 interface ShortcutSlotProps {
   slotKey?: string;
@@ -11,17 +15,51 @@ interface ShortcutSlotProps {
   iconBorder?: IconBorder;
 }
 
-/** Wraps the generic Slot with hotbar-shortcut-specific content resolution (icon/name/tooltip against the live inventory -- see shortcut-mapping.ts). */
+/**
+ * Dispatches a hotbar shortcut to the matching domain slot component --
+ * always the "short" tooltip (hotbar is never the item/skill/action's own
+ * domain window, see TooltipDetail). MACRO/RECIPE/BOOKMARK and an
+ * unresolved ITEM (target no longer in inventory) have no dedicated
+ * component, so those fall back to a plain category-labelled Slot.
+ */
 export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, pressed, iconBorder }: ShortcutSlotProps) {
   const game = useGameStore();
 
-  return (
-    <Slot
-      type="hotbar"
-      slotKey={slotKey}
-      pressed={pressed}
-      content={shortcut ? getShortcutSlotContent(shortcut, game.inventoryItems) : undefined}
-      iconBorder={iconBorder}
-    />
-  );
+  if (!shortcut) {
+    return <Slot type="hotbar" slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} />;
+  }
+
+  switch (shortcut.Type) {
+    case ShortcutType.SKILL:
+      return <SkillSlot id={shortcut.TargetId} level={shortcut.Level} slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} />;
+
+    case ShortcutType.ITEM: {
+      const item = resolveShortcutItem(shortcut, game.inventoryItems);
+      if (!item) {
+        return (
+          <Slot type="hotbar" slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} content={getShortcutFallbackContent("item-misc")} />
+        );
+      }
+      return (
+        <ItemSlot
+          id={item.Id}
+          slotType={getItemSlotType(item)}
+          count={item.Count}
+          slotKey={slotKey}
+          pressed={pressed}
+          iconBorder={iconBorder}
+        />
+      );
+    }
+
+    case ShortcutType.ACTION:
+      return <ActionSlot code={shortcut.TargetId as Actions} slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} />;
+
+    case ShortcutType.MACRO:
+      return <Slot type="hotbar" slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} content={getShortcutFallbackContent("macro")} />;
+
+    default:
+      // RECIPE/BOOKMARK/NONE -- no dedicated window/component yet either.
+      return <Slot type="hotbar" slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} content={getShortcutFallbackContent("action")} />;
+  }
 });

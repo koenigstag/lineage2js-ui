@@ -2,6 +2,7 @@ import { useState } from "react";
 import { observer } from "mobx-react-lite";
 import type { L2Item } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
+import { ItemSlot } from "../core/item-slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
@@ -10,7 +11,6 @@ import {
   getItemSlotType,
   getItemGradeLabel,
   getItemName,
-  getItemSlotContent,
   getMiscItemCategory,
 } from "../../../config/item-mapping";
 import { t } from "../../../lang/lang";
@@ -101,23 +101,18 @@ export const InventoryContent = observer(function InventoryContent() {
         >
           {Array.from({ length: GRID_COLUMNS * GRID_ROWS }).map((_, index) => {
             const item = filteredItems[index];
-            const slotType = item ? getItemSlotType(item) : undefined;
+            if (!item) {
+              return <Slot key={`empty-${index}`} type="inventory" />;
+            }
             return (
-              <Slot
-                key={item ? `item-${item.ObjectId}` : `empty-${index}`}
-                type="inventory"
-                content={
-                  item && slotType
-                    ? getItemSlotContent({
-                        id: item.Id,
-                        slotType,
-                        count: item.Count,
-                        grade: getItemGradeLabel(item),
-                        isEquipped: item.IsEquipped,
-                        detail: "full",
-                      })
-                    : undefined
-                }
+              <ItemSlot
+                key={`item-${item.ObjectId}`}
+                id={item.Id}
+                slotType={getItemSlotType(item)}
+                count={item.Count}
+                grade={getItemGradeLabel(item)}
+                isEquipped={item.IsEquipped}
+                detail="full"
                 // iconBorder={INVENTORY_ICON_BORDER}
               />
             );

@@ -1,12 +1,11 @@
 import type { CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { StatBar } from "../../core/stat-bar.component";
-import { Slot } from "../core/slot.component";
+import { SkillSlot } from "../core/skill-slot.component";
 import { CreatureKindIcon } from "../../core/creature-kind-icon.component";
 import { CreatureRaceIcon } from "../../core/creature-race-icon.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { HP_COLOR } from "../../../config/stat-colors";
-import { getSkillSlotContent } from "../../../config/skill-mapping";
 import { getTargetLevelColor } from "../../../config/target-level-color";
 import { t } from "../../../lang/lang";
 import { BUFF_ICON_SIZE } from "../effects/effects.window";
@@ -101,15 +100,12 @@ export const TargetSelectContent = observer(function TargetSelectContent() {
       {target.buffs.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
           {target.buffs.map((buff) => (
-            <Slot
+            <SkillSlot
               key={buff.Id}
-              type="inventory"
+              id={buff.Id}
+              level={buff.SkillLevel}
               size={BUFF_ICON_SIZE}
-              content={getSkillSlotContent({
-                id: buff.Id,
-                level: buff.SkillLevel,
-                expiresAt: Date.now() + buff.RemainingTime * 1000,
-              })}
+              expiresAt={Date.now() + buff.RemainingTime * 1000}
             />
           ))}
         </div>

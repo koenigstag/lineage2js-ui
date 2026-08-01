@@ -1,5 +1,7 @@
 import { Actions } from "@lineage2js/network";
 import type { GameStore } from "../stores/GameStore";
+import type { SlotContent } from "../components/windows/core/slot.component";
+import { getActionIconUrl } from "./icon-urls";
 import { t } from "../lang/lang";
 
 export type ActionCategory = "basic" | "party" | "target" | "social" | "pet";
@@ -24,6 +26,23 @@ export interface Action {
 /** Display name for an action, from the id->name table loaded by UiStore.loadActionNames() (see lang.ts's "action.name.<id>" special case). */
 export function getActionName(action: Action): string {
   return t(`action.name.${action.code}`);
+}
+
+export interface ActionSlotParams {
+  code: Actions;
+  /** "pet" gets the pet-action gradient, everything else (including hotbar shortcuts, which don't carry a category) the regular action one. */
+  category?: ActionCategory;
+  name?: string;
+}
+
+/** Builds the Slot component's content for an action icon -- no full/short tooltip split like Skill/Item, actions only ever show their name. */
+export function getActionSlotContent({ code, category, name }: ActionSlotParams): SlotContent {
+  return {
+    type: category === "pet" ? "pet-action" : "action",
+    data: { code, category },
+    iconUrl: getActionIconUrl(code),
+    tooltip: { kind: "simple", name: name ?? getActionName({ code }) },
+  };
 }
 
 const RECOMMEND: Action = {

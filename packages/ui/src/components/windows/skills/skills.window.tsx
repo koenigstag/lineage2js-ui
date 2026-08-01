@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { observer } from "mobx-react-lite";
 import type { L2Skill } from "@lineage2js/network";
-import { Slot } from "../core/slot.component";
+import { SkillSlot } from "../core/skill-slot.component";
 import { BaseInput } from "../../core/inputs/base.input";
 import { useGameStore, useWindowManagerStore } from "../../../stores/StoreContext";
-import { getSkillName, getSkillSlotContent } from "../../../config/skill-mapping";
+import { getSkillName } from "../../../config/skill-mapping";
 import type { LearnableSkillSnapshot } from "../../../stores/GameStore";
 import { t } from "../../../lang/lang";
 
@@ -82,9 +82,13 @@ export const SkillsContent = observer(function SkillsContent() {
           }}
         >
           {game.learnableSkills.map((skill) => (
-            <div key={`${skill.id}-${skill.level}`} onClick={() => handleLearnableClick(skill)} style={{ cursor: "pointer" }}>
-              <Slot type="inventory" content={getSkillSlotContent({ id: skill.id, level: skill.level, detail: "full" })} />
-            </div>
+            <SkillSlot
+              key={`${skill.id}-${skill.level}`}
+              id={skill.id}
+              level={skill.level}
+              detail="full"
+              onClick={() => handleLearnableClick(skill)}
+            />
           ))}
         </div>
       ) : (
@@ -105,16 +109,13 @@ export const SkillsContent = observer(function SkillsContent() {
             }}
           >
             {filteredSkills.map((skill) => (
-              <Slot
+              <SkillSlot
                 key={skill.Id}
-                type="inventory"
-                content={getSkillSlotContent({
-                  id: skill.Id,
-                  level: skill.Level,
-                  cost: skill.Mp,
-                  expiresAt: skill.IsReady ? undefined : Date.now() + skill.Remaining,
-                  detail: "full",
-                })}
+                id={skill.Id}
+                level={skill.Level}
+                cost={skill.Mp}
+                expiresAt={skill.IsReady ? undefined : Date.now() + skill.Remaining}
+                detail="full"
               />
             ))}
           </div>

@@ -1,9 +1,9 @@
 import { observer } from "mobx-react-lite";
-import { Slot } from "../core/slot.component";
+import { SkillSlot } from "../core/skill-slot.component";
+import { ItemSlot } from "../core/item-slot.component";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useGameStore, useWindowManagerStore } from "../../../stores/StoreContext";
-import { getSkillName, getSkillSlotContent } from "../../../config/skill-mapping";
-import { getItemSlotContent } from "../../../config/item-mapping";
+import { getSkillName } from "../../../config/skill-mapping";
 import { t } from "../../../lang/lang";
 
 const WIDTH = 220;
@@ -41,7 +41,7 @@ export const SkillLearnContent = observer(function SkillLearnContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, width: WIDTH }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <Slot type="inventory" content={getSkillSlotContent({ id: skill.id, level: skill.level })} />
+        <SkillSlot id={skill.id} level={skill.level} />
         <span style={{ color: "#e6d9be", fontSize: 13 }}>{getSkillName({ Id: skill.id })}</span>
       </div>
       <div style={infoRowStyle}>{t("skills.learn.level", { level: skill.level })}</div>
@@ -56,14 +56,7 @@ export const SkillLearnContent = observer(function SkillLearnContent() {
             <div style={infoRowStyle}>{t("skills.learn.requiredItem")}</div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <div style={hasItem ? undefined : { filter: "blur(2px) grayscale(1)" }}>
-                <Slot
-                  type="inventory"
-                  content={getItemSlotContent({
-                    id: skill.requiredItem.id,
-                    slotType: "item-misc",
-                    count: skill.requiredItem.count,
-                  })}
-                />
+                <ItemSlot id={skill.requiredItem.id} slotType="item-misc" count={skill.requiredItem.count} />
               </div>
             </div>
           </>

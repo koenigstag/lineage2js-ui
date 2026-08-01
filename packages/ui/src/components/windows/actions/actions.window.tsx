@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
-import { Slot } from "../core/slot.component";
-import { getActionIconUrl } from "../../../config/icon-urls";
-import { USER_ACTIONS, getActionName, type ActionCategory, type Action } from "../../../config/user-actions";
+import { ActionSlot } from "../core/action-slot.component";
+import { USER_ACTIONS, type ActionCategory, type Action } from "../../../config/user-actions";
 import { useGameStore } from "../../../stores/StoreContext";
 import { t } from "../../../lang/lang";
 
@@ -14,10 +13,6 @@ const ACTIONS_PER_ROW = 6;
 // then breaks onto a new line once that width is exceeded, same technique
 // as HOTBAR_WIDTH in windows.registry.ts.
 const ROW_WIDTH = ACTIONS_PER_ROW * SLOT_SIZE + (ACTIONS_PER_ROW - 1) * SLOT_GAP;
-
-function getActionSlotType(category: ActionCategory): "action" | "pet-action" {
-  return category === "pet" ? "pet-action" : "action";
-}
 
 export const ActionsContent = observer(function ActionsContent() {
   const game = useGameStore();
@@ -34,24 +29,15 @@ export const ActionsContent = observer(function ActionsContent() {
               // Most entries have no click dispatch wired yet (see Action's
               // own doc comment) -- only ones with `dispatch` set are clickable here.
               const enabled = action.isEnabled ? action.isEnabled(game) : true;
-              const onClick = action.dispatch ? () => enabled && action.dispatch!(game) : undefined;
 
               return (
-                <div
+                <ActionSlot
                   key={action.code}
-                  onClick={onClick}
-                  style={onClick ? { opacity: enabled ? 1 : 0.5, cursor: enabled ? "pointer" : "not-allowed" } : undefined}
-                >
-                  <Slot
-                    type="hotbar"
-                    content={{
-                      type: getActionSlotType(category),
-                      data: action,
-                      iconUrl: getActionIconUrl(action.code),
-                      tooltip: { kind: "simple", name: getActionName(action) },
-                    }}
-                  />
-                </div>
+                  code={action.code}
+                  category={category}
+                  disabled={!enabled}
+                  onClick={action.dispatch ? () => enabled && action.dispatch!(game) : undefined}
+                />
               );
             })}
           </div>

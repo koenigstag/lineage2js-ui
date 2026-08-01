@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
-import { Slot } from "../core/slot.component";
+import { SkillSlot } from "../core/skill-slot.component";
 import { useGameStore } from "../../../stores/StoreContext";
-import { getSkillSlotContent } from "../../../config/skill-mapping";
 
 const SLOT_SIZE = 34;
 export const BUFF_ICON_SIZE = SLOT_SIZE / 2;
@@ -13,16 +12,13 @@ export const EffectsContent = observer(function EffectsContent() {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: SLOT_GAP }}>
       {game.buffs.map((buff) => (
-        <Slot
+        <SkillSlot
           key={buff.Id}
-          type="inventory"
+          id={buff.Id}
+          level={buff.SkillLevel}
           size={BUFF_ICON_SIZE}
-          content={getSkillSlotContent({
-            id: buff.Id,
-            level: buff.SkillLevel,
-            // No cost -- buffs aren't cast by the viewer, MP price isn't relevant here.
-            expiresAt: Date.now() + buff.RemainingTime * 1000,
-          })}
+          // No cost -- buffs aren't cast by the viewer, MP price isn't relevant here.
+          expiresAt={Date.now() + buff.RemainingTime * 1000}
         />
       ))}
     </div>
