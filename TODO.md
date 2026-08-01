@@ -46,5 +46,38 @@ instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
 - **Manor/Crops**: ExShowSeedInfo (0xfe/0x23), ExShowCropInfo (0xfe/0x24), ExShowManorDefaultInfo (0xfe/0x25), ExShowSeedSetting (0xfe/0x26), ExShowCropSetting (0xfe/0x2b), ExShowSellCropList (0xfe/0x2c), ExShowProcureCropDetail (0xfe/0x78), ExShowSeedMapInfo (0xfe/0xa1)
 - **Olympiad/Duel/Hero**: ExOlympiadMatchEnd (0xfe/0x2d), ExOlympiadMatchList (0xfe/0xd4), ExOlympiadMode (0xfe/0x7c), ExHeroList (0xfe/0x79), ExDuelReady (0xfe/0x4d), ExDuelStart (0xfe/0x4e), ExDuelEnd (0xfe/0x4f)
 - **Enchant/Variation**: StartItemEnchanting (0x7c), EnchantResult (0x87), ExEnchantSkillResult (0xfe/0xa7), ExEnchantSkillInfo (0xfe/0x2a), ExEnchantSkillInfoDetail (0xfe/0x5e), ExShowVariationMakeWindow (0xfe/0x51), ExShowVariationCancelWindow (0xfe/0x52), ExPutItemResultForVariationMake (0xfe/0x53), ExPutIntensiveResultForVariationMake (0xfe/0x54), ExPutCommissionResultForVariationMake (0xfe/0x55), ExVariationResult (0xfe/0x56), ExPutItemResultForVariationCancel (0xfe/0x57), ExVariationCancelResult (0xfe/0x58), ExAttributeEnchantResult (0xfe/0x61), ExChooseInventoryAttributeItem (0xfe/0x62), ExShowBaseAttributeCancelWindow (0xfe/0x74), ExBaseAttributeCancelResult (0xfe/0x75), ExPutEnchantTargetItemResult (0xfe/0x81), ExPutEnchantSupportItemResult (0xfe/0x82)
-- **Разное**: GameGuardQuery (0x74), QuestList (0x86), ShowMiniMap (0xa3), ObservationMode (0xeb), ObservationReturn (0xec), ChairSit (0xed), GMHennaInfo (0xf0), RadarControl (0xf1), CameraMode (0xf7), ShortBuffStatusUpdate (0xfa), PetitionVotePacket (0xfc), AgitDecoInfo (0xfd), FlyToLocation (0xd4), NetPing (0xd9), Dice (0xda), ShowCalculator (0xe2), ExRegenMax (0xfe/0x01), ExColosseumFenceInfo (0xfe/0x03), ExAutoSoulShot (0xfe/0x0c), ExSpawnEmitter (0xfe/0x5d), ExBasicActionList (0xfe/0x5f), ExAskCoupleAction (0xfe/0xbb), ExChangeNpcState (0xfe/0xbe), ExItemAuctionInfoPacket (0xfe/0x68), ExReplyDominionInfo (0xfe/0x92), ExShowOwnedThingsPosition (0xfe/0x93), ExRequestChangeNicknameColor (0xfe/0x83), ExGetDimensionalItemList (0xfe/0x86), PackageSendableList (0xd2), MagicSkillCanceled (0x49), SSQStatus (0xfb), ExShowQuestInfo (0xfe/0x20), ExShowQuestMark (0xfe/0x21)
+- **Разное**
+  - GameGuardQuery (0x74) -- anti-cheat client challenge (legacy GameGuard handshake, not relevant to a browser client)
+  - MagicSkillCanceled (0x49) -- stops a skill's cast animation on the client mid-cast
+  - QuestList (0x86) -- full list of the player's active/completed quests
+  - ExShowQuestInfo (0xfe/0x20) -- toggles the quest-tracker UI panel
+  - ExShowQuestMark (0xfe/0x21) -- marks a quest-related NPC/location on the map
+  - PackageSendableList (0xd2) -- items eligible for Freight (parcel-send to another character)
+  - ShowMiniMap (0xa3) -- opens the minimap overlay, tagged with the current Seven Signs period
+  - RadarControl (0xf1) -- add/remove/clear a radar waypoint marker
+  - CameraMode (0xf7) -- switches 1st/3rd-person camera
+  - FlyToLocation (0xd4) -- knockback/charge/throw forced-movement effect
+  - ObservationMode (0xeb) -- enter spectator mode (death/GM observation) at a location
+  - ObservationReturn (0xec) -- return from spectator mode to the body's location
+  - ChairSit (0xed) -- sit animation on a static chair/throne object
+  - Dice (0xda) -- dice-roll emote result
+  - ShowCalculator (0xe2) -- opens the in-client crafting calculator
+  - ShortBuffStatusUpdate (0xfa) -- compact buff-icon update (id/level/remaining only, no full AbnormalStatusUpdate)
+  - PetitionVotePacket (0xfc) -- GM petition satisfaction survey prompt
+  - GMHennaInfo (0xf0) -- henna dye-stat breakdown shown in the GM panel
+  - AgitDecoInfo (0xfd) -- clan hall ("Agit") interior decoration/function list
+  - SSQStatus (0xfb) -- Seven Signs quest status pages
+  - NetPing (0xd9) -- periodic latency probe
+  - ExRegenMax (0xfe/0x01) -- timed HP-regen-over-time effect ticks
+  - ExColosseumFenceInfo (0xfe/0x03) -- Olympiad arena fence/barrier state
+  - ExAutoSoulShot (0xfe/0x0c) -- server ack for the auto-soulshot toggle
+  - ExSpawnEmitter (0xfe/0x5d) -- spawns a particle-effect emitter tied to an NPC
+  - ExBasicActionList (0xfe/0x5f) -- which basic actions are usable in the current transform/attachment context
+  - ExAskCoupleAction (0xfe/0xbb) -- wedding/couple social-action request prompt
+  - ExChangeNpcState (0xfe/0xbe) -- visual NPC state-flag change (e.g. siege golem/machine states)
+  - ExItemAuctionInfoPacket (0xfe/0x68) -- item auction house listing state
+  - ExReplyDominionInfo (0xfe/0x92) -- Territory War dominion/ward ownership state
+  - ExShowOwnedThingsPosition (0xfe/0x93) -- Territory War ward marker positions on the map
+  - ExRequestChangeNicknameColor (0xfe/0x83) -- nickname color change (event/GM reward)
+  - ExGetDimensionalItemList (0xfe/0x86) -- Dimensional Merchant's transferable-item list
 - **Ивенты**: ExFishingStart (0xfe/0x1e), ExFishingStartCombat (0xfe/0x27), ExCursedWeaponList (0xfe/0x46), ExCursedWeaponLocation (0xfe/0x47), ExUseSharedGroupItem (0xfe/0x4a), ExStartScenePlayer (0xfe/0x99), ExCubeGameChangeTeam (0xfe/0x97), ExCubeGameRemovePlayer (0xfe/0x97), ExCubeGameChangePoints (0xfe/0x98), ExCubeGameExtendedChangePoints (0xfe/0x98), ExPCCafePointInfo (0xfe/0x32), PcCafeUI (0xfe/0x44), ExNotifyPremiumItem (0xfe/0x85), ExNotifyBirthday (0xfe/0x8f), ShowXMasSeal (0xf8), ExGetBossRecord (0xfe/0x34), ExBrLoadEventTopRankers (0xfe/0xbd), ExBrGamePoint (0xfe/0xd5), ExBrProductList (0xfe/0xd6), ExBrProductInfo (0xfe/0xd7), ExBrBuyProductResponse (0xfe/0xd8), ExBRAgathionEnergyInfo (0xfe/0xde), ExNevitAdventEffect (0xfe/0xe0)
