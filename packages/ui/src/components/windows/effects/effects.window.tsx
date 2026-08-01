@@ -19,6 +19,7 @@ export const EffectsContent = observer(function EffectsContent() {
           size={BUFF_ICON_SIZE}
           // No cost -- buffs aren't cast by the viewer, MP price isn't relevant here.
           expiresAt={Date.now() + buff.RemainingTime * 1000}
+          countdownWarning
         />
       ))}
     </div>

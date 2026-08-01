@@ -11,6 +11,8 @@ export interface SlotContent {
   iconUrl?: string;
   /** Hover tooltip content. No tooltip is shown when unset. */
   tooltip?: TooltipInfo;
+  /** Live "about to expire" seconds count, overlaid centered on the icon -- see SkillSlot's countdownWarning prop. */
+  countdownSeconds?: number;
 }
 
 export interface IconBorder {
@@ -76,6 +78,23 @@ function formatCount(count: number): string {
   return count > 99 ? "99+" : String(count);
 }
 
+const countdownStyle: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontFamily: "'Courier Prime', monospace",
+  fontSize: 10,
+  fontWeight: "bold",
+  lineHeight: 1,
+  color: "#ffffff",
+  textShadow: "0 1px 1px rgba(0, 0, 0, 0.9)",
+  zIndex: 2,
+  pointerEvents: "none",
+  userSelect: "none",
+};
+
 export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE, pressed }: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { target, showTooltip, hideTooltip } = useTooltipTarget();
@@ -111,6 +130,7 @@ export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE, pressed }
       )}
       {slotKey && <div style={slotKeyStyle}>{slotKey}</div>}
       {content?.count !== undefined && content.count > 1 && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
+      {content?.countdownSeconds !== undefined && <div style={countdownStyle}>{content.countdownSeconds}</div>}
       {tooltip && <Tooltip target={target} />}
     </div>
   );
