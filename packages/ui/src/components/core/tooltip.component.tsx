@@ -22,6 +22,16 @@ export function getTypeText(type: IconSlotType): string {
   return t(`tooltip.types.${TYPE_KEYS[type] ?? type}`);
 }
 
+/** "1:05:32" once past an hour, otherwise "m:ss" -- mirrors the real client's buff/reuse countdown format instead of a raw millisecond count. */
+function formatRemaining(ms: number): string {
+  const totalSeconds = Math.ceil(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const ss = String(seconds).padStart(2, "0");
+  return hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}:${ss}` : `${minutes}:${ss}`;
+}
+
 /**
  * "full" shows grade/equipped/cost/id -- reserved for the item/skill's own
  * domain window (inventory / skills-list), where that detail is the point.
@@ -113,7 +123,7 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
             <div style={{ marginTop: 6 }}>{t("tooltip.costLabel", { cost: info.cost })}</div>
           )}
           {remainingMs !== undefined && (
-            <div style={{ marginTop: 6 }}>{t("tooltip.remainingLabel", { ms: remainingMs })}</div>
+            <div style={{ marginTop: 6 }}>{t("tooltip.remainingLabel", { time: formatRemaining(remainingMs) })}</div>
           )}
           {isFull && <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>}
         </>
