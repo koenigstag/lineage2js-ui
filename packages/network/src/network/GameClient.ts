@@ -41,6 +41,8 @@ export default class GameClient extends MMOClient {
   AcquireSkillList: AcquireSkillList | undefined = undefined;
   /** `${id}_${level}` -> last AcquireSkillInfo received for it (authoritative SpCost/Requirements). */
   AcquireSkillInfoByKey: Map<string, AcquireSkillInfo> = new Map();
+  /** Healing-potion reuse-cooldown icon, see ShortBuffStatusUpdate.ts -- a single value, not a collection, unlike BuffsList. */
+  ShortBuff: L2Buff | undefined = undefined;
 
   LastConfirmMessageId!: number;
   LastConfirmMessageRequesterId!: number;
@@ -96,6 +98,7 @@ export default class GameClient extends MMOClient {
     this.PledgeInfoByClanId.clear();
     this.AcquireSkillList = undefined;
     this.AcquireSkillInfoByKey.clear();
+    this.ShortBuff = undefined;
   }
 
   encrypt(buf: Uint8Array, offset: number, size: number): void {

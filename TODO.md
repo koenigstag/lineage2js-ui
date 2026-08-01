@@ -15,7 +15,7 @@
 - Add NPC dialog system -- render engine and actions
 - Add item/skill/action descriptions -- no per-id table exists yet
 - Parse ExBasicActionList (see Unhandled packets) and use it to drive the Actions window's per-slot enabled state -- currently each action's availability is a hand-written isEnabled(game) predicate (user-actions.ts), not the server's actual allowed-action-id list, so it can't reflect e.g. a transform's restricted action set
-- Parse ShortBuffStatusUpdate (see Unhandled packets) and render it as its own row in the buffs window (effects.window.tsx), below the regular game.buffs row -- it's the healing-potion reuse-cooldown icon, sent separately from AbnormalStatusUpdate/game.buffs (lineage2ts's BuffInfo.isShortBuff() explicitly excludes it from the normal buff list)
+- Split game.buffs into Buff/Song-Dance/Toggle/Debuff rows in effects.window.tsx (Short buff already has its own row) -- AbnormalStatusUpdate's wire format has no per-entry type tag, so this needs a local skill-type table (same gap as item/skill/action descriptions) to classify each id the way lineage2ts's Skill.isDance()/isToggle()/isDebuff do server-side
 
 
 # Long-term TODOs
@@ -64,7 +64,6 @@ instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
   - ChairSit (0xed) -- sit animation on a static chair/throne object
   - Dice (0xda) -- dice-roll emote result
   - ShowCalculator (0xe2) -- opens the in-client crafting calculator
-  - ShortBuffStatusUpdate (0xfa) -- compact buff-icon update (id/level/remaining only, no full AbnormalStatusUpdate)
   - PetitionVotePacket (0xfc) -- GM petition satisfaction survey prompt
   - GMHennaInfo (0xf0) -- henna dye-stat breakdown shown in the GM panel
   - AgitDecoInfo (0xfd) -- clan hall ("Agit") interior decoration/function list

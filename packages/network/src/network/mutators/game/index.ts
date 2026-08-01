@@ -85,6 +85,8 @@ import ReviveMutator from "./ReviveMutator";
 import Revive from "../../incoming/game/Revive";
 import SetupGaugeMutator from "./SetupGaugeMutator";
 import SetupGauge from "../../incoming/game/SetupGauge";
+import ShortBuffStatusUpdateMutator from "./ShortBuffStatusUpdateMutator";
+import ShortBuffStatusUpdate from "../../incoming/game/ShortBuffStatusUpdate";
 import ShortCutInitMutator from "./ShortCutInitMutator";
 import ShortCutInit from "../../incoming/game/ShortCutInit";
 import ShortCutRegisterMutator from "./ShortCutRegisterMutator";
@@ -160,6 +162,7 @@ export default [
   [SetupGaugeMutator.prototype, SetupGauge],
   [SkillCoolTimeMutator.prototype, SkillCoolTime],
   [SkillListMutator.prototype, SkillList],
+  [ShortBuffStatusUpdateMutator.prototype, ShortBuffStatusUpdate],
   [ShortCutInitMutator.prototype, ShortCutInit],
   [ShortCutRegisterMutator.prototype, ShortCutRegister],
   [ShortCutDeleteMutator.prototype, ShortCutDelete],

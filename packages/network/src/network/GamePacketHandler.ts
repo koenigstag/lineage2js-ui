@@ -345,6 +345,9 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
         case 0xf9:
           rpk = new Packets.EtcStatusUpdate();
           break;
+        case 0xfa:
+          rpk = new Packets.ShortBuffStatusUpdate();
+          break;
         case 0xfe: {
           const sub = data[1] + (data[2] << 8);
           switch (sub) {

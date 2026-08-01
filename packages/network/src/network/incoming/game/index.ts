@@ -84,6 +84,7 @@ import Revive from "./Revive";
 import SendTradeRequest from "./SendTradeRequest";
 import ServerClose from "./ServerClose";
 import SetupGauge from "./SetupGauge";
+import ShortBuffStatusUpdate from "./ShortBuffStatusUpdate";
 import ShortCutDelete from "./ShortCutDelete";
 import ShortCutInit from "./ShortCutInit";
 import ShortCutRegister from "./ShortCutRegister";
@@ -218,6 +219,7 @@ export {
   SendTradeRequest,
   ServerClose,
   SetupGauge,
+  ShortBuffStatusUpdate,
   ShortCutDelete,
   ShortCutInit,
   ShortCutRegister,

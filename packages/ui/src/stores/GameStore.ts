@@ -736,6 +736,8 @@ export class GameStore {
   hotbarSlots: (L2Shortcut | undefined)[] = createDemoHotbarShortcuts(this.inventoryItems);
   skills: L2Skill[] = createDemoSkills();
   buffs: L2Buff[] = createDemoBuffs();
+  /** Healing-potion reuse-cooldown icon, see ShortBuffStatusUpdate.ts -- a single value, not part of buffs (own row in effects.window.tsx). No demo data: no verified real skill id to fake it with. */
+  shortBuff: L2Buff | undefined = undefined;
   charInfo: CharInfoSnapshot = createDemoCharInfo();
   party: L2PartyMember[] = createDemoParty();
   /** Currently selected attack/spell/buff target, if any -- see target-select window. */
@@ -952,6 +954,9 @@ export class GameStore {
     const syncBuffs = () => runInAction(() => {
       this.buffs = Array.from(client.BuffsList);
     });
+    const syncShortBuff = () => runInAction(() => {
+      this.shortBuff = client.ShortBuff;
+    });
     const syncHotbar = () => runInAction(() => {
       const slots: (L2Shortcut | undefined)[] = new Array(HOTBAR_SLOT_COUNT).fill(undefined);
       client.Shortcuts.forEach((shortcut) => {
@@ -1062,6 +1067,7 @@ export class GameStore {
     client.on("PacketReceived", "SkillList", syncSkills);
     client.on("PacketReceived", "SkillCoolTime", syncSkills);
     client.on("PacketReceived", "AbnormalStatusUpdate", syncBuffs);
+    client.on("PacketReceived", "ShortBuffStatusUpdate", syncShortBuff);
     client.on("PacketReceived", "ShortCutInit", syncHotbar);
     client.on("PacketReceived", "ShortCutRegister", syncHotbar);
     client.on("PacketReceived", "ShortCutDelete", syncHotbar);
