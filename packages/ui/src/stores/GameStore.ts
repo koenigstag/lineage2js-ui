@@ -25,6 +25,7 @@ import {
   type EConfirmDlg,
   type EPartyRequest,
   type ETradeRequest,
+  type ERequestedDuel,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
@@ -695,6 +696,8 @@ export class GameStore {
   partyInviteRequest: { requestorName: string; distributionType: PartyDistributionType } | undefined = undefined;
   /** Pending trade request (SendTradeRequest -> "TradeRequest") -- drives the "trade-request" window. This client has no trade session UI yet, so accepting only sends the answer; the server's follow-up TradeStart isn't consumed. Cleared on accept/decline or the next world-enter. */
   tradeRequest: { requesterId: number; requesterName: string } | undefined = undefined;
+  /** Pending duel request (ExDuelAskStart -> "RequestedDuel") -- drives the "duel-request" window. This client has no duel-in-progress UI yet, so accepting only sends the answer. Cleared on accept/decline or the next world-enter. */
+  duelRequest: { requestorName: string; partyDuel: boolean } | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -777,6 +780,16 @@ export class GameStore {
   declineTradeRequest() {
     this.client?.declineTradeRequest();
     this.tradeRequest = undefined;
+  }
+
+  acceptDuel() {
+    this.client?.acceptDuel();
+    this.duelRequest = undefined;
+  }
+
+  declineDuel() {
+    this.client?.declineDuel();
+    this.duelRequest = undefined;
   }
 
   /**
@@ -1079,6 +1092,7 @@ export class GameStore {
       this.resurrectRequest = undefined;
       this.partyInviteRequest = undefined;
       this.tradeRequest = undefined;
+      this.duelRequest = undefined;
     }));
     // Henna stat bonuses arrive via their own packet, sent right after
     // world-enter (see EnterWorld.java in the H5 reference server) --
@@ -1192,6 +1206,15 @@ export class GameStore {
       this.tradeRequest = {
         requesterId: e.data.requesterId,
         requesterName: e.data.requesterName,
+      };
+    }));
+
+    // Drives the "duel-request" window. Accepting only sends the answer --
+    // this client has no duel-in-progress UI yet.
+    client.on("RequestedDuel", (e: ERequestedDuel) => runInAction(() => {
+      this.duelRequest = {
+        requestorName: e.data.requestorName,
+        partyDuel: e.data.partyDuel,
       };
     }));
 

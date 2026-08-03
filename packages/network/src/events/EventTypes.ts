@@ -59,7 +59,7 @@ export declare type EAttacked = {
 };
 export declare type ERequestedDuel = {
   type: string;
-  data: { requestorName: string };
+  data: { requestorName: string; partyDuel: boolean };
   once: boolean;
 };
 export declare type EStartMoving = {

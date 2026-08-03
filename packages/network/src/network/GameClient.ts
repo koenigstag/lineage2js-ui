@@ -46,6 +46,8 @@ export default class GameClient extends MMOClient {
 
   LastConfirmMessageId!: number;
   LastConfirmMessageRequesterId!: number;
+  /** Whether the pending duel request (ExDuelAskStart) was a party duel -- RequestDuelAnswerStart echoes it back, the server doesn't track it per-requester like ConfirmDlg's messageId/requesterId. */
+  LastDuelPartyDuel!: boolean;
 
   get BuffsList(): L2ObjectCollection<L2Buff> {
     return this.ActiveChar.Buffs;

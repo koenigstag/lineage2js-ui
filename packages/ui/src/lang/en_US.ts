@@ -261,6 +261,13 @@ export const LANG_EN_US: LangDictionary = {
     acceptButton: "Accept",
     declineButton: "Decline",
   },
+  duelRequest: {
+    title: "Duel Request",
+    message: "{name} challenges you to a duel.",
+    partyMessage: "{name} challenges your party to a duel.",
+    acceptButton: "Accept",
+    declineButton: "Decline",
+  },
   tooltip: {
     types: {
       skill: "Skill",

@@ -18,6 +18,7 @@ import { SkillLearnContent } from "../skill/skill.window";
 import { ResurrectConfirmContent } from "../resurrect/resurrect.window";
 import { PartyInviteConfirmContent } from "../party-invite/party-invite.window";
 import { TradeRequestConfirmContent } from "../trade-request/trade-request.window";
+import { DuelRequestConfirmContent } from "../duel-request/duel-request.window";
 import { useGameStore } from "../../../stores/StoreContext";
 
 export interface WindowsRootProps {
@@ -45,6 +46,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     resurrect: () => <ResurrectConfirmContent />,
     "party-invite": () => <PartyInviteConfirmContent />,
     "trade-request": () => <TradeRequestConfirmContent />,
+    "duel-request": () => <DuelRequestConfirmContent />,
   };
 
   return (
@@ -73,6 +75,10 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
         }
         // No pending trade request -- same treatment.
         if (id === "trade-request" && !game.tradeRequest) {
+          return null;
+        }
+        // No pending duel request -- same treatment.
+        if (id === "duel-request" && !game.duelRequest) {
           return null;
         }
 

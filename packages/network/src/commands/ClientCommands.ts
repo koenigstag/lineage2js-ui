@@ -158,6 +158,14 @@ export default interface ClientCommands {
    */
   declineTradeRequest(): void;
   /**
+   * Accepts the requested duel
+   */
+  acceptDuel(): void;
+  /**
+   * Declines the requested duel
+   */
+  declineDuel(): void;
+  /**
    * Select next/closest attackable target
    */
   nextTarget(): L2Creature | undefined;

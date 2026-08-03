@@ -261,6 +261,13 @@ export const LANG_RU_RU: LangDictionary = {
     acceptButton: "Принять",
     declineButton: "Отказаться",
   },
+  duelRequest: {
+    title: "Вызов на дуэль",
+    message: "{name} вызывает вас на дуэль.",
+    partyMessage: "{name} вызывает вашу группу на дуэль.",
+    acceptButton: "Принять",
+    declineButton: "Отказаться",
+  },
   tooltip: {
     types: {
       skill: "Навык",

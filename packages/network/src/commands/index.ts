@@ -1,3 +1,4 @@
+import CommandAcceptDuel from "./CommandAcceptDuel";
 import CommandAcceptJoinParty from "./CommandAcceptJoinParty";
 import CommandAcceptResurrect from "./CommandAcceptResurrect";
 import CommandAcceptTradeRequest from "./CommandAcceptTradeRequest";
@@ -9,6 +10,7 @@ import CommandCancelTarget from "./CommandCancelTarget";
 import CommandCast from "./CommandCast";
 import CommandCraft from "./CommandCraft";
 import CommandCreateCharacter from "./CommandCreateCharacter";
+import CommandDeclineDuel from "./CommandDeclineDuel";
 import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
 import CommandDeclineResurrect from "./CommandDeclineResurrect";
 import CommandDeclineTradeRequest from "./CommandDeclineTradeRequest";
@@ -45,7 +47,8 @@ import CommandValidatePosition from "./CommandValidatePosition";
 
 
   export default {
-    acceptJoinParty: CommandAcceptJoinParty.prototype,
+    acceptDuel: CommandAcceptDuel.prototype,
+  acceptJoinParty: CommandAcceptJoinParty.prototype,
   acceptResurrect: CommandAcceptResurrect.prototype,
   acceptTradeRequest: CommandAcceptTradeRequest.prototype,
   action: CommandAction.prototype,
@@ -56,6 +59,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   cast: CommandCast.prototype,
   craft: CommandCraft.prototype,
   createCharacter: CommandCreateCharacter.prototype,
+  declineDuel: CommandDeclineDuel.prototype,
   declineJoinParty: CommandDeclineJoinParty.prototype,
   declineResurrect: CommandDeclineResurrect.prototype,
   declineTradeRequest: CommandDeclineTradeRequest.prototype,
