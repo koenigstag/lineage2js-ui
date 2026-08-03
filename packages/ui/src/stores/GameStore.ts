@@ -535,6 +535,7 @@ const BATTLE_LOG_MAX_ENTRIES = 200;
 // a fuller one exists; see public/system-messages/en.json for the full
 // L2J_Mobius-sourced id->template table this pulls display text from.
 const BATTLE_LOG_MESSAGE_IDS = new Set([
+  34, // Welcome to the World of Lineage II. -- also doubles as AbstractEnterWorldCommand's enter-world sync signal, see its own doc comment.
   35, // You hit for $s1 damage.
   36, // $c1 hit you for $s2 damage.
   37, // $c1 hit you for $s2 damage.
