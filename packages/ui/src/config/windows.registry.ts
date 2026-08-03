@@ -83,7 +83,7 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     draggable: false,
   },
   clan: { id: "clan", type: "titlebar", title: "windows.clan", closable: true, draggable: true },
-  actions: { id: "actions", type: "titlebar", title: "windows.actions", icon: "🤜", closable: true, draggable: true },
+  actions: { id: "actions", type: "titlebar", title: "windows.actions", closable: true, draggable: true },
   macroses: {
     id: "macroses",
     type: "titlebar",
