@@ -12,6 +12,8 @@ import AbstractGameCommand from "./AbstractGameCommand";
 // servers from CommandLogin's result, log into it, and hand off to the game
 // server. Resolves with the account's existing characters on that server.
 export default class CommandSelectServer extends AbstractGameCommand {
+  static requiresConnection = false;
+
   execute(serverId: number): Promise<L2User[]> {
     return new Promise((resolve, reject) => {
       const server = this.LoginClient.Servers.find((s) => s.Id === serverId);

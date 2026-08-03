@@ -760,30 +760,22 @@ export class GameStore {
   }
 
   acceptPartyInvite() {
-    if (this.client?.GameClient.IsConnected) {
-      this.client.acceptJoinParty();
-    }
+    this.client?.acceptJoinParty();
     this.partyInviteRequest = undefined;
   }
 
   declinePartyInvite() {
-    if (this.client?.GameClient.IsConnected) {
-      this.client.declineJoinParty();
-    }
+    this.client?.declineJoinParty();
     this.partyInviteRequest = undefined;
   }
 
   acceptTradeRequest() {
-    if (this.client?.GameClient.IsConnected) {
-      this.client.acceptTradeRequest();
-    }
+    this.client?.acceptTradeRequest();
     this.tradeRequest = undefined;
   }
 
   declineTradeRequest() {
-    if (this.client?.GameClient.IsConnected) {
-      this.client.declineTradeRequest();
-    }
+    this.client?.declineTradeRequest();
     this.tradeRequest = undefined;
   }
 

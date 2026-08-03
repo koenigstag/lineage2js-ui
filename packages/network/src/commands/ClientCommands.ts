@@ -279,12 +279,23 @@ export default abstract class ClientCommands {
           return Reflect.get(target, propertyKey, receiver);
         }
         if (propertyKey in commands) {
-          const cmd = Object.create((commands as any)[propertyKey] as AbstractGameCommand, {
+          const prototype = (commands as any)[propertyKey] as AbstractGameCommand;
+          const cmd = Object.create(prototype, {
             LoginClient: { value: (target as any).LoginClient },
             GameClient: { value: (target as any).GameClient },
           });
           target.logger.debug("Command", propertyKey);
-          return (...args: any) => cmd.execute(...args);
+          return (...args: any) => {
+            // requiresConnection lives on the command class (a static, see
+            // AbstractGameCommand), not the instance -- prototype.constructor
+            // resolves to that class without needing to construct cmd first.
+            const commandClass = prototype.constructor as typeof AbstractGameCommand;
+            if (commandClass.requiresConnection && !target.GameClient.IsConnected) {
+              target.logger.debug("Skipped (not connected)", propertyKey);
+              return undefined;
+            }
+            return cmd.execute(...args);
+          };
         }
       },
     });

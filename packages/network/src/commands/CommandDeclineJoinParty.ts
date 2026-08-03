@@ -3,7 +3,7 @@ import RequestAnswerJoinParty from "../network/outgoing/game/RequestAnswerJoinPa
 
 export default class CommandDeclineJoinParty extends AbstractGameCommand {
   execute(): void {
-    this.GameClient?.sendPacket(
+    this.GameClient.sendPacket(
       new RequestAnswerJoinParty(RequestAnswerJoinParty.ANSWER_CANCEL)
     );
   }
