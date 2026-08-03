@@ -141,8 +141,8 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     origin: "bottom-left",
     defaultPosition: () => ({ x: 10, y: 10 }),
   },
-  battlelog: {
-    id: "battlelog",
+  "system-messages": {
+    id: "system-messages",
     type: "sidebar",
     closable: false,
     draggable: true,
@@ -216,7 +216,7 @@ export const GAME_WINDOW_IDS = [
   "game-menu",
   "hotbar",
   "chat",
-  "battlelog",
+  "system-messages",
   "effects",
   "radar",
   "char-info",

@@ -20,8 +20,8 @@ function tabLabel(tab: ChatTab): string {
     : t(CHAT_CHANNEL_LABEL_KEY[tab]);
 }
 
-// Same custom-scrollbar treatment as battlelog.window.tsx -- see
-// .battle-log-hide-native-scrollbar in index.css.
+// Same custom-scrollbar treatment as system-messages.window.tsx -- see
+// .hide-native-scrollbar in index.css.
 export const ChatContent = observer(function ChatContent() {
   const game = useGameStore();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -79,7 +79,7 @@ export const ChatContent = observer(function ChatContent() {
       style={{ display: "flex", flexDirection: "column", width: WIDTH, gap: 4 }}
     >
       <div
-        className="battle-log-hide-native-scrollbar"
+        className="hide-native-scrollbar"
         style={{ display: "flex", gap: 2, overflowX: "auto" }}
       >
         {CHAT_TABS.filter((tab) => showTabs.includes(tab)).map((tab) => {
@@ -110,7 +110,7 @@ export const ChatContent = observer(function ChatContent() {
       </div>
       <div
         ref={scrollRef}
-        className="battle-log-hide-native-scrollbar"
+        className="hide-native-scrollbar"
         style={{
           height: LOG_HEIGHT,
           overflowY: "scroll",

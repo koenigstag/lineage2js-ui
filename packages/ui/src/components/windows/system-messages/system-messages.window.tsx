@@ -22,13 +22,14 @@ function measureThumb(el: HTMLDivElement): ThumbGeometry {
   return { top, height };
 }
 
-// Scrolling combat text feed -- see GameStore.battleLog/BATTLE_LOG_MESSAGE_IDS.
+// Scrolling system-message feed (combat text plus everything else not
+// filtered by isNoisySystemMessage()) -- see GameStore.systemMessages.
 // Native scrollbars are hidden and replaced with a custom always-drawn
-// track+thumb (see index.css's .battle-log-hide-native-scrollbar): modern
-// Chromium/GTK increasingly default to "overlay" scrollbars that reserve no
-// layout space and only paint while actively scrolling, which reads as "no
-// scrollbar at all" for a HUD element like this one.
-export const BattleLogContent = observer(function BattleLogContent() {
+// track+thumb (see index.css's .hide-native-scrollbar):
+// modern Chromium/GTK increasingly default to "overlay" scrollbars that
+// reserve no layout space and only paint while actively scrolling, which
+// reads as "no scrollbar at all" for a HUD element like this one.
+export const SystemMessagesContent = observer(function SystemMessagesContent() {
   const game = useGameStore();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [thumb, setThumb] = useState<ThumbGeometry>({ top: 0, height: HEIGHT });
@@ -39,13 +40,13 @@ export const BattleLogContent = observer(function BattleLogContent() {
       el.scrollTop = el.scrollHeight;
       setThumb(measureThumb(el));
     }
-  }, [game.battleLog]);
+  }, [game.systemMessages]);
 
   return (
     <div style={{ display: "flex", flexDirection: "row", width: WIDTH, height: HEIGHT }}>
       <div
         ref={scrollRef}
-        className="battle-log-hide-native-scrollbar"
+        className="hide-native-scrollbar"
         onScroll={(event) => setThumb(measureThumb(event.currentTarget))}
         style={{
           flex: 1,
@@ -56,7 +57,7 @@ export const BattleLogContent = observer(function BattleLogContent() {
           gap: 2,
         }}
       >
-        {game.battleLog.map((entry) => (
+        {game.systemMessages.map((entry) => (
           <div key={entry.id} style={{ color: "#c8b892", fontSize: 12, lineHeight: 1.3 }}>
             {entry.text}
           </div>

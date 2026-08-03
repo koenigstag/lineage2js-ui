@@ -12,7 +12,7 @@ import { CharInfoContent } from "../char-info/char-info.window";
 import { CharacterContent } from "../character/character.window";
 import { PartyCharInfoContent } from "../party-char-info/party-char-info.window";
 import { TargetSelectContent } from "../target-select/target-select.window";
-import { BattleLogContent } from "../battlelog/battlelog.window";
+import { SystemMessagesContent } from "../system-messages/system-messages.window";
 import { ChatContent } from "../chat/chat.window";
 import { SkillLearnContent } from "../skill/skill.window";
 import { useGameStore } from "../../../stores/StoreContext";
@@ -36,7 +36,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     "char-info": () => <CharInfoContent />,
     "party-char-info": () => <PartyCharInfoContent onMemberClick={(member) => game.selectTarget(member)} />,
     "target-select": () => <TargetSelectContent />,
-    battlelog: () => <BattleLogContent />,
+    "system-messages": () => <SystemMessagesContent />,
     chat: () => <ChatContent />,
     skill: () => <SkillLearnContent />,
   };

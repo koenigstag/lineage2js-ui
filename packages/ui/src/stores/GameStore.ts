@@ -23,7 +23,7 @@ import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
 import { getNpcName } from "../config/npc-name-mapping";
-import { formatSystemMessage } from "../config/system-message-mapping";
+import { formatSystemMessage, isNoisySystemMessage } from "../config/system-message-mapping";
 
 /** A nearby NPC/mob/other player as reported by NpcInfo/CharInfo, for the world scene (not the target-select window -- see TargetSnapshot for that). */
 export interface WorldCreatureSnapshot {
@@ -520,51 +520,16 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
   };
 }
 
-export interface BattleLogEntry {
+export interface SystemMessageEntry {
   id: number;
   text: string;
 }
 
-let nextBattleLogEntryId = 1;
-const BATTLE_LOG_MAX_ENTRIES = 200;
+let nextSystemMessageEntryId = 1;
+const SYSTEM_MESSAGES_MAX_ENTRIES = 200;
 
-// SystemMessage is the wire's only channel for combat text, but it's also
-// used for mail/trade/guild/etc -- real L2 routes each messageId to a chat
-// tab client-side (there's no channel tag on the wire itself). This is a
-// curated subset of combat-relevant ids standing in for that routing until
-// a fuller one exists; see public/system-messages/en.json for the full
-// L2J_Mobius-sourced id->template table this pulls display text from.
-const BATTLE_LOG_MESSAGE_IDS = new Set([
-  34, // Welcome to the World of Lineage II. -- also doubles as AbstractEnterWorldCommand's enter-world sync signal, see its own doc comment.
-  35, // You hit for $s1 damage.
-  36, // $c1 hit you for $s2 damage.
-  37, // $c1 hit you for $s2 damage.
-  42, // You have avoided $c1's attack.
-  43, // You have missed.
-  44, // Critical hit!
-  1280, // Magic Critical Hit!
-  1999, // $c1 dodges the attack.
-  2261, // $c1 has done $s3 points of damage to $c2.
-  2262, // $c1 has received $s3 damage from $c2.
-  2264, // $c1 has evaded $c2's attack.
-  2266, // $c1 landed a critical hit!
-  2269, // $c1 resisted $c2's magic.
-  2344, // You have been killed by an attack from $c1.
-  2345, // You have attacked and killed $c1.
-
-  // Vitality level changes (confirmed against lineage2ts's PcStats.ts --
-  // sent from updateVitalityLevel() only, i.e. NOT on every ordinary solo
-  // kill's vitality drain (that path calls addVitalityPoints with
-  // sendUpdate=false); real triggers are the periodic online regen tick,
-  // party-kill vitality gains, and Vitality Herb-style skill effects).
-  2314, // Your Vitality is at maximum.
-  2315, // Your Vitality has increased.
-  2316, // Your Vitality has decreased.
-  2317, // Your Vitality is fully exhausted.
-]);
-
-function demoBattleLogEntry(text: string): BattleLogEntry {
-  return { id: nextBattleLogEntryId++, text };
+function demoSystemMessageEntry(text: string): SystemMessageEntry {
+  return { id: nextSystemMessageEntryId++, text };
 }
 
 export interface ChatMessage {
@@ -581,8 +546,8 @@ function demoChatMessage(channel: number, senderName: string, text: string): Cha
   return { id: nextChatMessageId++, channel, senderName, text };
 }
 
-// Same demo-first treatment as battleLog -- a few representative lines
-// across channels before any real CreatureSay has arrived.
+// Same demo-first treatment as systemMessages -- a few representative
+// lines across channels before any real CreatureSay has arrived.
 function createDemoChatMessages(): ChatMessage[] {
   return [
     demoChatMessage(ChatType.GENERAL, "DemoRanger", "anyone selling soulshots?"),
@@ -594,12 +559,12 @@ function createDemoChatMessages(): ChatMessage[] {
 
 // Same demo-first treatment as everywhere else -- a few representative
 // lines before any real SystemMessage has arrived.
-function createDemoBattleLog(): BattleLogEntry[] {
+function createDemoSystemMessages(): SystemMessageEntry[] {
   return [
-    demoBattleLogEntry("You hit for 245 damage."),
-    demoBattleLogEntry("Critical hit!"),
-    demoBattleLogEntry("Ant Soldier has evaded your attack."),
-    demoBattleLogEntry("You have attacked and killed Ant Soldier."),
+    demoSystemMessageEntry("You hit for 245 damage."),
+    demoSystemMessageEntry("Critical hit!"),
+    demoSystemMessageEntry("Ant Soldier has evaded your attack."),
+    demoSystemMessageEntry("You have attacked and killed Ant Soldier."),
   ];
 }
 
@@ -745,8 +710,8 @@ export class GameStore {
   target: TargetSnapshot | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
-  /** Combat text feed, see battlelog window and BATTLE_LOG_MESSAGE_IDS. */
-  battleLog: BattleLogEntry[] = createDemoBattleLog();
+  /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. */
+  systemMessages: SystemMessageEntry[] = createDemoSystemMessages();
   /** Chat log feed, see chat window and recordChatMessage/sendChatMessage. */
   chatMessages: ChatMessage[] = createDemoChatMessages();
   /** Skills-list "Learn" tab data, see LearnableSkillSnapshot. */
@@ -869,12 +834,14 @@ export class GameStore {
     this.selectedLearnableSkill = undefined;
   }
 
-  private recordBattleLogMessage(messageId: number, params: unknown[], paramTypes: number[]) {
-    if (!BATTLE_LOG_MESSAGE_IDS.has(messageId)) {
+  private recordSystemMessage(messageId: number, params: unknown[], paramTypes: number[]) {
+    if (isNoisySystemMessage(messageId)) {
       return;
     }
     const text = formatSystemMessage(messageId, params, paramTypes);
-    this.battleLog = [...this.battleLog, { id: nextBattleLogEntryId++, text }].slice(-BATTLE_LOG_MAX_ENTRIES);
+    this.systemMessages = [...this.systemMessages, { id: nextSystemMessageEntryId++, text }].slice(
+      -SYSTEM_MESSAGES_MAX_ENTRIES
+    );
   }
 
   private recordChatMessage(channel: number, senderName: string, text: string) {
@@ -1136,7 +1103,7 @@ export class GameStore {
     }));
 
     client.on("SystemMessage", (e: ESystemMessage) => {
-      runInAction(() => this.recordBattleLogMessage(e.data.messageId, e.data.params, e.data.paramTypes));
+      runInAction(() => this.recordSystemMessage(e.data.messageId, e.data.params, e.data.paramTypes));
     });
 
     client.on("CreatureSay", (e: ECreatureSay) => {
