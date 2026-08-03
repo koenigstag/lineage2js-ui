@@ -28,7 +28,6 @@ export const ConfirmationModal = observer(function ConfirmationModal({
         inset: 0,
         zIndex: MODAL_Z_INDEX,
         backgroundColor: "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

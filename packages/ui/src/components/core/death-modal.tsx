@@ -28,7 +28,6 @@ export const DeathModal = observer(function DeathModal() {
         inset: 0,
         zIndex: MODAL_Z_INDEX,
         backgroundColor: "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
