@@ -53,6 +53,8 @@ instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
   - GameGuardQuery (0x74) -- anti-cheat client challenge (legacy GameGuard handshake, not relevant to a browser client)
   - MagicSkillCanceled (0x49) -- stops a skill's cast animation on the client mid-cast
   - QuestList (0x86) -- full list of the player's active/completed quests
+  - SendMacroList (0xe8) -- account macro list, sent unprompted right after world-enter alongside ItemList/SkillList (confirmed on the wire: opcode 0xe8, 8-byte empty-list payload)
+  - PlaySound (0x9e) -- plays a named sound effect client-side (also seen twice, unprompted, in the same world-enter burst)
   - ExShowQuestInfo (0xfe/0x20) -- toggles the quest-tracker UI panel
   - ExShowQuestMark (0xfe/0x21) -- marks a quest-related NPC/location on the map
   - PackageSendableList (0xd2) -- items eligible for Freight (parcel-send to another character)
