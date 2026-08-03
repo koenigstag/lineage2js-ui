@@ -112,6 +112,11 @@ const NEXT_TARGET: Action = {
   dispatch: (game) => game.selectNextTarget(),
 };
 
+const PICK_UP: Action = {
+  code: Actions.PICK_UP,
+  dispatch: (game) => game.pickUpNearestItem(),
+};
+
 const INVITE: Action = {
   code: Actions.INVITE,
   dispatch: (game) => game.inviteToParty(),
@@ -185,10 +190,7 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     ATTACK,
     EXCHANGE,
     NEXT_TARGET,
-    // Picks up the nearest droppable item -- no target needed, unlike
-    // clicking a specific ground item directly (which this client has no
-    // rendering/targeting for yet, see DropItemMutator/DroppedItems).
-    simpleAction(Actions.PICK_UP),
+    PICK_UP,
     ASSIST,
     simpleAction(Actions.PRIVATE_STORE_SELL),
     simpleAction(Actions.PRIVATE_STORE_BUY),

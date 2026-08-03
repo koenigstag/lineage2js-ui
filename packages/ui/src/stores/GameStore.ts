@@ -948,6 +948,29 @@ export class GameStore {
   }
 
   /**
+   * Picks up the nearest tracked dropped item. RequestActionUse has no case
+   * for PICK_UP at all (confirmed against the reference server's
+   * RequestActionUse.java -- ids 2-9 aren't handled there, they all have
+   * their own dedicated packets), so this is presumably the same trick the
+   * real client plays: find the closest item and click it exactly like the
+   * player would (client.hit(), the same Action packet DropItemMutator's
+   * Distance -- computed once at drop time -- exists to support). No-ops
+   * when nothing is tracked nearby.
+   */
+  pickUpNearestItem() {
+    let nearest: L2Item | undefined;
+    for (const item of this.client?.DroppedItems ?? []) {
+      if (!nearest || item.Distance < nearest.Distance) {
+        nearest = item;
+      }
+    }
+    if (!nearest) {
+      return;
+    }
+    this.client?.hit(nearest);
+  }
+
+  /**
    * Opens the skill's detail window and, when connected, asks the trainer
    * for its authoritative SpCost/Requirements (RequestAcquireSkillInfo) --
    * syncSkillRequirements picks up the AcquireSkillInfo reply and fills in
