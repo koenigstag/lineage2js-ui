@@ -251,6 +251,17 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     defaultPosition: () => ({ x: 0, y: 410 }),
     zIndex: CONFIRM_WINDOW_Z_INDEX,
   },
+  "pair-action-request": {
+    id: "pair-action-request",
+    type: "titlebar",
+    title: "pairActionRequest.title",
+    closable: false,
+    draggable: true,
+    defaultOpen: true,
+    origin: "top-center",
+    defaultPosition: () => ({ x: 0, y: 520 }),
+    zIndex: CONFIRM_WINDOW_Z_INDEX,
+  },
 };
 
 export const GAME_WINDOW_IDS = [
@@ -279,6 +290,7 @@ export const GAME_WINDOW_IDS = [
   "party-invite",
   "trade-request",
   "duel-request",
+  "pair-action-request",
 ];
 
 export const LOGIN_WINDOW_IDS = ["settings"];

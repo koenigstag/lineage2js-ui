@@ -73,7 +73,6 @@ instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
   - ExColosseumFenceInfo (0xfe/0x03) -- Olympiad arena fence/barrier state
   - ExAutoSoulShot (0xfe/0x0c) -- server ack for the auto-soulshot toggle
   - ExSpawnEmitter (0xfe/0x5d) -- spawns a particle-effect emitter tied to an NPC
-  - ExAskCoupleAction (0xfe/0xbb) -- wedding/couple social-action request prompt
   - ExChangeNpcState (0xfe/0xbe) -- visual NPC state-flag change (e.g. siege golem/machine states)
   - ExItemAuctionInfoPacket (0xfe/0x68) -- item auction house listing state
   - ExReplyDominionInfo (0xfe/0x92) -- Territory War dominion/ward ownership state

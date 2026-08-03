@@ -146,6 +146,10 @@ export default interface ClientCommands {
    */
   requestJoinParty(char?: L2Character | string): void;
   /**
+   * Leaves the current party
+   */
+  leaveParty(): void;
+  /**
    * Accepts the requested party invite
    */
   acceptJoinParty(): void;
@@ -182,6 +186,14 @@ export default interface ClientCommands {
    */
   declineDuel(): void;
   /**
+   * Accepts the requested pair (couple) social action
+   */
+  acceptCoupleAction(): void;
+  /**
+   * Declines the requested pair (couple) social action
+   */
+  declineCoupleAction(): void;
+  /**
    * Select next/closest attackable target
    */
   nextTarget(): L2Creature | undefined;
@@ -203,8 +215,9 @@ export default interface ClientCommands {
   /**
    * Request player a duel. If no char is provided, the command tries to request the selected target
    * @param char
+   * @param partyDuel challenges the target's whole party instead of just them
    */
-  requestDuel(char?: L2Character | string): void;
+  requestDuel(char?: L2Character | string, partyDuel?: boolean): void;
   /**
    * Enable/disable auto-shots
    * @param item

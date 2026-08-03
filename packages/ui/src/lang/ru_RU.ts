@@ -269,6 +269,12 @@ export const LANG_RU_RU: LangDictionary = {
     acceptButton: "Принять",
     declineButton: "Отказаться",
   },
+  pairActionRequest: {
+    title: "Парное действие",
+    message: "{name} хочет выполнить с вами \"{action}\".",
+    acceptButton: "Принять",
+    declineButton: "Отказаться",
+  },
   tooltip: {
     types: {
       skill: "Навык",

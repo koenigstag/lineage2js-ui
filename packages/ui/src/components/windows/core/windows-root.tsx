@@ -19,6 +19,7 @@ import { ResurrectConfirmContent } from "../resurrect/resurrect.window";
 import { PartyInviteConfirmContent } from "../party-invite/party-invite.window";
 import { TradeRequestConfirmContent } from "../trade-request/trade-request.window";
 import { DuelRequestConfirmContent } from "../duel-request/duel-request.window";
+import { PairActionRequestConfirmContent } from "../pair-action-request/pair-action-request.window";
 import { useGameStore } from "../../../stores/StoreContext";
 
 export interface WindowsRootProps {
@@ -47,6 +48,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     "party-invite": () => <PartyInviteConfirmContent />,
     "trade-request": () => <TradeRequestConfirmContent />,
     "duel-request": () => <DuelRequestConfirmContent />,
+    "pair-action-request": () => <PairActionRequestConfirmContent />,
   };
 
   return (
@@ -79,6 +81,10 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
         }
         // No pending duel request -- same treatment.
         if (id === "duel-request" && !game.duelRequest) {
+          return null;
+        }
+        // No pending pair-action request -- same treatment.
+        if (id === "pair-action-request" && !game.pairActionRequest) {
           return null;
         }
 

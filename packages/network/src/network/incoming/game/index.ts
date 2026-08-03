@@ -23,6 +23,7 @@ import Die from "./Die";
 import DropItem from "./DropItem";
 import EquipUpdate from "./EquipUpdate";
 import EtcStatusUpdate from "./EtcStatusUpdate";
+import ExAskCoupleAction from "./ExAskCoupleAction";
 import ExBasicActionList from "./ExBasicActionList";
 import ExBrExtraUserInfo from "./ExBrExtraUserInfo";
 import ExDuelAskStart from "./ExDuelAskStart";
@@ -159,6 +160,7 @@ export {
   DropItem,
   EquipUpdate,
   EtcStatusUpdate,
+  ExAskCoupleAction,
   ExBasicActionList,
   ExBrExtraUserInfo,
   ExDuelAskStart,

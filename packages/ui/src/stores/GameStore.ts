@@ -27,6 +27,7 @@ import {
   type EPartyRequest,
   type ETradeRequest,
   type ERequestedDuel,
+  type EPairActionRequest,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
@@ -708,6 +709,8 @@ export class GameStore {
   tradeRequest: { requesterId: number; requesterName: string } | undefined = undefined;
   /** Pending duel request (ExDuelAskStart -> "RequestedDuel") -- drives the "duel-request" window. This client has no duel-in-progress UI yet, so accepting only sends the answer. expiresAt is a client-side-only countdown (see DUEL_REQUEST_TIMEOUT_MS's comment) -- unlike resurrect, ExDuelAskStart carries no time field on the wire. Cleared on accept/decline, expiry, or the next world-enter. */
   duelRequest: { requestorName: string; partyDuel: boolean; expiresAt: number } | undefined = undefined;
+  /** Pending pair (couple) social-action request (ExAskCoupleAction -> "PairActionRequest", e.g. High Five/Exchange Bows/Couple Dance) -- drives the "pair-action-request" window. Cleared on accept/decline or the next world-enter. */
+  pairActionRequest: { requesterName: string; actionId: number } | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -802,6 +805,16 @@ export class GameStore {
     this.duelRequest = undefined;
   }
 
+  acceptPairAction() {
+    this.client?.acceptCoupleAction();
+    this.pairActionRequest = undefined;
+  }
+
+  declinePairAction() {
+    this.client?.declineCoupleAction();
+    this.pairActionRequest = undefined;
+  }
+
   /**
    * Recommends the current target (RequestVoteNew) -- only valid for player
    * targets (target.recommHave is only ever set for those, see
@@ -854,13 +867,21 @@ export class GameStore {
     this.client?.requestJoinParty(target.name);
   }
 
-  /** Challenges the current target to a 1v1 duel (RequestDuelStart) -- only valid for a player target. */
-  challengeToDuel() {
+  /** Challenges the current target (or their whole party, if partyDuel) to a duel (RequestDuelStart) -- only valid for a player target. */
+  challengeToDuel(partyDuel = false) {
     const target = this.target;
     if (!target || target.creatureKind) {
       return;
     }
-    this.client?.requestDuel(target.name);
+    this.client?.requestDuel(target.name, partyDuel);
+  }
+
+  /** Leaves the current party (RequestWithDrawalParty) -- only valid while actually in one. */
+  leaveParty() {
+    if (this.party.length === 0) {
+      return;
+    }
+    this.client?.leaveParty();
   }
 
   /** Whether the local player currently leads their own party (see the DISMISS_PARTY_MEMBER/CHANGE_PARTY_LEADER guards below -- the server only honors those requests from the actual leader, per RequestOustPartyMember.java/RequestChangePartyLeader.java). */
@@ -893,6 +914,25 @@ export class GameStore {
       return;
     }
     this.client?.changePartyLeader(target.name);
+  }
+
+  /** Sends a pair (couple) social-action request to the current target (RequestActionUse -- the server relays it to the target as ExAskCoupleAction, see GameStore.pairActionRequest's field comment) -- only valid for a different player target. */
+  requestPairAction(actionKey: "EXCHANGE_BOWS" | "HIGH_FIVE" | "COUPLE_DANCE") {
+    const target = this.target;
+    if (!target || target.creatureKind || target.objectId === this.me) {
+      return;
+    }
+    this.client?.action(actionKey);
+  }
+
+  /** Sends a bare RequestActionUse -- for actions with no precondition beyond the server's ExBasicActionList check already reflected in the slot's visual state (see user-actions.ts). */
+  useBasicAction(actionKey: keyof typeof Actions) {
+    this.client?.action(actionKey);
+  }
+
+  /** Selects the next/closest attackable target (see Client.nextTarget()) -- the resulting MyTargetSelected event is what actually updates `target` (see the syncTarget handler in bindToClient). */
+  selectNextTarget() {
+    this.client?.nextTarget();
   }
 
   /**
@@ -1180,6 +1220,7 @@ export class GameStore {
       this.partyInviteRequest = undefined;
       this.tradeRequest = undefined;
       this.duelRequest = undefined;
+      this.pairActionRequest = undefined;
     }));
     // Henna stat bonuses arrive via their own packet, sent right after
     // world-enter (see EnterWorld.java in the H5 reference server) --
@@ -1303,6 +1344,16 @@ export class GameStore {
         requestorName: e.data.requestorName,
         partyDuel: e.data.partyDuel,
         expiresAt: Date.now() + DUEL_REQUEST_TIMEOUT_MS,
+      };
+    }));
+
+    // Drives the "pair-action-request" window (High Five/Exchange Bows/
+    // Couple Dance). Accepting only sends the answer -- this client has no
+    // couple-action animation playback.
+    client.on("PairActionRequest", (e: EPairActionRequest) => runInAction(() => {
+      this.pairActionRequest = {
+        requesterName: e.data.requesterName,
+        actionId: e.data.actionId,
       };
     }));
 

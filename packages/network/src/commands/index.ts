@@ -1,3 +1,4 @@
+import CommandAcceptCoupleAction from "./CommandAcceptCoupleAction";
 import CommandAcceptDuel from "./CommandAcceptDuel";
 import CommandAcceptJoinParty from "./CommandAcceptJoinParty";
 import CommandAcceptResurrect from "./CommandAcceptResurrect";
@@ -11,6 +12,7 @@ import CommandCast from "./CommandCast";
 import CommandChangePartyLeader from "./CommandChangePartyLeader";
 import CommandCraft from "./CommandCraft";
 import CommandCreateCharacter from "./CommandCreateCharacter";
+import CommandDeclineCoupleAction from "./CommandDeclineCoupleAction";
 import CommandDeclineDuel from "./CommandDeclineDuel";
 import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
 import CommandDeclineResurrect from "./CommandDeclineResurrect";
@@ -20,6 +22,7 @@ import CommandDropItem from "./CommandDropItem";
 import CommandDwarvenCraftRecipes from "./CommandDwarvenCraftRecipes";
 import CommandHit from "./CommandHit";
 import CommandInventory from "./CommandInventory";
+import CommandLeaveParty from "./CommandLeaveParty";
 import CommandLogin from "./CommandLogin";
 import CommandLogout from "./CommandLogout";
 import CommandMoveTo from "./CommandMoveTo";
@@ -50,7 +53,8 @@ import CommandValidatePosition from "./CommandValidatePosition";
 
 
   export default {
-    acceptDuel: CommandAcceptDuel.prototype,
+    acceptCoupleAction: CommandAcceptCoupleAction.prototype,
+  acceptDuel: CommandAcceptDuel.prototype,
   acceptJoinParty: CommandAcceptJoinParty.prototype,
   acceptResurrect: CommandAcceptResurrect.prototype,
   acceptTradeRequest: CommandAcceptTradeRequest.prototype,
@@ -63,6 +67,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   changePartyLeader: CommandChangePartyLeader.prototype,
   craft: CommandCraft.prototype,
   createCharacter: CommandCreateCharacter.prototype,
+  declineCoupleAction: CommandDeclineCoupleAction.prototype,
   declineDuel: CommandDeclineDuel.prototype,
   declineJoinParty: CommandDeclineJoinParty.prototype,
   declineResurrect: CommandDeclineResurrect.prototype,
@@ -72,6 +77,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   dwarvenCraftRecipes: CommandDwarvenCraftRecipes.prototype,
   hit: CommandHit.prototype,
   inventory: CommandInventory.prototype,
+  leaveParty: CommandLeaveParty.prototype,
   login: CommandLogin.prototype,
   logout: CommandLogout.prototype,
   moveTo: CommandMoveTo.prototype,
