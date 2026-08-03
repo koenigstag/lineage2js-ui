@@ -195,10 +195,16 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     simpleAction(Actions.PRIVATE_STORE_SELL),
     simpleAction(Actions.PRIVATE_STORE_BUY),
     simpleAction(Actions.PRIVATE_STORE_PACKAGE_SELL),
-    simpleAction(Actions.FIND_STORE),
+    // FIND_STORE/MINI_GAME have no case in RequestActionUse's switch either
+    // (confirmed against the reference server, same as PICK_UP) -- unlike
+    // Pick Up though, there's no alternate click-based mechanism to fall
+    // back on: both are purely client-side UI panels (private store search,
+    // Cube Game HUD fed entirely by server-pushed ExCubeGame* packets) that
+    // this client hasn't built yet, so no dispatch until they exist.
+    { code: Actions.FIND_STORE },
     RECOMMEND,
     DUEL,
-    simpleAction(Actions.MINI_GAME),
+    { code: Actions.MINI_GAME },
   ],
   party: [
     INVITE,

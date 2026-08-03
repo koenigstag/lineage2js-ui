@@ -16,6 +16,7 @@
 - Add item/skill/action descriptions -- no per-id table exists yet
 - Add the other revive points to the death modal (death-modal.tsx currently only offers RestartPoint.TOWN) -- Clan Hall/Castle/Fortress/Siege HQ/Fixed/Agathion need ownership/availability data (clan hall or castle ownership, siege participation, Fixed-point item, Agathion state) that isn't modeled anywhere in this client yet
 - Remaining confirm-dialog flows, each blocked on a parent feature that doesn't exist yet: friend invite (Friends List), party room join (party-matching rooms), command channel invite (RequestExAskJoinMPCC), pledge war surrender confirm (clan war), and ConfirmDlgType.CONFIRM_EXECUTE_COMMAND's generic bypass-command prompts (NPC dialog/bypass system)
+- Private Store search window and Mini-Game (Cube Game) HUD -- Actions FIND_STORE/MINI_GAME (user-actions.ts) stay icon-only until these exist; neither has a request packet at all (confirmed against RequestActionUse.java's switch and the ExCubeGame* server-push packets), so there's nothing to wire until the window itself is built
 
 
 # Long-term TODOs
