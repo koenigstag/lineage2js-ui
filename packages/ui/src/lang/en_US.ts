@@ -228,6 +228,10 @@ export const LANG_EN_US: LangDictionary = {
     message: "You are dead.",
     reviveTownButton: "To Nearest Town",
   },
+  disconnect: {
+    message: "Connection to the server has been lost.",
+    returnToLoginButton: "Return to Login",
+  },
   tooltip: {
     types: {
       skill: "Skill",

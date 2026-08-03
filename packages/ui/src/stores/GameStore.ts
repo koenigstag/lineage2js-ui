@@ -683,6 +683,8 @@ export class GameStore {
   target: TargetSnapshot | undefined = undefined;
   /** True while the local player is dead, see the Die/Revive event handlers in bindToClient -- drives the death modal. */
   isPlayerDead: boolean = false;
+  /** True once the game connection has dropped (graceful ServerClose or an abrupt socket loss), see bindToClient -- drives the disconnect modal. Cleared on the next successful world-enter. */
+  isDisconnected: boolean = false;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -1028,6 +1030,13 @@ export class GameStore {
     client.on("PacketReceived", "ShortCutDelete", syncHotbar);
     client.on("PacketReceived", "CharSelected", syncCharInfo);
     client.on("PacketReceived", "UserInfo", syncCharInfo);
+    // UserInfo is the "definitely (re)entered the world" signal syncCharInfo
+    // also keys off -- clears any isDisconnected left over from an earlier
+    // dropped connection attempt, so a fresh successful session doesn't open
+    // straight into the disconnect modal.
+    client.on("PacketReceived", "UserInfo", () => runInAction(() => {
+      this.isDisconnected = false;
+    }));
     // Henna stat bonuses arrive via their own packet, sent right after
     // world-enter (see EnterWorld.java in the H5 reference server) --
     // re-snapshot once it lands instead of waiting for the next UserInfo.
@@ -1106,6 +1115,20 @@ export class GameStore {
       if (e.data.creature.ObjectId === client.Me.ObjectId) {
         this.isPlayerDead = false;
       }
+    }));
+
+    // Drives the disconnect modal. ServerClose is the server's graceful
+    // notice (kick, restart, ...) and normally fires moments before the
+    // socket actually closes; the low-level "Disconnected" event (raw
+    // EventEmitter, not the strictly-typed EventHandlerType union the rest
+    // of this file uses -- see CommandLogin/CommandSelectServer for the
+    // same pattern) is the fallback for an abrupt drop with no ServerClose
+    // at all (network loss, crash).
+    client.on("ServerClose", () => runInAction(() => {
+      this.isDisconnected = true;
+    }));
+    client.GameClient.on("Disconnected", () => runInAction(() => {
+      this.isDisconnected = true;
     }));
 
     // Real Learn-tab data source -- replaces the demo learnableSkills list

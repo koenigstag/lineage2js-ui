@@ -228,6 +228,10 @@ export const LANG_RU_RU: LangDictionary = {
     message: "Вы погибли.",
     reviveTownButton: "В ближайший город",
   },
+  disconnect: {
+    message: "Соединение с сервером потеряно.",
+    returnToLoginButton: "Вернуться к логину",
+  },
   tooltip: {
     types: {
       skill: "Навык",

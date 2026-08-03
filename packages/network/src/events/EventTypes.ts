@@ -32,6 +32,11 @@ export declare type EDie = {
   data: { creature: L2Creature; isSpoiled: boolean };
   once: boolean;
 };
+export declare type EServerClose = {
+  type: string;
+  data: {};
+  once: boolean;
+};
 export declare type ETargetSelected = {
   type: string;
   data: { objectId: number; targetObjectId: number; targetLocation: number[] };
@@ -201,6 +206,10 @@ export declare type OnPartyMemberPosition = [
 ];
 export declare type OnCharInfo = ["CharInfo", (e: ECharInfo) => void];
 export declare type OnRevive = ["Revive", (e: ERevive) => void];
+export declare type OnServerClose = [
+  "ServerClose",
+  (e: EServerClose) => void
+];
 export declare type OnConfirmDlg = ["ConfirmDlg", (e: EConfirmDlg) => void];
 export declare type OnSystemMessage = [
   "SystemMessage",
@@ -240,6 +249,7 @@ export declare type EventHandlerType =
   | OnPartyMemberPosition
   | OnCharInfo
   | OnRevive
+  | OnServerClose
   | OnConfirmDlg
   | OnSystemMessage
   | OnCreatureSay
