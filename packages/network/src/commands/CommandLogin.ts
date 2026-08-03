@@ -19,7 +19,7 @@ export interface LoginResult {
 // game server at all. Meant for a login form -- server choice is a separate
 // step (see CommandSelectServer).
 export default class CommandLogin extends AbstractGameCommand {
-  static requiresConnection = false;
+  static requiresGameConnection = false;
 
   execute(config: MMOConfig | Record<string, unknown>): Promise<LoginResult> {
     const mergedConfig: MMOConfig = { ...new MMOConfig(), ...(config as MMOConfig) };

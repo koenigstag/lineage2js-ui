@@ -13,7 +13,7 @@ export default abstract class AbstractGameCommand implements ICommand {
   // unless a command overrides this to false. Only login() and
   // selectServer() do: login() only ever touches LoginClient, and
   // selectServer() is what establishes the GameClient connection itself.
-  static requiresConnection = true;
+  static requiresGameConnection = true;
 
   constructor(public LoginClient: LoginClient, public GameClient: GameClient) {}
 

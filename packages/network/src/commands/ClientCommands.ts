@@ -286,11 +286,11 @@ export default abstract class ClientCommands {
           });
           target.logger.debug("Command", propertyKey);
           return (...args: any) => {
-            // requiresConnection lives on the command class (a static, see
-            // AbstractGameCommand), not the instance -- prototype.constructor
+            // requiresGameConnection lives on the command class (a static,
+            // see AbstractGameCommand), not the instance -- prototype.constructor
             // resolves to that class without needing to construct cmd first.
             const commandClass = prototype.constructor as typeof AbstractGameCommand;
-            if (commandClass.requiresConnection && !target.GameClient.IsConnected) {
+            if (commandClass.requiresGameConnection && !target.GameClient.IsConnected) {
               target.logger.debug("Skipped (not connected)", propertyKey);
               return undefined;
             }

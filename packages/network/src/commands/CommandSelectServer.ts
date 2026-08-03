@@ -12,7 +12,7 @@ import AbstractGameCommand from "./AbstractGameCommand";
 // servers from CommandLogin's result, log into it, and hand off to the game
 // server. Resolves with the account's existing characters on that server.
 export default class CommandSelectServer extends AbstractGameCommand {
-  static requiresConnection = false;
+  static requiresGameConnection = false;
 
   execute(serverId: number): Promise<L2User[]> {
     return new Promise((resolve, reject) => {
