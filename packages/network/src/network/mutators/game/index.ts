@@ -29,6 +29,8 @@ import DropItemMutator from "./DropItemMutator";
 import DropItem from "../../incoming/game/DropItem";
 import EtcStatusUpdateMutator from "./EtcStatusUpdateMutator";
 import EtcStatusUpdate from "../../incoming/game/EtcStatusUpdate";
+import ExBasicActionListMutator from "./ExBasicActionListMutator";
+import ExBasicActionList from "../../incoming/game/ExBasicActionList";
 import ExDuelAskStartMutator from "./ExDuelAskStartMutator";
 import ExDuelAskStart from "../../incoming/game/ExDuelAskStart";
 import ExQuestItemListMutator from "./ExQuestItemListMutator";
@@ -136,6 +138,7 @@ export default [
   [DieMutator.prototype, Die],
   [DropItemMutator.prototype, DropItem],
   [EtcStatusUpdateMutator.prototype, EtcStatusUpdate],
+  [ExBasicActionListMutator.prototype, ExBasicActionList],
   [ExDuelAskStartMutator.prototype, ExDuelAskStart],
   [ExQuestItemListMutator.prototype, ExQuestItemList],
   [ExRotationMutator.prototype, ExRotation],

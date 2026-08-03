@@ -28,7 +28,12 @@ export const ActionsContent = observer(function ActionsContent() {
             {USER_ACTIONS[category].map((action: Action) => {
               // Most entries have no click dispatch wired yet (see Action's
               // own doc comment) -- only ones with `dispatch` set are clickable here.
-              const enabled = action.isEnabled ? action.isEnabled(game) : true;
+              // Falls back to the server's actual allowed-action list
+              // (ExBasicActionList) so e.g. a transform's restricted action
+              // set is reflected without a hand-written predicate per action.
+              const enabled = action.isEnabled
+                ? action.isEnabled(game)
+                : game.isBasicActionAllowed(action.code);
 
               return (
                 <ActionSlot

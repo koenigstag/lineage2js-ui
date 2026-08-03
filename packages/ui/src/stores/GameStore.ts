@@ -17,6 +17,7 @@ import {
   ChatType,
   RestartPoint,
   PartyDistributionType,
+  Actions,
   type Client,
   type ESystemMessage,
   type ECreatureSay,
@@ -689,6 +690,8 @@ export class GameStore {
   buffs: L2Buff[] = createDemoBuffs();
   /** Healing-potion reuse-cooldown icon, see ShortBuffStatusUpdate.ts -- a single value, not part of buffs (own row in effects.window.tsx). No demo data: no verified real skill id to fake it with. */
   shortBuff: L2Buff | undefined = undefined;
+  /** Action ids the server currently allows (ExBasicActionList) -- undefined until the first one arrives, which isBasicActionAllowed() treats as "no restriction known" rather than "nothing allowed" (keeps the Actions window fully enabled offline/in demo mode). */
+  basicActionIds: Set<number> | undefined = undefined;
   charInfo: CharInfoSnapshot = createDemoCharInfo();
   party: L2PartyMember[] = createDemoParty();
   /** Currently selected attack/spell/buff target, if any -- see target-select window. */
@@ -845,6 +848,11 @@ export class GameStore {
     return this.inventoryItems.some((item) => item.Id === requiredItem.id && item.Count >= requiredItem.count);
   }
 
+  /** True if the server hasn't told us otherwise yet (see basicActionIds' field comment) or explicitly allows this action id right now (ExBasicActionList -- the full set normally, a restricted set while transformed). */
+  isBasicActionAllowed(code: Actions): boolean {
+    return !this.basicActionIds || this.basicActionIds.has(code);
+  }
+
   /**
    * When connected, commits to learning the skill server-side
    * (RequestAcquireSkill) and optimistically closes the window -- the
@@ -974,6 +982,9 @@ export class GameStore {
     const syncShortBuff = () => runInAction(() => {
       this.shortBuff = client.ShortBuff;
     });
+    const syncBasicActions = () => runInAction(() => {
+      this.basicActionIds = client.BasicActionIds;
+    });
     const syncHotbar = () => runInAction(() => {
       const slots: (L2Shortcut | undefined)[] = new Array(HOTBAR_SLOT_COUNT).fill(undefined);
       client.Shortcuts.forEach((shortcut) => {
@@ -1085,6 +1096,7 @@ export class GameStore {
     client.on("PacketReceived", "SkillCoolTime", syncSkills);
     client.on("PacketReceived", "AbnormalStatusUpdate", syncBuffs);
     client.on("PacketReceived", "ShortBuffStatusUpdate", syncShortBuff);
+    client.on("PacketReceived", "ExBasicActionList", syncBasicActions);
     client.on("PacketReceived", "ShortCutInit", syncHotbar);
     client.on("PacketReceived", "ShortCutRegister", syncHotbar);
     client.on("PacketReceived", "ShortCutDelete", syncHotbar);

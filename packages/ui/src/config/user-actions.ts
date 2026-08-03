@@ -13,9 +13,12 @@ export type ActionCategory = "basic" | "party" | "target" | "social" | "pet";
  * Assist/private-store/party/Recommend actions all have their own dedicated
  * packets/commands elsewhere in this codebase (CommandAttack,
  * CommandNextTarget, CommandRequestJoinParty, GameStore.recommend(), ...),
- * same as real L2. `dispatch`/`isEnabled` are only set for the ones actually
- * wired to a click here; the rest stay icon/tooltip-only for now (see
- * slot.component.tsx).
+ * same as real L2. `dispatch` is only set for the ones actually wired to a
+ * click here; the rest stay icon/tooltip-only for now (see
+ * slot.component.tsx). `isEnabled` is only for actions whose availability
+ * depends on something other than the server's ExBasicActionList (e.g.
+ * RECOMMEND below) -- actions.window.tsx falls back to
+ * GameStore.isBasicActionAllowed(code) when it's unset.
  */
 export interface Action {
   code: Actions;

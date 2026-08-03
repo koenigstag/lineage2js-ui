@@ -375,6 +375,9 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
             case 0x4c:
               rpk = new Packets.ExDuelAskStart();
               break;
+            case 0x5f:
+              rpk = new Packets.ExBasicActionList();
+              break;
             case 0x70:
               rpk = new Packets.ExUISetting();
               break;

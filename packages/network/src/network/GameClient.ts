@@ -43,6 +43,8 @@ export default class GameClient extends MMOClient {
   AcquireSkillInfoByKey: Map<string, AcquireSkillInfo> = new Map();
   /** Healing-potion reuse-cooldown icon, see ShortBuffStatusUpdate.ts -- a single value, not a collection, unlike BuffsList. */
   ShortBuff: L2Buff | undefined = undefined;
+  /** Action ids currently usable (ExBasicActionList) -- the full default set at world-enter, a restricted set while transformed. undefined until the first one arrives (offline/not connected yet), which callers should treat as "no restriction known" rather than "nothing allowed". */
+  BasicActionIds: Set<number> | undefined = undefined;
 
   LastConfirmMessageId!: number;
   LastConfirmMessageRequesterId!: number;

@@ -14,7 +14,6 @@
 - Basic Quests system
 - Add NPC dialog system -- render engine and actions
 - Add item/skill/action descriptions -- no per-id table exists yet
-- Parse ExBasicActionList (see Unhandled packets) and use it to drive the Actions window's per-slot enabled state -- currently each action's availability is a hand-written isEnabled(game) predicate (user-actions.ts), not the server's actual allowed-action-id list, so it can't reflect e.g. a transform's restricted action set
 - Add the other revive points to the death modal (death-modal.tsx currently only offers RestartPoint.TOWN) -- Clan Hall/Castle/Fortress/Siege HQ/Fixed/Agathion need ownership/availability data (clan hall or castle ownership, siege participation, Fixed-point item, Agathion state) that isn't modeled anywhere in this client yet
 - Remaining confirm-dialog flows, each blocked on a parent feature that doesn't exist yet: friend invite (Friends List), party room join (party-matching rooms), command channel invite (RequestExAskJoinMPCC), pledge war surrender confirm (clan war), and ConfirmDlgType.CONFIRM_EXECUTE_COMMAND's generic bypass-command prompts (NPC dialog/bypass system)
 
@@ -74,7 +73,6 @@ instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
   - ExColosseumFenceInfo (0xfe/0x03) -- Olympiad arena fence/barrier state
   - ExAutoSoulShot (0xfe/0x0c) -- server ack for the auto-soulshot toggle
   - ExSpawnEmitter (0xfe/0x5d) -- spawns a particle-effect emitter tied to an NPC
-  - ExBasicActionList (0xfe/0x5f) -- which basic actions are usable in the current transform/attachment context
   - ExAskCoupleAction (0xfe/0xbb) -- wedding/couple social-action request prompt
   - ExChangeNpcState (0xfe/0xbe) -- visual NPC state-flag change (e.g. siege golem/machine states)
   - ExItemAuctionInfoPacket (0xfe/0x68) -- item auction house listing state

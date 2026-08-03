@@ -43,6 +43,9 @@ export default class Client extends ClientCommands {
   get ShortBuff(): L2Buff | undefined {
     return this.GameClient.ShortBuff;
   }
+  get BasicActionIds(): Set<number> | undefined {
+    return this.GameClient.BasicActionIds;
+  }
   get SkillsList(): L2ObjectCollection<L2Skill> {
     return this.GameClient.SkillsList;
   }
