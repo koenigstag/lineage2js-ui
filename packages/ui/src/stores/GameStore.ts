@@ -756,6 +756,23 @@ export class GameStore {
     this.target = undefined;
   }
 
+  /**
+   * Selects the local player as their own target -- same Action/hit packet
+   * mechanism as selectTarget, just with client.Me as the object. Lets
+   * clicking your own name/level in the character window put yourself in
+   * the target-select window (e.g. to check your own buffs).
+   */
+  selectSelfAsTarget() {
+    const me = this.client?.Me;
+    if (!me) {
+      return;
+    }
+    if (this.client?.GameClient.IsConnected) {
+      this.client.hit(me);
+    }
+    this.target = targetSnapshotFromCreature(me, this.pledgeCache);
+  }
+
   /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
   reviveAtTown() {
     if (this.client?.GameClient.IsConnected) {

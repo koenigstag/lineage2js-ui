@@ -53,9 +53,9 @@ const rowValueStyle: CSSProperties = { color: "#9b876c", fontSize: 11, textShado
 
 type StatRowTuple = [label: string, value: string | number];
 
-function InfoRow({ label, value }: { label: string; value: string | number }) {
+function InfoRow({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }} onClick={onClick}>
       <span style={rowLabelStyle}>{label}</span>
       <span style={rowValueStyle}>{value}</span>
     </div>
@@ -219,10 +219,12 @@ export const CharacterContent = observer(function CharacterContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <PortraitPlaceholder />
           <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
-            <div style={{ color: "#eeefee", fontSize: 11, textShadow: TEXT_SHADOW }}>{info.name}</div>
+            <div style={{ color: "#eeefee", fontSize: 11, textShadow: TEXT_SHADOW }} onClick={() => game.selectSelfAsTarget()}>
+              {info.name}
+            </div>
             <InfoRow label={t("charInfo.clan")} value={clanName ?? t("charInfo.noClan")} />
             <div style={{ display: "flex", gap: 10 }}>
-              <InfoRow label={t("charInfo.level")} value={info.level} />
+              <InfoRow label={t("charInfo.level")} value={info.level} onClick={() => game.selectSelfAsTarget()} />
               <InfoRow label={t("charInfo.status")} value={info.title || "-"} />
             </div>
           </div>
