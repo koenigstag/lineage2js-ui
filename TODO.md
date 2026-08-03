@@ -1,6 +1,6 @@
 # Short-term TODOs
 - Hotbar features - user-added shortcuts, cooldown animation, soul-shots auto-usage
-- Basic Chat system
+- Improve chat system
 - Add a bottom menu -- unread messages count, clan menu, party, XP toggle, exp bar, adena, weight
 - Show curr/total exp values in a tooltip on the character window's XP bar - frontend currently shows only the percentage, and has no level-steps info (game server does not send it).
 - Add current class icon with tooltip in the character window -- currently just the "Class" text label (character.window.tsx) - depends on assets-server to serve the class icons.
