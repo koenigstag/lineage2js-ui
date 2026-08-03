@@ -919,6 +919,9 @@ export class GameStore {
         case ChatType.ALLIANCE:
           this.client.sayToAlly(trimmed);
           break;
+        case ChatType.HERO_VOICE:
+          this.client.sayToHero(trimmed);
+          break;
         case ChatType.GENERAL:
         default:
           this.client.say(trimmed);

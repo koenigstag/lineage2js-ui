@@ -30,6 +30,7 @@ import CommandRevive from "./CommandRevive";
 import CommandSay from "./CommandSay";
 import CommandSayToAlly from "./CommandSayToAlly";
 import CommandSayToClan from "./CommandSayToClan";
+import CommandSayToHero from "./CommandSayToHero";
 import CommandSayToParty from "./CommandSayToParty";
 import CommandSayToTrade from "./CommandSayToTrade";
 import CommandSelectCharacter from "./CommandSelectCharacter";
@@ -74,6 +75,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   say: CommandSay.prototype,
   sayToAlly: CommandSayToAlly.prototype,
   sayToClan: CommandSayToClan.prototype,
+  sayToHero: CommandSayToHero.prototype,
   sayToParty: CommandSayToParty.prototype,
   sayToTrade: CommandSayToTrade.prototype,
   selectCharacter: CommandSelectCharacter.prototype,

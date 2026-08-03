@@ -94,6 +94,13 @@ export default interface ClientCommands {
    */
   sayToAlly(text: string): void;
   /**
+   * Send a Hero Voice message. Requires the character to actually hold
+   * Hero status server-side -- the server silently drops it otherwise, same
+   * as the real client.
+   * @param text
+   */
+  sayToHero(text: string): void;
+  /**
    * Move to location
    * @param x
    * @param y
