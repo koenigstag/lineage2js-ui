@@ -59,25 +59,58 @@ const RECOMMEND: Action = {
   isEnabled: (game) => Boolean(game.target && !game.target.creatureKind) && game.charInfo.recommLeft > 0,
 };
 
+const ATTACK: Action = {
+  code: Actions.ATTACK,
+  dispatch: (game) => game.attack(),
+  isEnabled: (game) => Boolean(game.target),
+};
+
+const ASSIST: Action = {
+  code: Actions.ASSIST,
+  dispatch: (game) => game.assist(),
+  // Mirrors GameStore.assist()'s own guard (target must be a party member).
+  isEnabled: (game) => {
+    const target = game.target;
+    return Boolean(target && game.party.some((member) => member.ObjectId === target.objectId));
+  },
+};
+
+const INVITE: Action = {
+  code: Actions.INVITE,
+  dispatch: (game) => game.inviteToParty(),
+  // Mirrors GameStore.inviteToParty()'s own guard (player target, not already in the party).
+  isEnabled: (game) => {
+    const target = game.target;
+    return Boolean(target && !target.creatureKind && !game.party.some((member) => member.ObjectId === target.objectId));
+  },
+};
+
+const DUEL: Action = {
+  code: Actions.DUEL,
+  dispatch: (game) => game.challengeToDuel(),
+  // Mirrors GameStore.challengeToDuel()'s own guard (player target).
+  isEnabled: (game) => Boolean(game.target && !game.target.creatureKind),
+};
+
 export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
   basic: [
     { code: Actions.SIT_STAND },
     { code: Actions.WALK_RUN },
-    { code: Actions.ATTACK },
+    ATTACK,
     { code: Actions.EXCHANGE },
     { code: Actions.NEXT_TARGET },
     { code: Actions.PICK_UP },
-    { code: Actions.ASSIST },
+    ASSIST,
     { code: Actions.PRIVATE_STORE_SELL },
     { code: Actions.PRIVATE_STORE_BUY },
     { code: Actions.PRIVATE_STORE_PACKAGE_SELL },
     { code: Actions.FIND_STORE },
     RECOMMEND,
-    { code: Actions.DUEL },
+    DUEL,
     { code: Actions.MINI_GAME },
   ],
   party: [
-    { code: Actions.INVITE },
+    INVITE,
     { code: Actions.LEAVE_PARTY },
     { code: Actions.DISMISS_PARTY_MEMBER },
     { code: Actions.CHANGE_PARTY_LEADER },

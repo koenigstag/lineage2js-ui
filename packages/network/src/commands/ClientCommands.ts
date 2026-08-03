@@ -142,6 +142,10 @@ export default interface ClientCommands {
    */
   cancelTarget(): void;
   /**
+   * Invites a character to a party -- defaults to the current target's name when omitted
+   */
+  requestJoinParty(char?: L2Character | string): void;
+  /**
    * Accepts the requested party invite
    */
   acceptJoinParty(): void;
