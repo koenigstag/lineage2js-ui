@@ -101,19 +101,35 @@ export default abstract class MMOClient extends EventEmitter implements IProcess
           const packetData = new Uint8Array(data.slice(n + 2, n + packetLength)); // +2 is for skipping the packet size
           ctx.decrypt(packetData, 0, packetData.byteLength);
 
+          // TEMP diagnostics: every decrypted opcode this client sees,
+          // regardless of whether a handler/parse succeeds. Remove once
+          // creatures render. 0xfe is the extended-packet marker -- the real
+          // id is the 2-byte little-endian sub-opcode right after it.
+          const mainOpcode = packetData[0] & 0xff;
+          if (mainOpcode === 0xfe) {
+            const subOpcode = packetData[1] + (packetData[2] << 8);
+            console.debug("[opcode]", "0xfe", `sub=0x${subOpcode.toString(16).padStart(2, "0")}`, packetData.byteLength, "bytes");
+          } else {
+            console.debug("[opcode]", `0x${mainOpcode.toString(16).padStart(2, "0")}`, packetData.byteLength, "bytes");
+          }
+
           const rcp: ReceivablePacket = ctx.PacketHandler.handlePacket(packetData, ctx);
           if (!rcp) {
+            console.debug("[unhandled]", `0x${(packetData[0] & 0xff).toString(16).padStart(2, "0")}`, packetData.byteLength, "bytes");
             reject(`Cannot find a handler for this packet. Opcode: 0x${(packetData[0] & 0xff).toString(16)}`);
             return; // We cannot find the required packet handler. Most probably the game packet is not yet implemented.
           }
 
           if (rcp.read()) {
             this.logger.debug("Received", rcp.constructor.name);
+            console.debug("[parsed]", rcp.constructor.name);
             this._mutate(rcp);
             this.fire(`PacketReceived:${rcp.constructor.name}`, {
               packet: rcp,
             });
             resolve(rcp);
+          } else {
+            console.debug("[parse-failed]", rcp.constructor.name);
           }
         })(i, this);
 
