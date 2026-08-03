@@ -28,12 +28,12 @@ export const ActionsContent = observer(function ActionsContent() {
             {USER_ACTIONS[category].map((action: Action) => {
               // Most entries have no click dispatch wired yet (see Action's
               // own doc comment) -- only ones with `dispatch` set are clickable here.
-              // Falls back to the server's actual allowed-action list
-              // (ExBasicActionList) so e.g. a transform's restricted action
-              // set is reflected without a hand-written predicate per action.
-              const enabled = action.isEnabled
-                ? action.isEnabled(game)
-                : game.isBasicActionAllowed(action.code);
+              // Dimming always reflects the server's actual allowed-action
+              // list (ExBasicActionList), e.g. a transform's restricted
+              // action set -- isEnabled (if set) is a separate click-time
+              // guard, not part of this visual state (see Action's doc comment).
+              const enabled = game.isBasicActionAllowed(action.code);
+              const canDispatch = !action.isEnabled || action.isEnabled(game);
 
               return (
                 <ActionSlot
@@ -41,7 +41,7 @@ export const ActionsContent = observer(function ActionsContent() {
                   code={action.code}
                   category={category}
                   disabled={!enabled}
-                  onClick={action.dispatch ? () => enabled && action.dispatch!(game) : undefined}
+                  onClick={action.dispatch ? () => canDispatch && action.dispatch!(game) : undefined}
                 />
               );
             })}

@@ -15,14 +15,15 @@ export type ActionCategory = "basic" | "party" | "target" | "social" | "pet";
  * CommandNextTarget, CommandRequestJoinParty, GameStore.recommend(), ...),
  * same as real L2. `dispatch` is only set for the ones actually wired to a
  * click here; the rest stay icon/tooltip-only for now (see
- * slot.component.tsx). `isEnabled` is only for actions whose availability
- * depends on something other than the server's ExBasicActionList (e.g.
- * RECOMMEND below) -- actions.window.tsx falls back to
- * GameStore.isBasicActionAllowed(code) when it's unset.
+ * slot.component.tsx). The slot's dimmed/enabled look always comes from the
+ * server's ExBasicActionList (GameStore.isBasicActionAllowed) -- `isEnabled`
+ * is a separate, purely click-time guard for a precondition dispatch itself
+ * needs (e.g. RECOMMEND below requiring a valid target), not a visual state.
  */
 export interface Action {
   code: Actions;
   dispatch?(game: GameStore): void;
+  /** Click-time guard, checked right before dispatch -- does not affect the slot's visual disabled state (see this file's doc comment above). */
   isEnabled?(game: GameStore): boolean;
 }
 
@@ -54,8 +55,7 @@ const RECOMMEND: Action = {
   // GameStore.recommend()).
   code: Actions.RECOMMEND,
   dispatch: (game) => game.recommend(),
-  // Mirrors GameStore.recommend()'s own guard (player target + recomms left)
-  // so the slot visibly dims instead of silently no-opping on click.
+  // Mirrors GameStore.recommend()'s own guard (player target + recomms left).
   isEnabled: (game) => Boolean(game.target && !game.target.creatureKind) && game.charInfo.recommLeft > 0,
 };
 
