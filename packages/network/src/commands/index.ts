@@ -8,12 +8,14 @@ import CommandAutoShots from "./CommandAutoShots";
 import CommandCancelBuff from "./CommandCancelBuff";
 import CommandCancelTarget from "./CommandCancelTarget";
 import CommandCast from "./CommandCast";
+import CommandChangePartyLeader from "./CommandChangePartyLeader";
 import CommandCraft from "./CommandCraft";
 import CommandCreateCharacter from "./CommandCreateCharacter";
 import CommandDeclineDuel from "./CommandDeclineDuel";
 import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
 import CommandDeclineResurrect from "./CommandDeclineResurrect";
 import CommandDeclineTradeRequest from "./CommandDeclineTradeRequest";
+import CommandDismissPartyMember from "./CommandDismissPartyMember";
 import CommandDropItem from "./CommandDropItem";
 import CommandDwarvenCraftRecipes from "./CommandDwarvenCraftRecipes";
 import CommandHit from "./CommandHit";
@@ -29,6 +31,7 @@ import CommandRequestBypass from "./CommandRequestBypass";
 import CommandRequestDuel from "./CommandRequestDuel";
 import CommandRequestCharacterTemplates from "./CommandRequestCharacterTemplates";
 import CommandRequestJoinParty from "./CommandRequestJoinParty";
+import CommandRequestTrade from "./CommandRequestTrade";
 import CommandRestart from "./CommandRestart";
 import CommandRevive from "./CommandRevive";
 import CommandSay from "./CommandSay";
@@ -57,12 +60,14 @@ import CommandValidatePosition from "./CommandValidatePosition";
   cancelBuff: CommandCancelBuff.prototype,
   cancelTarget: CommandCancelTarget.prototype,
   cast: CommandCast.prototype,
+  changePartyLeader: CommandChangePartyLeader.prototype,
   craft: CommandCraft.prototype,
   createCharacter: CommandCreateCharacter.prototype,
   declineDuel: CommandDeclineDuel.prototype,
   declineJoinParty: CommandDeclineJoinParty.prototype,
   declineResurrect: CommandDeclineResurrect.prototype,
   declineTradeRequest: CommandDeclineTradeRequest.prototype,
+  dismissPartyMember: CommandDismissPartyMember.prototype,
   dropItem: CommandDropItem.prototype,
   dwarvenCraftRecipes: CommandDwarvenCraftRecipes.prototype,
   hit: CommandHit.prototype,
@@ -78,6 +83,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   requestCharacterTemplates: CommandRequestCharacterTemplates.prototype,
   requestDuel: CommandRequestDuel.prototype,
   requestJoinParty: CommandRequestJoinParty.prototype,
+  requestTrade: CommandRequestTrade.prototype,
   restart: CommandRestart.prototype,
   revive: CommandRevive.prototype,
   say: CommandSay.prototype,

@@ -863,6 +863,38 @@ export class GameStore {
     this.client?.requestDuel(target.name);
   }
 
+  /** Whether the local player currently leads their own party (see the DISMISS_PARTY_MEMBER/CHANGE_PARTY_LEADER guards below -- the server only honors those requests from the actual leader, per RequestOustPartyMember.java/RequestChangePartyLeader.java). */
+  isPartyLeader(): boolean {
+    return this.party.find((member) => member.ObjectId === this.me)?.IsPartyLeader ?? false;
+  }
+
+  /** Sends a trade request to the current target (TradeRequest) -- only valid for a player target. */
+  requestTrade() {
+    const target = this.target;
+    if (!target || target.creatureKind) {
+      return;
+    }
+    this.client?.requestTrade(target.objectId);
+  }
+
+  /** Dismisses the current target from the party (RequestOustPartyMember) -- only valid when the local player is the party leader and the target is a (different) party member. */
+  dismissPartyMember() {
+    const target = this.target;
+    if (!target || target.objectId === this.me || !this.isPartyLeader() || !this.party.some((member) => member.ObjectId === target.objectId)) {
+      return;
+    }
+    this.client?.dismissPartyMember(target.name);
+  }
+
+  /** Transfers party leadership to the current target (RequestChangePartyLeader) -- only valid when the local player is the party leader and the target is a (different) party member. */
+  changePartyLeader() {
+    const target = this.target;
+    if (!target || target.objectId === this.me || !this.isPartyLeader() || !this.party.some((member) => member.ObjectId === target.objectId)) {
+      return;
+    }
+    this.client?.changePartyLeader(target.name);
+  }
+
   /**
    * Opens the skill's detail window and, when connected, asks the trainer
    * for its authoritative SpCost/Requirements (RequestAcquireSkillInfo) --

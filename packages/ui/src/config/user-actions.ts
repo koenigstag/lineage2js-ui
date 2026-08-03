@@ -92,12 +92,43 @@ const DUEL: Action = {
   isEnabled: (game) => Boolean(game.target && !game.target.creatureKind),
 };
 
+const EXCHANGE: Action = {
+  code: Actions.EXCHANGE,
+  dispatch: (game) => game.requestTrade(),
+  // Mirrors GameStore.requestTrade()'s own guard (player target).
+  isEnabled: (game) => Boolean(game.target && !game.target.creatureKind),
+};
+
+const DISMISS_PARTY_MEMBER: Action = {
+  code: Actions.DISMISS_PARTY_MEMBER,
+  dispatch: (game) => game.dismissPartyMember(),
+  // Mirrors GameStore.dismissPartyMember()'s own guard (must be party leader, target a different party member).
+  isEnabled: (game) => {
+    const target = game.target;
+    return Boolean(
+      target && target.objectId !== game.me && game.isPartyLeader() && game.party.some((member) => member.ObjectId === target.objectId)
+    );
+  },
+};
+
+const CHANGE_PARTY_LEADER: Action = {
+  code: Actions.CHANGE_PARTY_LEADER,
+  dispatch: (game) => game.changePartyLeader(),
+  // Mirrors GameStore.changePartyLeader()'s own guard (must be party leader, target a different party member).
+  isEnabled: (game) => {
+    const target = game.target;
+    return Boolean(
+      target && target.objectId !== game.me && game.isPartyLeader() && game.party.some((member) => member.ObjectId === target.objectId)
+    );
+  },
+};
+
 export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
   basic: [
     { code: Actions.SIT_STAND },
     { code: Actions.WALK_RUN },
     ATTACK,
-    { code: Actions.EXCHANGE },
+    EXCHANGE,
     { code: Actions.NEXT_TARGET },
     { code: Actions.PICK_UP },
     ASSIST,
@@ -112,8 +143,8 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
   party: [
     INVITE,
     { code: Actions.LEAVE_PARTY },
-    { code: Actions.DISMISS_PARTY_MEMBER },
-    { code: Actions.CHANGE_PARTY_LEADER },
+    DISMISS_PARTY_MEMBER,
+    CHANGE_PARTY_LEADER,
     { code: Actions.PARTY_DUEL },
   ],
   // Not a real client tab -- placeholder for target-related actions

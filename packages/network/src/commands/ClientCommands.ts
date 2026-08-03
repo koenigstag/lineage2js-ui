@@ -154,6 +154,18 @@ export default interface ClientCommands {
    */
   declineJoinParty(): void;
   /**
+   * Dismisses a member from the party -- only the party leader can do this
+   */
+  dismissPartyMember(name: string): void;
+  /**
+   * Transfers party leadership to another member -- only the current party leader can do this
+   */
+  changePartyLeader(name: string): void;
+  /**
+   * Sends a trade request to a target character
+   */
+  requestTrade(targetObjectId: number): void;
+  /**
    * Accepts the requested trade
    */
   acceptTradeRequest(): void;
