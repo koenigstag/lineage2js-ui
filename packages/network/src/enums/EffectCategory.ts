@@ -15,9 +15,13 @@
  * NOT tag each entry with its category -- it's a flat {skillId, skillLevel,
  * timeLeftSeconds} list (see lineage2ts's packets/send/builder/
  * AbnormalStatusUpdate.ts). The server derives the category from each
- * skill's own static data at cast time; splitting game.buffs into
- * per-category rows client-side needs an equivalent skill id ->
- * EffectCategory table, which doesn't exist yet (see TODO.md).
+ * skill's own static data (magicClass/operateType/isDebuff, sourced from
+ * lineage2ts's own datapack CSV -- game-server/source/data/type/sqlite/
+ * SkillData.ts loads exactly these three fields into Skill.magic/
+ * operateType/isDebuff) at cast time. Splitting game.buffs into
+ * per-category rows client-side needs the same three raw fields per skill
+ * id (see public/skill-effect-fields/data.json) plus getEffectCategory()
+ * below, which applies the identical precedence.
  *
  * Passive skills are never sent as a timed buff at all (no icon, no
  * duration) -- Passive is included here only for parity with the server's
@@ -36,4 +40,44 @@ export enum EffectCategory {
   Toggle = "toggle",
   Trigger = "trigger",
   Passive = "passive",
+}
+
+/**
+ * The three datapack fields getEffectCategory() needs -- see this file's
+ * doc comment for where each one comes from and what it means:
+ *   magicClass: SkillMagicType (0 PhysicalCast, 1 MagicCast, 2 StaticAbility, 3 Dance, 4 Trigger)
+ *   operateType: SkillOperateType code ("P" Passive, "T" Toggle, everything else active: A1/A2/A3/A4/CA1/CA5/DA1/DA2)
+ *   isDebuff: the datapack's own isDebuff flag
+ */
+export interface SkillEffectFields {
+  magicClass: number;
+  operateType: string;
+  isDebuff: boolean;
+}
+
+const DANCE_MAGIC_CLASS = 3;
+const TRIGGER_MAGIC_CLASS = 4;
+
+/**
+ * Same precedence as lineage2ts's characterEffects.ts's getEffectList()
+ * (see this file's top comment) -- order matters: a debuff-flagged Dance/
+ * Trigger skill is a Debuff, not a Dance/Trigger, same as server-side.
+ */
+export function getEffectCategory({ magicClass, operateType, isDebuff }: SkillEffectFields): EffectCategory {
+  if (operateType === "P") {
+    return EffectCategory.Passive;
+  }
+  if (isDebuff) {
+    return EffectCategory.Debuff;
+  }
+  if (magicClass === TRIGGER_MAGIC_CLASS) {
+    return EffectCategory.Trigger;
+  }
+  if (magicClass === DANCE_MAGIC_CLASS) {
+    return EffectCategory.Dance;
+  }
+  if (operateType === "T") {
+    return EffectCategory.Toggle;
+  }
+  return EffectCategory.Buff;
 }

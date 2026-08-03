@@ -46,6 +46,9 @@ export class UiStore {
   /** npcId -> level, see config/npc-level-mapping.ts. Same datapack source/gap as npcRaces -- NpcInfo never sends a monster's level over the wire. */
   npcLevels: Record<string, number> = {};
   private npcLevelsRequested = false;
+  /** skillId -> [magicClass, operateType, isDebuff], see config/skill-effect-mapping.ts and @lineage2js/network's EffectCategory.ts. Same datapack source/gap as npcRaces -- AbnormalStatusUpdate never sends a buff's category over the wire. */
+  skillEffectFields: Record<string, [number, string, number]> = {};
+  private skillEffectFieldsRequested = false;
   /** questId -> name for the current lang, see config/quest-mapping.ts's getQuestName(). Forward-looking -- no quest window built yet. Same source/caching as itemNames/skillNames. */
   questNames: Record<string, string> = {};
   private questNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
@@ -251,6 +254,30 @@ export class UiStore {
       this.setNpcLevels(levels);
     } catch {
       this.npcLevelsRequested = false;
+    }
+  }
+
+  setSkillEffectFields(fields: Record<string, [number, string, number]>) {
+    this.skillEffectFields = fields;
+  }
+
+  /**
+   * Fetches public/skill-effect-fields/data.json once, same treatment as
+   * loadNpcRaces(). Generated from lineage2ts's own datapack CSV
+   * (cli/overrides/data/csv/skills/skills.csv's magicClass/operateType/
+   * isDebuff columns, one row per skill id -- taking each id's lowest-level
+   * row, since a handful of ids reuse high "levels" for unrelated skill
+   * variants, e.g. Spoil's levels 101+).
+   */
+  async loadSkillEffectFields() {
+    if (this.skillEffectFieldsRequested) return;
+    this.skillEffectFieldsRequested = true;
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}skill-effect-fields/data.json`);
+      const fields: Record<string, [number, string, number]> = await response.json();
+      this.setSkillEffectFields(fields);
+    } catch {
+      this.skillEffectFieldsRequested = false;
     }
   }
 

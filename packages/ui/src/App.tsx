@@ -27,6 +27,7 @@ export const App = observer(function App() {
     ui.loadQuestNames();
     ui.loadNpcRaces();
     ui.loadNpcLevels();
+    ui.loadSkillEffectFields();
     ui.loadSystemMessages();
   }, [ui]);
 
