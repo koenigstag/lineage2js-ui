@@ -898,19 +898,31 @@ export class GameStore {
     this.client?.requestTrade(target.objectId);
   }
 
-  /** Dismisses the current target from the party (RequestOustPartyMember) -- only valid when the local player is the party leader and the target is a (different) party member. */
+  /** Dismisses the current target from the party (RequestOustPartyMember) -- only valid when the local player is the party leader and the target is a (different) player in the party. */
   dismissPartyMember() {
     const target = this.target;
-    if (!target || target.objectId === this.me || !this.isPartyLeader() || !this.party.some((member) => member.ObjectId === target.objectId)) {
+    if (
+      !target ||
+      target.creatureKind ||
+      target.objectId === this.me ||
+      !this.isPartyLeader() ||
+      !this.party.some((member) => member.ObjectId === target.objectId)
+    ) {
       return;
     }
     this.client?.dismissPartyMember(target.name);
   }
 
-  /** Transfers party leadership to the current target (RequestChangePartyLeader) -- only valid when the local player is the party leader and the target is a (different) party member. */
+  /** Transfers party leadership to the current target (RequestChangePartyLeader) -- only valid when the local player is the party leader and the target is a (different) player in the party. */
   changePartyLeader() {
     const target = this.target;
-    if (!target || target.objectId === this.me || !this.isPartyLeader() || !this.party.some((member) => member.ObjectId === target.objectId)) {
+    if (
+      !target ||
+      target.creatureKind ||
+      target.objectId === this.me ||
+      !this.isPartyLeader() ||
+      !this.party.some((member) => member.ObjectId === target.objectId)
+    ) {
       return;
     }
     this.client?.changePartyLeader(target.name);

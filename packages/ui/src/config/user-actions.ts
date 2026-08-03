@@ -149,28 +149,30 @@ const EXCHANGE: Action = {
   isEnabled: requiresPlayerTarget,
 };
 
+/** Shared by Dismiss Party Member/Change Party Leader (must be party leader, target a different player in the party). */
+function canManagePartyTarget(game: GameStore): boolean {
+  const target = game.target;
+  return Boolean(
+    target &&
+      !target.creatureKind &&
+      target.objectId !== game.me &&
+      game.isPartyLeader() &&
+      game.party.some((member) => member.ObjectId === target.objectId)
+  );
+}
+
 const DISMISS_PARTY_MEMBER: Action = {
   code: Actions.DISMISS_PARTY_MEMBER,
   dispatch: (game) => game.dismissPartyMember(),
-  // Mirrors GameStore.dismissPartyMember()'s own guard (must be party leader, target a different party member).
-  isEnabled: (game) => {
-    const target = game.target;
-    return Boolean(
-      target && target.objectId !== game.me && game.isPartyLeader() && game.party.some((member) => member.ObjectId === target.objectId)
-    );
-  },
+  // Mirrors GameStore.dismissPartyMember()'s own guard.
+  isEnabled: canManagePartyTarget,
 };
 
 const CHANGE_PARTY_LEADER: Action = {
   code: Actions.CHANGE_PARTY_LEADER,
   dispatch: (game) => game.changePartyLeader(),
-  // Mirrors GameStore.changePartyLeader()'s own guard (must be party leader, target a different party member).
-  isEnabled: (game) => {
-    const target = game.target;
-    return Boolean(
-      target && target.objectId !== game.me && game.isPartyLeader() && game.party.some((member) => member.ObjectId === target.objectId)
-    );
-  },
+  // Mirrors GameStore.changePartyLeader()'s own guard.
+  isEnabled: canManagePartyTarget,
 };
 
 const EXCHANGE_BOWS = pairAction(Actions.EXCHANGE_BOWS, "EXCHANGE_BOWS");
