@@ -57,6 +57,13 @@ export const MAX_CHARACTERS = 7;
 
 const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + page*12 addressing
 
+// ExDuelAskStart carries no expiry field on the wire -- the real client
+// still shows a countdown on the duel-request popup (unlike party/trade
+// invites, which have none), driven purely client-side off the same 15s
+// window the reference server enforces server-side against re-requesting
+// (Player.REQUEST_TIMEOUT, gameserver/model/actor/Player.java).
+const DUEL_REQUEST_TIMEOUT_MS = 15000;
+
 // H5-era vitality system: raw points shown as a single 0-100% bar (not the
 // later Vitality Herb chronicles' 140000/5-level system). Matches
 // lineage2ts's VitalityPointsPerLevel.Top -- the hard cap both
@@ -696,8 +703,8 @@ export class GameStore {
   partyInviteRequest: { requestorName: string; distributionType: PartyDistributionType } | undefined = undefined;
   /** Pending trade request (SendTradeRequest -> "TradeRequest") -- drives the "trade-request" window. This client has no trade session UI yet, so accepting only sends the answer; the server's follow-up TradeStart isn't consumed. Cleared on accept/decline or the next world-enter. */
   tradeRequest: { requesterId: number; requesterName: string } | undefined = undefined;
-  /** Pending duel request (ExDuelAskStart -> "RequestedDuel") -- drives the "duel-request" window. This client has no duel-in-progress UI yet, so accepting only sends the answer. Cleared on accept/decline or the next world-enter. */
-  duelRequest: { requestorName: string; partyDuel: boolean } | undefined = undefined;
+  /** Pending duel request (ExDuelAskStart -> "RequestedDuel") -- drives the "duel-request" window. This client has no duel-in-progress UI yet, so accepting only sends the answer. expiresAt is a client-side-only countdown (see DUEL_REQUEST_TIMEOUT_MS's comment) -- unlike resurrect, ExDuelAskStart carries no time field on the wire. Cleared on accept/decline, expiry, or the next world-enter. */
+  duelRequest: { requestorName: string; partyDuel: boolean; expiresAt: number } | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -1215,6 +1222,7 @@ export class GameStore {
       this.duelRequest = {
         requestorName: e.data.requestorName,
         partyDuel: e.data.partyDuel,
+        expiresAt: Date.now() + DUEL_REQUEST_TIMEOUT_MS,
       };
     }));
 

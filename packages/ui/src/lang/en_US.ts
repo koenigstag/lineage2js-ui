@@ -265,6 +265,7 @@ export const LANG_EN_US: LangDictionary = {
     title: "Duel Request",
     message: "{name} challenges you to a duel.",
     partyMessage: "{name} challenges your party to a duel.",
+    expiresIn: "Expires in {seconds}s",
     acceptButton: "Accept",
     declineButton: "Decline",
   },

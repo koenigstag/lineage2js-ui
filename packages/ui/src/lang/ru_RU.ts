@@ -265,6 +265,7 @@ export const LANG_RU_RU: LangDictionary = {
     title: "Вызов на дуэль",
     message: "{name} вызывает вас на дуэль.",
     partyMessage: "{name} вызывает вашу группу на дуэль.",
+    expiresIn: "Истекает через {seconds} сек.",
     acceptButton: "Принять",
     declineButton: "Отказаться",
   },
