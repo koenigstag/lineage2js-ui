@@ -866,15 +866,6 @@ export class GameStore {
     this.client?.attack(target.objectId);
   }
 
-  /** Assists the current target -- only valid when it's a party member (RequestActionUse ASSIST; the server infers "assist whoever my target is attacking" from the already-synced target selection, no objectId needed on the wire). */
-  assist() {
-    const target = this.target;
-    if (!target || !this.party.some((member) => member.ObjectId === target.objectId)) {
-      return;
-    }
-    this.client?.action("ASSIST");
-  }
-
   /** Invites the current target to a party (RequestJoinParty) -- only valid for a player target not already in the party. */
   inviteToParty() {
     const target = this.target;
