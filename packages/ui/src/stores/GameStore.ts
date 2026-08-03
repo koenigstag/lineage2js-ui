@@ -866,6 +866,31 @@ export class GameStore {
     this.client?.attack(target.objectId);
   }
 
+  /**
+   * Assists the current target (only valid when it's a party member) --
+   * there's no RequestActionUse case or dedicated packet for this (see the
+   * PICK_UP-style investigation in user-actions.ts's history), but the
+   * server broadcasts TargetSelected to every nearby player whenever
+   * *anyone* selects a target (Player.java's Broadcast.toKnownPlayers call),
+   * which TargetSelectedMutator already uses to keep every tracked
+   * creature's own .Target field live -- not just ours. So "assist" is just
+   * "attack whatever my target is currently targeting", read off the live
+   * L2Creature in CreaturesList rather than the flattened TargetSnapshot.
+   * No-ops if we haven't seen that member retarget since they came into
+   * view (Target still null) or they have no target at all.
+   */
+  assist() {
+    const target = this.target;
+    if (!target || target.creatureKind || !this.party.some((member) => member.ObjectId === target.objectId)) {
+      return;
+    }
+    const theirTarget = this.client?.CreaturesList.getEntryByObjectId(target.objectId)?.Target;
+    if (!theirTarget) {
+      return;
+    }
+    this.client?.hit(theirTarget);
+  }
+
   /** Invites the current target to a party (RequestJoinParty) -- only valid for a player target not already in the party. */
   inviteToParty() {
     const target = this.target;

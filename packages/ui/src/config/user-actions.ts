@@ -97,6 +97,18 @@ const ATTACK: Action = {
   isEnabled: (game) => Boolean(game.target),
 };
 
+const ASSIST: Action = {
+  code: Actions.ASSIST,
+  dispatch: (game) => game.assist(),
+  // Mirrors GameStore.assist()'s own guard (target must be a party member) --
+  // the "does that member have a known target" half is checked inside
+  // dispatch itself, not here, since it can't be answered from TargetSnapshot.
+  isEnabled: (game) => {
+    const target = game.target;
+    return Boolean(target && game.party.some((member) => member.ObjectId === target.objectId));
+  },
+};
+
 const NEXT_TARGET: Action = {
   code: Actions.NEXT_TARGET,
   dispatch: (game) => game.selectNextTarget(),
@@ -181,13 +193,7 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     EXCHANGE,
     NEXT_TARGET,
     PICK_UP,
-    // No case in RequestActionUse for id 6 (confirmed against HighFive and
-    // even the much older Interlude source) and no dedicated Assist packet
-    // either -- unlike Pick Up, no alternate mechanism was found (the only
-    // hit for "assist" server-side is Attackable.MinionList.onAssist, NPC
-    // minion aggro-sharing, unrelated to a player action). Icon-only until a
-    // real mechanism turns up.
-    { code: Actions.ASSIST },
+    ASSIST,
     simpleAction(Actions.PRIVATE_STORE_SELL),
     simpleAction(Actions.PRIVATE_STORE_BUY),
     simpleAction(Actions.PRIVATE_STORE_PACKAGE_SELL),
