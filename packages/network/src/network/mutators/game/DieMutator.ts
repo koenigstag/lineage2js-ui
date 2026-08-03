@@ -11,6 +11,7 @@ export default class DieMutator extends IMMOClientMutator<GameClient, Die> {
       creature.Target = null;
       creature.IsDead = true;
       if (creature.ObjectId === this.Client.ActiveChar.ObjectId) {
+        this.Client.ActiveChar.IsDead = true;
         this.Client.BuffsList.clear();
       }
 

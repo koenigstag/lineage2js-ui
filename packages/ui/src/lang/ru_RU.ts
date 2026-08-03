@@ -224,6 +224,10 @@ export const LANG_RU_RU: LangDictionary = {
     messagePlaceholder: "Введите сообщение...",
     whisperTargetPlaceholder: "Имя игрока",
   },
+  death: {
+    message: "Вы погибли.",
+    reviveTownButton: "В ближайший город",
+  },
   tooltip: {
     types: {
       skill: "Навык",

@@ -224,6 +224,10 @@ export const LANG_EN_US: LangDictionary = {
     messagePlaceholder: "Type a message...",
     whisperTargetPlaceholder: "Player name",
   },
+  death: {
+    message: "You are dead.",
+    reviveTownButton: "To Nearest Town",
+  },
   tooltip: {
     types: {
       skill: "Skill",

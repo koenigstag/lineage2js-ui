@@ -15,9 +15,12 @@ import {
   ClassId,
   AcquireSkillType,
   ChatType,
+  RestartPoint,
   type Client,
   type ESystemMessage,
   type ECreatureSay,
+  type EDie,
+  type ERevive,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
@@ -678,6 +681,8 @@ export class GameStore {
   party: L2PartyMember[] = createDemoParty();
   /** Currently selected attack/spell/buff target, if any -- see target-select window. */
   target: TargetSnapshot | undefined = undefined;
+  /** True while the local player is dead, see the Die/Revive event handlers in bindToClient -- drives the death modal. */
+  isPlayerDead: boolean = false;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -721,6 +726,15 @@ export class GameStore {
       this.client.cancelTarget();
     }
     this.target = undefined;
+  }
+
+  /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
+  reviveAtTown() {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.revive(RestartPoint.TOWN);
+    } else {
+      this.isPlayerDead = false;
+    }
   }
 
   /**
@@ -1080,6 +1094,19 @@ export class GameStore {
       const text = e.data.messages.join(" ");
       runInAction(() => this.recordChatMessage(e.data.type, e.data.charName, text));
     });
+
+    // Drives the death modal -- only reacts when the affected creature is
+    // the local player, same ObjectId comparison syncCreatures uses.
+    client.on("Die", (e: EDie) => runInAction(() => {
+      if (e.data.creature.ObjectId === client.Me.ObjectId) {
+        this.isPlayerDead = true;
+      }
+    }));
+    client.on("Revive", (e: ERevive) => runInAction(() => {
+      if (e.data.creature.ObjectId === client.Me.ObjectId) {
+        this.isPlayerDead = false;
+      }
+    }));
 
     // Real Learn-tab data source -- replaces the demo learnableSkills list
     // the moment the server sends one. Only AcquireSkillType.CLASS is shown
