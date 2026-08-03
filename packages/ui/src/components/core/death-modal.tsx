@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { BaseButton } from "./buttons/base.button";
-import { MODAL_Z_INDEX } from "../../config/z-index";
+import { DEATH_Z_INDEX } from "../../config/z-index";
 import { t } from "../../lang/lang";
 import { useGameStore } from "../../stores/StoreContext";
 
@@ -26,7 +26,7 @@ export const DeathModal = observer(function DeathModal() {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: MODAL_Z_INDEX,
+        zIndex: DEATH_Z_INDEX,
         backgroundColor: "rgba(0, 0, 0, 0.4)",
         display: "flex",
         alignItems: "center",

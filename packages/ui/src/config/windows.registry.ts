@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { RESURRECT_Z_INDEX } from "./z-index";
 
 export type WindowType = "titlebar" | "sidebar" | "only-body";
 
@@ -28,6 +29,8 @@ export interface WindowConfig {
   origin?: WindowOrigin;
   /** x/y are distances from the origin corner ("top-center": x is the horizontal offset from screen-center). Defaults to screen-center when omitted. */
   defaultPosition?: (viewport: Viewport) => WindowPosition;
+  /** Fixed z-index that overrides WindowManagerStore's normal per-window focus-order counter (which never leaves the low hundreds) -- for windows that must sit above/below other overlay tiers regardless of focus history, see config/z-index.ts. */
+  zIndex?: number;
   /** Overrides the content area's background color. */
   contentBackground?: string;
   /** Overrides the content area's padding (default 8). */
@@ -198,6 +201,21 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     origin: "top-center",
     defaultPosition: () => ({ x: 0, y: 10 }),
   },
+  resurrect: {
+    id: "resurrect",
+    type: "titlebar",
+    title: "resurrect.title",
+    // No close button -- accept/decline (see resurrect.window.tsx) are the
+    // only ways out, same "answer, don't dismiss" rule as death/disconnect.
+    closable: false,
+    draggable: true,
+    // Always "open" -- windows-root.tsx collapses it via GameStore.resurrectRequest
+    // instead, same hide-when-empty treatment as party-char-info/target-select.
+    defaultOpen: true,
+    origin: "top-center",
+    defaultPosition: () => ({ x: 0, y: 80 }),
+    zIndex: RESURRECT_Z_INDEX,
+  },
 };
 
 export const GAME_WINDOW_IDS = [
@@ -222,6 +240,7 @@ export const GAME_WINDOW_IDS = [
   "char-info",
   "party-char-info",
   "target-select",
+  "resurrect",
 ];
 
 export const LOGIN_WINDOW_IDS = ["settings"];

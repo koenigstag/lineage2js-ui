@@ -15,6 +15,7 @@ import { TargetSelectContent } from "../target-select/target-select.window";
 import { SystemMessagesContent } from "../system-messages/system-messages.window";
 import { ChatContent } from "../chat/chat.window";
 import { SkillLearnContent } from "../skill/skill.window";
+import { ResurrectConfirmContent } from "../resurrect/resurrect.window";
 import { useGameStore } from "../../../stores/StoreContext";
 
 export interface WindowsRootProps {
@@ -39,6 +40,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     "system-messages": () => <SystemMessagesContent />,
     chat: () => <ChatContent />,
     skill: () => <SkillLearnContent />,
+    resurrect: () => <ResurrectConfirmContent />,
   };
 
   return (
@@ -55,6 +57,10 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
         }
         // No skill selected from the Learn tab yet -- same treatment.
         if (id === "skill" && !game.selectedLearnableSkill) {
+          return null;
+        }
+        // No pending resurrect prompt -- same treatment.
+        if (id === "resurrect" && !game.resurrectRequest) {
           return null;
         }
 

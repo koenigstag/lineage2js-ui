@@ -21,6 +21,7 @@ import {
   type ECreatureSay,
   type EDie,
   type ERevive,
+  type EConfirmDlg,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
@@ -685,6 +686,8 @@ export class GameStore {
   isPlayerDead: boolean = false;
   /** True once the game connection has dropped (graceful ServerClose or an abrupt socket loss), see bindToClient -- drives the disconnect modal. Cleared on the next successful world-enter. */
   isDisconnected: boolean = false;
+  /** Pending "so-and-so wants to resurrect you" prompt (a ConfirmDlg with isResurrect=true), pre-formatted the same way recordSystemMessage formats its entries -- drives the "resurrect" window. expiresAt is only set for the Charm of Courage self-res case (the only one the real server sends a timeout for, see Player.reviveRequest -- a normal party/priest request waits indefinitely). Cleared on accept/decline, a successful Revive, or the next world-enter. */
+  resurrectRequest: { requesterId: number; message: string; expiresAt: number | undefined } | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -737,6 +740,16 @@ export class GameStore {
     } else {
       this.isPlayerDead = false;
     }
+  }
+
+  acceptResurrect() {
+    this.client?.acceptResurrect();
+    this.resurrectRequest = undefined;
+  }
+
+  declineResurrect() {
+    this.client?.declineResurrect();
+    this.resurrectRequest = undefined;
   }
 
   /**
@@ -1036,6 +1049,7 @@ export class GameStore {
     // straight into the disconnect modal.
     client.on("PacketReceived", "UserInfo", () => runInAction(() => {
       this.isDisconnected = false;
+      this.resurrectRequest = undefined;
     }));
     // Henna stat bonuses arrive via their own packet, sent right after
     // world-enter (see EnterWorld.java in the H5 reference server) --
@@ -1114,7 +1128,24 @@ export class GameStore {
     client.on("Revive", (e: ERevive) => runInAction(() => {
       if (e.data.creature.ObjectId === client.Me.ObjectId) {
         this.isPlayerDead = false;
+        this.resurrectRequest = undefined;
       }
+    }));
+
+    // Drives the "resurrect" window -- a party member/priest/Charm of
+    // Courage offering to bring the local player back. ConfirmDlgType's
+    // resurrect ids double as real SystemMessageId values (see
+    // ConfirmDlgMutator), so the prompt text reuses formatSystemMessage the
+    // same way recordSystemMessage does.
+    client.on("ConfirmDlg", (e: EConfirmDlg) => runInAction(() => {
+      if (!e.data.isResurrect) {
+        return;
+      }
+      this.resurrectRequest = {
+        requesterId: e.data.requesterId,
+        message: formatSystemMessage(e.data.messageId, e.data.params, e.data.paramTypes),
+        expiresAt: e.data.time > 0 ? Date.now() + e.data.time : undefined,
+      };
     }));
 
     // Drives the disconnect modal. ServerClose is the server's graceful

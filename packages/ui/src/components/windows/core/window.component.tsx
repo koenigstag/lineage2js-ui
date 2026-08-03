@@ -239,7 +239,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
       ? { backgroundColor: "transparent", minWidth: undefined, overflow: "visible" }
       : {}),
     ...getOriginStyle(origin, state.x, state.y),
-    zIndex: state.zIndex,
+    zIndex: config.zIndex ?? state.zIndex,
   };
 
   if (config.type === "titlebar") {

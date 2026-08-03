@@ -22,6 +22,7 @@ export default class ConfirmDlgMutator extends IMMOClientMutator<
           ConfirmDlgType.RESURRECTION_REQUEST_BY_C1_FOR_S2_XP ||
         packet.messageId === ConfirmDlgType.RESURRECT_USING_CHARM_OF_COURAGE,
       params: packet.messageParams,
+      paramTypes: packet.messageParamTypes,
       time: packet.Time,
       requesterId: packet.RequesterId,
     });

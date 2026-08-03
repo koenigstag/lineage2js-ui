@@ -232,6 +232,12 @@ export const LANG_RU_RU: LangDictionary = {
     message: "Соединение с сервером потеряно.",
     returnToLoginButton: "Вернуться к логину",
   },
+  resurrect: {
+    title: "Воскрешение",
+    acceptButton: "Принять",
+    declineButton: "Отказаться",
+    expiresIn: "Истекает через {seconds} сек.",
+  },
   tooltip: {
     types: {
       skill: "Навык",

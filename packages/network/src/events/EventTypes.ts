@@ -106,7 +106,8 @@ export declare type EConfirmDlg = {
     messageId: number;
     type: ConfirmDlgType;
     isResurrect: boolean;
-    params: [];
+    params: unknown[];
+    paramTypes: number[];
     time: number;
     requesterId: number;
   };

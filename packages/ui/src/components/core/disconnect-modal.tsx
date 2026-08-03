@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { BaseButton } from "./buttons/base.button";
-import { MODAL_Z_INDEX } from "../../config/z-index";
+import { DISCONNECT_Z_INDEX } from "../../config/z-index";
 import { t } from "../../lang/lang";
 import { useGameStore, useSessionStore, useUiStore } from "../../stores/StoreContext";
 
@@ -33,7 +33,7 @@ export const DisconnectModal = observer(function DisconnectModal() {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: MODAL_Z_INDEX,
+        zIndex: DISCONNECT_Z_INDEX,
         backgroundColor: "rgba(0, 0, 0, 0.4)",
         display: "flex",
         alignItems: "center",

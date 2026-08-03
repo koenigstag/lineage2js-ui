@@ -232,6 +232,12 @@ export const LANG_EN_US: LangDictionary = {
     message: "Connection to the server has been lost.",
     returnToLoginButton: "Return to Login",
   },
+  resurrect: {
+    title: "Resurrection",
+    acceptButton: "Accept",
+    declineButton: "Decline",
+    expiresIn: "Expires in {seconds}s",
+  },
   tooltip: {
     types: {
       skill: "Skill",
