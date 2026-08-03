@@ -15,8 +15,7 @@ export type ActionCategory = "basic" | "party" | "target" | "social" | "pet";
  * GameStore.recommend(), RequestOustPartyMember, ...), same as real L2.
  * `dispatch` is only set for the ones actually wired to a click here; pet/
  * servitor actions stay icon/tooltip-only since this client doesn't model
- * summon state yet, and PICK_UP stays icon-only since there's no ground-item
- * targeting system. The slot's dimmed/enabled look always comes from the
+ * summon state yet. The slot's dimmed/enabled look always comes from the
  * server's ExBasicActionList (GameStore.isBasicActionAllowed) -- `isEnabled`
  * is a separate, purely click-time guard for a precondition dispatch itself
  * needs (e.g. RECOMMEND below requiring a valid target), not a visual state.
@@ -186,7 +185,10 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
     ATTACK,
     EXCHANGE,
     NEXT_TARGET,
-    { code: Actions.PICK_UP },
+    // Picks up the nearest droppable item -- no target needed, unlike
+    // clicking a specific ground item directly (which this client has no
+    // rendering/targeting for yet, see DropItemMutator/DroppedItems).
+    simpleAction(Actions.PICK_UP),
     ASSIST,
     simpleAction(Actions.PRIVATE_STORE_SELL),
     simpleAction(Actions.PRIVATE_STORE_BUY),
