@@ -15,6 +15,7 @@
 - Add NPC dialog system -- render engine and actions
 - Add item/skill/action descriptions -- no per-id table exists yet
 - Parse ExBasicActionList (see Unhandled packets) and use it to drive the Actions window's per-slot enabled state -- currently each action's availability is a hand-written isEnabled(game) predicate (user-actions.ts), not the server's actual allowed-action-id list, so it can't reflect e.g. a transform's restricted action set
+- Add the other revive points to the death modal (death-modal.tsx currently only offers RestartPoint.TOWN) -- Clan Hall/Castle/Fortress/Siege HQ/Fixed/Agathion need ownership/availability data (clan hall or castle ownership, siege participation, Fixed-point item, Agathion state) that isn't modeled anywhere in this client yet
 
 
 # Long-term TODOs
