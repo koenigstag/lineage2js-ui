@@ -1,5 +1,7 @@
 import { observer } from "mobx-react-lite";
+import { ShortcutType } from "@lineage2js/network";
 import { ActionSlot } from "../core/action-slot.component";
+import { setHotbarDragPayload } from "../core/dnd";
 import { USER_ACTIONS, type ActionCategory, type Action } from "../../../config/user-actions";
 import { useGameStore } from "../../../stores/StoreContext";
 import { t } from "../../../lang/lang";
@@ -36,13 +38,14 @@ export const ActionsContent = observer(function ActionsContent() {
               const canDispatch = !action.isEnabled || action.isEnabled(game);
 
               return (
-                <ActionSlot
-                  key={action.code}
-                  code={action.code}
-                  category={category}
-                  disabled={!enabled}
-                  onClick={action.dispatch ? () => canDispatch && action.dispatch!(game) : undefined}
-                />
+                <div key={action.code} draggable onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.ACTION, action.code)}>
+                  <ActionSlot
+                    code={action.code}
+                    category={category}
+                    disabled={!enabled}
+                    onClick={action.dispatch ? () => canDispatch && action.dispatch!(game) : undefined}
+                  />
+                </div>
               );
             })}
           </div>

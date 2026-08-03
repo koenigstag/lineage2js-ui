@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { observer } from "mobx-react-lite";
-import type { L2Item } from "@lineage2js/network";
+import { ShortcutType, type L2Item } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
 import { ItemSlot } from "../core/item-slot.component";
+import { setHotbarDragPayload } from "../core/dnd";
 import { BaseInput } from "../../core/inputs/base.input";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
@@ -105,16 +106,21 @@ export const InventoryContent = observer(function InventoryContent() {
               return <Slot key={`empty-${index}`} type="inventory" />;
             }
             return (
-              <ItemSlot
+              <div
                 key={`item-${item.ObjectId}`}
-                id={item.Id}
-                slotType={getItemSlotType(item)}
-                count={item.Count}
-                grade={getItemGradeLabel(item)}
-                isEquipped={item.IsEquipped}
-                detail="full"
-                // iconBorder={INVENTORY_ICON_BORDER}
-              />
+                draggable
+                onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.ITEM, item.ObjectId)}
+              >
+                <ItemSlot
+                  id={item.Id}
+                  slotType={getItemSlotType(item)}
+                  count={item.Count}
+                  grade={getItemGradeLabel(item)}
+                  isEquipped={item.IsEquipped}
+                  detail="full"
+                  // iconBorder={INVENTORY_ICON_BORDER}
+                />
+              </div>
             );
           })}
         </div>

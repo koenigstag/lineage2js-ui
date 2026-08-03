@@ -732,6 +732,42 @@ export class GameStore {
     this.selectedCharacterId = id;
   }
 
+  /**
+   * Places a shortcut in a hotbar slot -- used by the hotbar's drag-and-drop
+   * (dragging an item/skill/action/macro/recipe from its source panel, or
+   * moving/swapping an existing hotbar slot). `source` is only set for the
+   * latter: when it names a *different* slot, whatever used to be in the
+   * target slot (if anything) is moved back into the source slot instead of
+   * being lost, i.e. a real swap rather than an overwrite.
+   *
+   * Local-only for now -- there's no outgoing RequestShortCutReg packet in
+   * the network layer yet (see packages/network/src/network/incoming/game/
+   * ShortCutRegister.ts, incoming-only), so this doesn't round-trip through
+   * a connected server the way e.g. sendChatMessage does.
+   */
+  setHotbarSlot(slot: number, shortcut: L2Shortcut, source?: { from: "hotbar"; slot: number }) {
+    const next = [...this.hotbarSlots];
+    const displaced = next[slot];
+    shortcut.Slot = slot;
+    next[slot] = shortcut;
+
+    if (source?.from === "hotbar" && source.slot !== slot) {
+      if (displaced) {
+        displaced.Slot = source.slot;
+      }
+      next[source.slot] = displaced;
+    }
+
+    this.hotbarSlots = next;
+  }
+
+  /** Clears a hotbar slot -- used when a shortcut is dragged off the hotbar entirely. */
+  clearHotbarSlot(slot: number) {
+    const next = [...this.hotbarSlots];
+    next[slot] = undefined;
+    this.hotbarSlots = next;
+  }
+
   setActiveCharacter(id: number | undefined) {
     this.me = id;
   }

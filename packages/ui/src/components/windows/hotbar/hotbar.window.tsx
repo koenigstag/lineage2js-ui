@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import { observer } from "mobx-react-lite";
-import { ShortcutType, type L2Item, type L2Shortcut } from "@lineage2js/network";
+import { L2Shortcut, ShortcutType, type L2Item } from "@lineage2js/network";
 import type { IconBorder } from "../core/slot.component";
 import { ShortcutSlot } from "./shortcut-slot.component";
+import { hasHotbarDragPayload, readHotbarDragPayload, setHotbarDragPayload } from "../core/dnd";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { resolveShortcutItem } from "../../../config/shortcut-mapping";
 
@@ -62,10 +63,58 @@ function activateShortcut(shortcut: L2Shortcut, client: ReturnType<typeof useSes
   }
 }
 
+/** Builds a fresh L2Shortcut for `slot` out of a drag payload -- used both for drops from a source panel (item/skill/action) and hotbar-to-hotbar moves. */
+function shortcutFromDragPayload(slot: number, shortcutType: ShortcutType, targetId: number, level?: number): L2Shortcut {
+  const shortcut = new L2Shortcut();
+  shortcut.Slot = slot;
+  shortcut.Type = shortcutType;
+  shortcut.TargetId = targetId;
+  if (level !== undefined) {
+    shortcut.Level = level;
+  }
+  return shortcut;
+}
+
 export const HotbarContent = observer(function HotbarContent() {
   const game = useGameStore();
   const session = useSessionStore();
   const [pressedSlot, setPressedSlot] = useState<number | undefined>(undefined);
+  const [dragOverSlot, setDragOverSlot] = useState<number | undefined>(undefined);
+
+  function handleSlotDragStart(e: DragEvent<HTMLDivElement>, slotIndex: number, shortcut: L2Shortcut) {
+    setHotbarDragPayload(e, shortcut.Type, shortcut.TargetId, shortcut.Type === ShortcutType.SKILL ? shortcut.Level : undefined, {
+      from: "hotbar",
+      slot: slotIndex,
+    });
+  }
+
+  function handleSlotDragOver(e: DragEvent<HTMLDivElement>, slotIndex: number) {
+    if (!hasHotbarDragPayload(e)) return;
+    // Without preventDefault the browser refuses the drop entirely.
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setDragOverSlot(slotIndex);
+  }
+
+  function handleSlotDragLeave(slotIndex: number) {
+    setDragOverSlot((current) => (current === slotIndex ? undefined : current));
+  }
+
+  function handleSlotDrop(e: DragEvent<HTMLDivElement>, slotIndex: number) {
+    setDragOverSlot(undefined);
+    const payload = readHotbarDragPayload(e);
+    if (!payload) return;
+    e.preventDefault();
+    const shortcut = shortcutFromDragPayload(slotIndex, payload.shortcutType, payload.targetId, payload.level);
+    game.setHotbarSlot(slotIndex, shortcut, payload.source);
+  }
+
+  function handleSlotDragEnd(e: DragEvent<HTMLDivElement>, slotIndex: number) {
+    // Dropped somewhere that didn't accept it (or cancelled) -- clear the source slot.
+    if (e.dataTransfer.dropEffect === "none") {
+      game.clearHotbarSlot(slotIndex);
+    }
+  }
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -99,14 +148,28 @@ export const HotbarContent = observer(function HotbarContent() {
           {row.map((slotKey, columnIndex) => {
             const slotIndex = rowIndex * COLUMNS + columnIndex;
             const shortcut = game.hotbarSlots[slotIndex];
+            const isDragOver = dragOverSlot === slotIndex;
             return (
-              <ShortcutSlot
+              <div
                 key={slotKey}
-                slotKey={slotKey}
-                shortcut={shortcut}
-                pressed={pressedSlot === slotIndex}
-                iconBorder={HOTBAR_ICON_BORDER}
-              />
+                draggable={Boolean(shortcut)}
+                onDragStart={shortcut ? (e) => handleSlotDragStart(e, slotIndex, shortcut) : undefined}
+                onDragOver={(e) => handleSlotDragOver(e, slotIndex)}
+                onDragLeave={() => handleSlotDragLeave(slotIndex)}
+                onDrop={(e) => handleSlotDrop(e, slotIndex)}
+                onDragEnd={(e) => handleSlotDragEnd(e, slotIndex)}
+                style={{
+                  outline: isDragOver ? "2px solid #d4af6a" : undefined,
+                  outlineOffset: isDragOver ? -2 : undefined,
+                }}
+              >
+                <ShortcutSlot
+                  slotKey={slotKey}
+                  shortcut={shortcut}
+                  pressed={pressedSlot === slotIndex}
+                  iconBorder={HOTBAR_ICON_BORDER}
+                />
+              </div>
             );
           })}
         </div>

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { observer } from "mobx-react-lite";
-import type { L2Skill } from "@lineage2js/network";
+import { ShortcutType, type L2Skill } from "@lineage2js/network";
 import { SkillSlot } from "../core/skill-slot.component";
+import { setHotbarDragPayload } from "../core/dnd";
 import { BaseInput } from "../../core/inputs/base.input";
 import { useGameStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import { getSkillName } from "../../../config/skill-mapping";
@@ -109,14 +110,19 @@ export const SkillsContent = observer(function SkillsContent() {
             }}
           >
             {filteredSkills.map((skill) => (
-              <SkillSlot
+              <div
                 key={skill.Id}
-                id={skill.Id}
-                level={skill.Level}
-                cost={skill.Mp}
-                expiresAt={skill.IsReady ? undefined : Date.now() + skill.Remaining}
-                detail="full"
-              />
+                draggable
+                onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.SKILL, skill.Id, skill.Level)}
+              >
+                <SkillSlot
+                  id={skill.Id}
+                  level={skill.Level}
+                  cost={skill.Mp}
+                  expiresAt={skill.IsReady ? undefined : Date.now() + skill.Remaining}
+                  detail="full"
+                />
+              </div>
             ))}
           </div>
         </>
