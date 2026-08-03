@@ -83,6 +83,8 @@ import RecipeItemMakeInfoMutator from "./RecipeItemMakeInfoMutator";
 import RecipeItemMakeInfo from "../../incoming/game/RecipeItemMakeInfo";
 import ReviveMutator from "./ReviveMutator";
 import Revive from "../../incoming/game/Revive";
+import SendTradeRequestMutator from "./SendTradeRequestMutator";
+import SendTradeRequest from "../../incoming/game/SendTradeRequest";
 import ServerCloseMutator from "./ServerCloseMutator";
 import ServerClose from "../../incoming/game/ServerClose";
 import SetupGaugeMutator from "./SetupGaugeMutator";
@@ -161,6 +163,7 @@ export default [
   [RecipeBookItemListMutator.prototype, RecipeBookItemList],
   [RecipeItemMakeInfoMutator.prototype, RecipeItemMakeInfo],
   [ReviveMutator.prototype, Revive],
+  [SendTradeRequestMutator.prototype, SendTradeRequest],
   [ServerCloseMutator.prototype, ServerClose],
   [SetupGaugeMutator.prototype, SetupGauge],
   [SkillCoolTimeMutator.prototype, SkillCoolTime],

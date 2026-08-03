@@ -27,6 +27,11 @@ export declare type EPartyRequest = {
   data: { requestorName: string; partyDistributionType: number };
   once: boolean;
 };
+export declare type ETradeRequest = {
+  type: string;
+  data: { requesterId: number; requesterName: string };
+  once: boolean;
+};
 export declare type EDie = {
   type: string;
   data: { creature: L2Creature; isSpoiled: boolean };
@@ -163,6 +168,10 @@ export declare type OnPartyRequestEvent = [
   "PartyRequest",
   (e: EPartyRequest) => void
 ];
+export declare type OnTradeRequestEvent = [
+  "TradeRequest",
+  (e: ETradeRequest) => void
+];
 export declare type OnDieEvent = ["Die", (e: EDie) => void];
 export declare type OnTargetSelectedEvent = [
   "TargetSelected",
@@ -237,6 +246,7 @@ export declare type EventHandlerType =
   | OnPacketReceivedEvent
   | OnPacketSentEvent
   | OnPartyRequestEvent
+  | OnTradeRequestEvent
   | OnDieEvent
   | OnTargetSelectedEvent
   | OnMyTargetSelectedEvent

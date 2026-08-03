@@ -1,5 +1,6 @@
 import CommandAcceptJoinParty from "./CommandAcceptJoinParty";
 import CommandAcceptResurrect from "./CommandAcceptResurrect";
+import CommandAcceptTradeRequest from "./CommandAcceptTradeRequest";
 import CommandAction from "./CommandAction";
 import CommandAttack from "./CommandAttack";
 import CommandAutoShots from "./CommandAutoShots";
@@ -10,6 +11,7 @@ import CommandCraft from "./CommandCraft";
 import CommandCreateCharacter from "./CommandCreateCharacter";
 import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
 import CommandDeclineResurrect from "./CommandDeclineResurrect";
+import CommandDeclineTradeRequest from "./CommandDeclineTradeRequest";
 import CommandDropItem from "./CommandDropItem";
 import CommandDwarvenCraftRecipes from "./CommandDwarvenCraftRecipes";
 import CommandHit from "./CommandHit";
@@ -45,6 +47,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   export default {
     acceptJoinParty: CommandAcceptJoinParty.prototype,
   acceptResurrect: CommandAcceptResurrect.prototype,
+  acceptTradeRequest: CommandAcceptTradeRequest.prototype,
   action: CommandAction.prototype,
   attack: CommandAttack.prototype,
   autoShots: CommandAutoShots.prototype,
@@ -55,6 +58,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   createCharacter: CommandCreateCharacter.prototype,
   declineJoinParty: CommandDeclineJoinParty.prototype,
   declineResurrect: CommandDeclineResurrect.prototype,
+  declineTradeRequest: CommandDeclineTradeRequest.prototype,
   dropItem: CommandDropItem.prototype,
   dwarvenCraftRecipes: CommandDwarvenCraftRecipes.prototype,
   hit: CommandHit.prototype,

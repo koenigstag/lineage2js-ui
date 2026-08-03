@@ -238,6 +238,29 @@ export const LANG_EN_US: LangDictionary = {
     declineButton: "Decline",
     expiresIn: "Expires in {seconds}s",
   },
+  partyInvite: {
+    title: "Party Invite",
+    message: "{name} invites you to a party. (Loot: {loot})",
+    acceptButton: "Accept",
+    declineButton: "Decline",
+  },
+  party: {
+    distribution: {
+      findersKeepers: "Finders Keepers",
+      random: "Random",
+      randomIncludingSpoil: "Random, Including Spoil",
+      byTurn: "By Turn",
+      byTurnIncludingSpoil: "By Turn, Including Spoil",
+      unknown: "Unknown",
+    },
+  },
+  tradeRequest: {
+    title: "Trade Request",
+    message: "{name} wants to trade with you.",
+    unknownPlayer: "Someone",
+    acceptButton: "Accept",
+    declineButton: "Decline",
+  },
   tooltip: {
     types: {
       skill: "Skill",

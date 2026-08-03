@@ -16,6 +16,8 @@ import { SystemMessagesContent } from "../system-messages/system-messages.window
 import { ChatContent } from "../chat/chat.window";
 import { SkillLearnContent } from "../skill/skill.window";
 import { ResurrectConfirmContent } from "../resurrect/resurrect.window";
+import { PartyInviteConfirmContent } from "../party-invite/party-invite.window";
+import { TradeRequestConfirmContent } from "../trade-request/trade-request.window";
 import { useGameStore } from "../../../stores/StoreContext";
 
 export interface WindowsRootProps {
@@ -41,6 +43,8 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     chat: () => <ChatContent />,
     skill: () => <SkillLearnContent />,
     resurrect: () => <ResurrectConfirmContent />,
+    "party-invite": () => <PartyInviteConfirmContent />,
+    "trade-request": () => <TradeRequestConfirmContent />,
   };
 
   return (
@@ -61,6 +65,14 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
         }
         // No pending resurrect prompt -- same treatment.
         if (id === "resurrect" && !game.resurrectRequest) {
+          return null;
+        }
+        // No pending party invite -- same treatment.
+        if (id === "party-invite" && !game.partyInviteRequest) {
+          return null;
+        }
+        // No pending trade request -- same treatment.
+        if (id === "trade-request" && !game.tradeRequest) {
           return null;
         }
 

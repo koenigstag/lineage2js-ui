@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { RESURRECT_Z_INDEX } from "./z-index";
+import { CONFIRM_WINDOW_Z_INDEX } from "./z-index";
 
 export type WindowType = "titlebar" | "sidebar" | "only-body";
 
@@ -214,7 +214,31 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     defaultOpen: true,
     origin: "top-center",
     defaultPosition: () => ({ x: 0, y: 80 }),
-    zIndex: RESURRECT_Z_INDEX,
+    zIndex: CONFIRM_WINDOW_Z_INDEX,
+  },
+  "party-invite": {
+    id: "party-invite",
+    type: "titlebar",
+    title: "partyInvite.title",
+    closable: false,
+    draggable: true,
+    defaultOpen: true,
+    origin: "top-center",
+    // Stacked below resurrect's default box so the two don't overlap if
+    // both happen to be pending at once.
+    defaultPosition: () => ({ x: 0, y: 190 }),
+    zIndex: CONFIRM_WINDOW_Z_INDEX,
+  },
+  "trade-request": {
+    id: "trade-request",
+    type: "titlebar",
+    title: "tradeRequest.title",
+    closable: false,
+    draggable: true,
+    defaultOpen: true,
+    origin: "top-center",
+    defaultPosition: () => ({ x: 0, y: 300 }),
+    zIndex: CONFIRM_WINDOW_Z_INDEX,
   },
 };
 
@@ -241,6 +265,8 @@ export const GAME_WINDOW_IDS = [
   "party-char-info",
   "target-select",
   "resurrect",
+  "party-invite",
+  "trade-request",
 ];
 
 export const LOGIN_WINDOW_IDS = ["settings"];

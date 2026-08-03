@@ -150,6 +150,14 @@ export default interface ClientCommands {
    */
   declineJoinParty(): void;
   /**
+   * Accepts the requested trade
+   */
+  acceptTradeRequest(): void;
+  /**
+   * Declines the requested trade
+   */
+  declineTradeRequest(): void;
+  /**
    * Select next/closest attackable target
    */
   nextTarget(): L2Creature | undefined;

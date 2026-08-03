@@ -16,12 +16,15 @@ import {
   AcquireSkillType,
   ChatType,
   RestartPoint,
+  PartyDistributionType,
   type Client,
   type ESystemMessage,
   type ECreatureSay,
   type EDie,
   type ERevive,
   type EConfirmDlg,
+  type EPartyRequest,
+  type ETradeRequest,
 } from "@lineage2js/network";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
@@ -688,6 +691,10 @@ export class GameStore {
   isDisconnected: boolean = false;
   /** Pending "so-and-so wants to resurrect you" prompt (a ConfirmDlg with isResurrect=true), pre-formatted the same way recordSystemMessage formats its entries -- drives the "resurrect" window. expiresAt is only set for the Charm of Courage self-res case (the only one the real server sends a timeout for, see Player.reviveRequest -- a normal party/priest request waits indefinitely). Cleared on accept/decline, a successful Revive, or the next world-enter. */
   resurrectRequest: { requesterId: number; message: string; expiresAt: number | undefined } | undefined = undefined;
+  /** Pending party invite (AskJoinParty -> "PartyRequest") -- drives the "party-invite" window. Cleared on accept/decline or the next world-enter. */
+  partyInviteRequest: { requestorName: string; distributionType: PartyDistributionType } | undefined = undefined;
+  /** Pending trade request (SendTradeRequest -> "TradeRequest") -- drives the "trade-request" window. This client has no trade session UI yet, so accepting only sends the answer; the server's follow-up TradeStart isn't consumed. Cleared on accept/decline or the next world-enter. */
+  tradeRequest: { requesterId: number; requesterName: string } | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -750,6 +757,34 @@ export class GameStore {
   declineResurrect() {
     this.client?.declineResurrect();
     this.resurrectRequest = undefined;
+  }
+
+  acceptPartyInvite() {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.acceptJoinParty();
+    }
+    this.partyInviteRequest = undefined;
+  }
+
+  declinePartyInvite() {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.declineJoinParty();
+    }
+    this.partyInviteRequest = undefined;
+  }
+
+  acceptTradeRequest() {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.acceptTradeRequest();
+    }
+    this.tradeRequest = undefined;
+  }
+
+  declineTradeRequest() {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.declineTradeRequest();
+    }
+    this.tradeRequest = undefined;
   }
 
   /**
@@ -1050,6 +1085,8 @@ export class GameStore {
     client.on("PacketReceived", "UserInfo", () => runInAction(() => {
       this.isDisconnected = false;
       this.resurrectRequest = undefined;
+      this.partyInviteRequest = undefined;
+      this.tradeRequest = undefined;
     }));
     // Henna stat bonuses arrive via their own packet, sent right after
     // world-enter (see EnterWorld.java in the H5 reference server) --
@@ -1145,6 +1182,24 @@ export class GameStore {
         requesterId: e.data.requesterId,
         message: formatSystemMessage(e.data.messageId, e.data.params, e.data.paramTypes),
         expiresAt: e.data.time > 0 ? Date.now() + e.data.time : undefined,
+      };
+    }));
+
+    // Drives the "party-invite" window.
+    client.on("PartyRequest", (e: EPartyRequest) => runInAction(() => {
+      this.partyInviteRequest = {
+        requestorName: e.data.requestorName,
+        distributionType: e.data.partyDistributionType,
+      };
+    }));
+
+    // Drives the "trade-request" window. Accepting only sends the answer --
+    // this client has no trade session UI yet, so the server's follow-up
+    // TradeStart (the actual item-exchange window) goes unconsumed.
+    client.on("TradeRequest", (e: ETradeRequest) => runInAction(() => {
+      this.tradeRequest = {
+        requesterId: e.data.requesterId,
+        requesterName: e.data.requesterName,
       };
     }));
 

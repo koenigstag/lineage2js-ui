@@ -238,6 +238,29 @@ export const LANG_RU_RU: LangDictionary = {
     declineButton: "Отказаться",
     expiresIn: "Истекает через {seconds} сек.",
   },
+  partyInvite: {
+    title: "Приглашение в группу",
+    message: "{name} приглашает вас в группу. (Дележ: {loot})",
+    acceptButton: "Принять",
+    declineButton: "Отказаться",
+  },
+  party: {
+    distribution: {
+      findersKeepers: "Кто поднял, тот и забрал",
+      random: "Случайно",
+      randomIncludingSpoil: "Случайно, включая спойл",
+      byTurn: "По очереди",
+      byTurnIncludingSpoil: "По очереди, включая спойл",
+      unknown: "Неизвестно",
+    },
+  },
+  tradeRequest: {
+    title: "Запрос на обмен",
+    message: "{name} хочет обменяться с вами предметами.",
+    unknownPlayer: "Игрок",
+    acceptButton: "Принять",
+    declineButton: "Отказаться",
+  },
   tooltip: {
     types: {
       skill: "Навык",
