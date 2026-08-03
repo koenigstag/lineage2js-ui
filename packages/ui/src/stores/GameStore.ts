@@ -528,10 +528,6 @@ export interface SystemMessageEntry {
 let nextSystemMessageEntryId = 1;
 const SYSTEM_MESSAGES_MAX_ENTRIES = 200;
 
-function demoSystemMessageEntry(text: string): SystemMessageEntry {
-  return { id: nextSystemMessageEntryId++, text };
-}
-
 export interface ChatMessage {
   id: number;
   channel: number;
@@ -541,32 +537,6 @@ export interface ChatMessage {
 
 let nextChatMessageId = 1;
 const CHAT_MAX_ENTRIES = 200;
-
-function demoChatMessage(channel: number, senderName: string, text: string): ChatMessage {
-  return { id: nextChatMessageId++, channel, senderName, text };
-}
-
-// Same demo-first treatment as systemMessages -- a few representative
-// lines across channels before any real CreatureSay has arrived.
-function createDemoChatMessages(): ChatMessage[] {
-  return [
-    demoChatMessage(ChatType.GENERAL, "DemoRanger", "anyone selling soulshots?"),
-    demoChatMessage(ChatType.TRADE, "DemoWarlock", "WTS Blessed Enchant Weapon A x3"),
-    demoChatMessage(ChatType.CLAN, "DemoSorc", "raid at 20:00, be online"),
-    demoChatMessage(ChatType.PARTY, "DemoHero", "pulling next pack, heal up"),
-  ];
-}
-
-// Same demo-first treatment as everywhere else -- a few representative
-// lines before any real SystemMessage has arrived.
-function createDemoSystemMessages(): SystemMessageEntry[] {
-  return [
-    demoSystemMessageEntry("You hit for 245 damage."),
-    demoSystemMessageEntry("Critical hit!"),
-    demoSystemMessageEntry("Ant Soldier has evaded your attack."),
-    demoSystemMessageEntry("You have attacked and killed Ant Soldier."),
-  ];
-}
 
 function createDemoParty(): L2PartyMember[] {
   const hero = demoPartyMember({
@@ -710,10 +680,10 @@ export class GameStore {
   target: TargetSnapshot | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
-  /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. */
-  systemMessages: SystemMessageEntry[] = createDemoSystemMessages();
-  /** Chat log feed, see chat window and recordChatMessage/sendChatMessage. */
-  chatMessages: ChatMessage[] = createDemoChatMessages();
+  /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
+  systemMessages: SystemMessageEntry[] = [];
+  /** Chat log feed, see chat window and recordChatMessage/sendChatMessage. Starts empty -- populated from real CreatureSay packets, no demo placeholder. */
+  chatMessages: ChatMessage[] = [];
   /** Skills-list "Learn" tab data, see LearnableSkillSnapshot. */
   learnableSkills: LearnableSkillSnapshot[] = createDemoLearnableSkills();
   /** Currently open in the "skill" detail window, if any. */
