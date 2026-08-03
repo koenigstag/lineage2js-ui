@@ -7,7 +7,7 @@
 - Add subclass display in the character window -- the 3 profession slots are currently static/decorative placeholders (character.window.tsx's ProfSlot), no subclass data is parsed by the network layer yet
 - Inventory equip slots
 - Radar
-- Plain demo surface for player movement
+- Real player movement with server packets -- geo-terrain-debug-scene.component.tsx is currently a dev-only local harness (WASD/click-to-move drives a local TestCharacterState), not wired to CommandMoveTo/MoveToLocation/ValidateLocation/StopMove
 - Movement without animation
 - Basic 3D models for mobs
 - Basic combat system
