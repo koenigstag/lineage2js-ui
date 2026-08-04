@@ -5,8 +5,6 @@ import { HairStyle } from "../../../enums/HairStyle";
 import { HairColor } from "../../../enums/HairColor";
 import { Face } from "../../../enums/Face";
 import { ClassId } from "../../../enums/ClassId";
-import { Race } from "../../../enums/Race";
-import { Sex } from "../../../enums/Sex";
 
 export default class CharInfo extends GameClientPacket {
   static readonly PAPERDOLL_ORDER: number[] = [
@@ -48,14 +46,14 @@ export default class CharInfo extends GameClientPacket {
 
     this.Char.Name = this.readS();
 
-    // Reverse-mapped to the enum key name (e.g. "HUMAN"), matching
-    // CharSelectionInfo.ts and every other categorical field here
-    // (ClassId/HairStyle/HairColor/Face) -- toLocalRace()/toLocalSex()
-    // (network-mapping.ts) cast this straight through to the UI's Race/Sex
-    // string literals, so a raw numeric value here would silently break
-    // race/sex-based rendering for every non-self creature.
-    this.Char.Race = (Race as any)[this.readD()];
-    this.Char.Sex = (Sex as any)[this.readD()];
+    // Raw numeric wire value, matching the Race/Sex enum's ordinals
+    // directly (see CharSelected.ts/PartySmallWindowAll.ts and
+    // CharacterCreate.ts's plain writeD(Race) on the way out) -- the
+    // display string is a UI-facing concern, produced on demand by
+    // toLocalRace()/toLocalSex() (network-mapping.ts) via the numeric
+    // enum's own reverse lookup.
+    this.Char.Race = this.readD();
+    this.Char.Sex = this.readD();
     this.Char.BaseClassId = (ClassId as any)[this.readD()];
 
     // Densely pre-filled -- `arr[slot] = value` on a bare [] would leave the

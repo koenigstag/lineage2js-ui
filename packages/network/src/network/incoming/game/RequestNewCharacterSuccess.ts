@@ -28,7 +28,8 @@ export default class RequestNewCharacterSuccess extends GameClientPacket {
     // which misaligned every field from the second word on, and made every
     // template after the first read pure garbage off the wire.
     for (let i = 0; i < size; i++) {
-      const race = (Race as any)[this.readD()];
+      // Raw numeric wire value -- see CharInfo.ts's identical comment.
+      const race = this.readD();
       const classId = (ClassId as any)[this.readD()];
 
       const _strMax = this.readD();

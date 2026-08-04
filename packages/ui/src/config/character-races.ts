@@ -1,10 +1,10 @@
 import { t } from "../lang/lang";
 import { rootStore } from "../stores/RootStore";
 
-// Matches @lineage2js/network's Race/Sex enum key names exactly (L2User.Race
-// and .Sex come back from the server as those key strings, e.g. "HUMAN",
-// "MALE" -- see network-mapping.ts) so no translation layer is needed
-// between the two.
+// Matches @lineage2js/network's Race/Sex enum key names exactly. L2User.Race
+// and .Sex come back from the server as raw numbers (matching the enum's
+// ordinals) -- toLocalRace()/toLocalSex() (network-mapping.ts) convert to
+// these string literals via the numeric enum's own reverse lookup.
 export type Race = "HUMAN" | "ELF" | "DARK_ELF" | "ORC" | "DWARF" | "KAMAEL";
 export type BaseClass = "fighter" | "mystic";
 export type Sex = "MALE" | "FEMALE";

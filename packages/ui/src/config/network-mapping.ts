@@ -19,21 +19,22 @@ import {
 } from "./character-races";
 import { CLASS_TREE } from "./class-tree";
 
-// L2Creature.Race/Sex come back from the server as the *enum key name* (e.g.
-// "HUMAN", "MALE"), not the numeric value -- the vendored packet parser
-// (CharSelectionInfo.ts) reverse-maps the wire byte through the enum object
-// before assigning it. Race/Sex's local type literals are spelled to match
-// those key names exactly (see character-races.ts), so reading one back is
-// just a type-level cast, no translation table needed. Typed against
-// L2Creature (not L2User) since Race/Sex/ClassId are declared there --
-// shared by players (CharInfo/UserInfo) so the same conversion works
-// whether the creature is the local player or one seen nearby.
+// L2Creature.Race/Sex are stored as the raw numeric wire value (matching
+// the Race/Sex enum's ordinals directly -- CharacterCreate.ts even writes
+// Race back out with a plain writeD(), no encoding); the display string is
+// purely a UI-facing concern, produced here via the numeric TS enum's own
+// reverse lookup (NetworkRace[0] === "HUMAN"). Race/Sex's local type
+// literals are spelled to match those enum key names exactly (see
+// character-races.ts). Typed against L2Creature (not L2User) since
+// Race/Sex/ClassId are declared there -- shared by players (CharInfo/UserInfo)
+// so the same conversion works whether the creature is the local player or
+// one seen nearby.
 export function toLocalRace(creature: L2Creature): Race {
-  return creature.Race as unknown as Race;
+  return NetworkRace[creature.Race] as unknown as Race;
 }
 
 export function toLocalSex(creature: L2Creature): Sex {
-  return creature.Sex as unknown as Sex;
+  return NetworkSex[creature.Sex] as unknown as Sex;
 }
 
 // Fighter/mystic per classId, straight from CLASS_TREE's isMage (itself
@@ -106,12 +107,12 @@ export function getAvailableRacesFromTemplates(templates: CharacterTemplate[]): 
   if (templates.length === 0) {
     return RACES;
   }
-  const present = new Set(templates.map((template) => template.Race as unknown as string));
+  const present = new Set(templates.map((template) => NetworkRace[template.Race] as unknown as Race));
   return RACES.filter((race) => present.has(race));
 }
 
 export function getAvailableBaseClassesFromTemplates(templates: CharacterTemplate[], race: Race): BaseClass[] {
-  const classesForRace = templates.filter((template) => (template.Race as unknown as string) === race);
+  const classesForRace = templates.filter((template) => (NetworkRace[template.Race] as unknown as Race) === race);
   if (classesForRace.length === 0) {
     return getAvailableBaseClasses(race);
   }
