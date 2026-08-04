@@ -1,19 +1,13 @@
 import { observer } from "mobx-react-lite";
 import { useGameStore } from "../../../../stores/StoreContext";
-import { CharacterMarker } from "../../../core/scene/character-marker.component";
+import { CreatureModel } from "../../../core/scene/creature-model.component";
 import { l2HeadingToThreeYaw, l2ToThree } from "../../../../utils/coords";
-
-const COLOR_BY_KIND: Record<string, string> = {
-  player: "#5b8fd6",
-  mob: "#c0504a",
-  summon: "#8a6fd6",
-  npc: "#7fae5a",
-};
 
 /**
  * Renders every creature the server currently reports nearby (NpcInfo/
- * CharInfo, see GameStore.bindToClient's syncCreatures), nickname above
- * each one via CharacterMarker.
+ * CharInfo/UserInfo, see GameStore.bindToClient's syncCreatures) via
+ * CreatureModel -- including the local player, which is just another entry
+ * in GameStore.creatures now, not a special case here.
  *
  * Positioned at their ABSOLUTE L2 world coordinates via l2ToThree. Note this
  * is a separate coordinate frame from GeoTerrainDebugScene's WASD/click test
@@ -29,14 +23,13 @@ export const GameCreaturesField = observer(function GameCreaturesField() {
       {Array.from(gameStore.creatures.values()).map((creature) => {
         const pos = l2ToThree(creature.x, creature.y, creature.z);
         return (
-          <CharacterMarker
+          <CreatureModel
             key={creature.objectId}
+            creature={creature}
             x={pos.x}
             y={pos.y}
             z={pos.z}
             angleToCenter={l2HeadingToThreeYaw(creature.heading)}
-            color={COLOR_BY_KIND[creature.kind] ?? COLOR_BY_KIND.npc}
-            nickname={creature.name}
           />
         );
       })}

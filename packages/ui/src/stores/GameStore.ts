@@ -34,8 +34,16 @@ import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
 import { getNpcName } from "../config/npc-name-mapping";
 import { formatSystemMessage, isNoisySystemMessage } from "../config/system-message-mapping";
+import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
+import type { BaseClass, Race, Sex } from "../config/character-races";
 
-/** A nearby NPC/mob/other player as reported by NpcInfo/CharInfo, for the world scene (not the target-select window -- see TargetSnapshot for that). */
+/**
+ * Any nearby creature (NPC/mob/player, including the local player -- see
+ * syncCreatures) reported by NpcInfo/CharInfo/UserInfo, for the world scene
+ * (not the target-select window -- see TargetSnapshot for that). Find your
+ * own entry via GameStore.me as the key into GameStore.creatures, rather
+ * than a separate self-only field -- self isn't a special case here.
+ */
 export interface WorldCreatureSnapshot {
   objectId: number;
   name: string;
@@ -45,14 +53,16 @@ export interface WorldCreatureSnapshot {
   heading: number;
   kind: "player" | "mob" | "summon" | "npc";
   isDead: boolean;
-}
-
-/** Own character's live world position, kept fresh by the same poll that refreshes WorldCreatureSnapshot positions (see bindToClient). */
-export interface MyPositionSnapshot {
-  x: number;
-  y: number;
-  z: number;
-  heading: number;
+  // Player-specific (kind === "player") -- lets CreatureModel pick the
+  // right visual via getPlayerVisualFromVariant, same as char-select/char-create.
+  race?: Race;
+  baseClass?: BaseClass;
+  sex?: Sex;
+  // Non-player only (kind !== "player") -- resolved from the npc template id
+  // (see config/npc-race-mapping.ts), only known for ids present in the
+  // datapack-derived table (mostly Monster-type npcs; Folk/quest-givers
+  // usually have none).
+  npcRace?: NpcRace;
 }
 
 export const MAX_CHARACTERS = 7;
@@ -534,6 +544,10 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
     heading: creature.Heading,
     kind,
     isDead: creature.IsDead,
+    race: kind === "player" ? toLocalRace(creature) : undefined,
+    baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
+    sex: kind === "player" ? toLocalSex(creature) : undefined,
+    npcRace: kind === "player" ? undefined : getNpcRace(creature.Id),
   };
 }
 
@@ -677,10 +691,8 @@ function createDemoParty(): L2PartyMember[] {
 // from the server) -- this store only tracks which one is active, plus
 // in-game-only state that has nothing to do with the account's character list.
 export class GameStore {
-  /** ObjectId -> nearby creature, see bindToClient's syncCreatures. */
+  /** ObjectId -> nearby creature (includes the local player -- look it up via `me`, see bindToClient's syncCreatures). */
   creatures: Map<number, WorldCreatureSnapshot> = new Map();
-  /** Own character's live position, see bindToClient's syncCreatures. */
-  myPosition: MyPositionSnapshot | undefined = undefined;
   /** ObjectId of the character entered world with, once Start actually succeeds. */
   me: number | undefined = undefined;
   /** ObjectId of the character highlighted on the char-select screen. */
@@ -1276,20 +1288,15 @@ export class GameStore {
         return;
       }
 
-      const myObjectId = client.Me.ObjectId;
+      // Includes the local player -- ActiveChar is a real member of
+      // CreaturesList too (see CharSelectedMutator), so self gets the exact
+      // same WorldCreatureSnapshot treatment (race/baseClass/sex included)
+      // as everyone else. Find it back via GameStore.me as the map key.
       const next = new Map<number, WorldCreatureSnapshot>();
       for (const creature of client.CreaturesList) {
-        if (creature.ObjectId === myObjectId) {
-          continue;
-        }
         next.set(creature.ObjectId, worldCreatureSnapshotFromCreature(creature));
       }
       this.creatures = next;
-
-      console.log("syncCreatures: myObjectId", myObjectId, "creatures", this.creatures.size);
-
-      const me = client.Me;
-      this.myPosition = { x: me.X, y: me.Y, z: me.Z, heading: me.Heading };
     });
 
     client.on("PacketReceived", "NpcInfo", syncCreatures);

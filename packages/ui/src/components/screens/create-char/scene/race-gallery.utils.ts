@@ -1,10 +1,11 @@
-import { RACES, getAvailableBaseClasses, type BaseClass, type Race, type Sex } from "../../../../config/character-races";
+import { RACES, getAvailableBaseClasses, type PlayerVariant, type Race, type Sex } from "../../../../config/character-races";
 
-export interface GalleryVariant {
-  race: Race;
-  baseClass: BaseClass;
-  sex: Sex;
-}
+// Same shape as PlayerVariant -- kept as its own name since it's specifically
+// what RACE_GALLERY enumerates, not every caller with a player variant on
+// hand. colorForVariant/getPlayerVisualFromVariant now live in
+// character-races.ts (shared by char-select/CreatureModel's player branch
+// too, not just this gallery).
+export type GalleryVariant = PlayerVariant;
 
 export interface GalleryGroup {
   race: Race;
@@ -22,12 +23,3 @@ export const RACE_GALLERY: GalleryGroup[] = RACES.map((race) => {
   }
   return { race, variants };
 });
-
-const CLASS_COLORS: Record<BaseClass, { MALE: string; FEMALE: string }> = {
-  fighter: { MALE: "#8a4a3a", FEMALE: "#b06a4a" },
-  mystic: { MALE: "#3a5a8a", FEMALE: "#6a8ab0" },
-};
-
-export function colorForVariant(variant: GalleryVariant): string {
-  return CLASS_COLORS[variant.baseClass][variant.sex];
-}

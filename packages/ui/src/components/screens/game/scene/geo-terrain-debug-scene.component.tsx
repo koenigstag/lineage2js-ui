@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type { Camera } from "three";
-import { CharacterMarker } from "../../../core/scene/character-marker.component";
+import { CharacterModel } from "../../../core/scene/character-model.component";
 import { l2ToThree, threeToL2 } from "../../../../utils/coords";
 import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
@@ -72,7 +72,7 @@ function clamp(value: number, min: number, max: number): number {
  * Dev-only harness: WASD or left-click-to-move drives a test character
  * (streaming geodata tiles around it); holding the right mouse button and
  * dragging orbits the camera around it, like the retail L2 client. Stands a
- * placeholder CharacterMarker on the loaded terrain, snapped to its height.
+ * placeholder CharacterModel on the loaded terrain, snapped to its height.
  */
 export function GeoTerrainDebugScene() {
   const [character, setCharacter] = useState<TestCharacterState>({ x: 0, y: 0, yaw: 0 });
@@ -220,7 +220,7 @@ export function GeoTerrainDebugScene() {
 
         <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} />
 
-        <CharacterMarker x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={character.yaw} color="#5b8fd6" />
+        <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={character.yaw} color="#5b8fd6" />
 
         {/* Real NPCs/mobs/other players from the live session, if connected -- see GameCreaturesField. */}
         <GameCreaturesField />

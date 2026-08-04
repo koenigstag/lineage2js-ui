@@ -1,10 +1,10 @@
 import {
   ClassId,
   L2Character,
+  L2Creature,
   Race as NetworkRace,
   Sex as NetworkSex,
   type CharacterTemplate,
-  type L2User,
 } from "@lineage2js/network";
 import {
   RACES,
@@ -19,18 +19,21 @@ import {
 } from "./character-races";
 import { CLASS_TREE } from "./class-tree";
 
-// L2User.Race/Sex come back from the server as the *enum key name* (e.g.
+// L2Creature.Race/Sex come back from the server as the *enum key name* (e.g.
 // "HUMAN", "MALE"), not the numeric value -- the vendored packet parser
 // (CharSelectionInfo.ts) reverse-maps the wire byte through the enum object
 // before assigning it. Race/Sex's local type literals are spelled to match
 // those key names exactly (see character-races.ts), so reading one back is
-// just a type-level cast, no translation table needed.
-export function toLocalRace(user: L2User): Race {
-  return user.Race as unknown as Race;
+// just a type-level cast, no translation table needed. Typed against
+// L2Creature (not L2User) since Race/Sex/ClassId are declared there --
+// shared by players (CharInfo/UserInfo) so the same conversion works
+// whether the creature is the local player or one seen nearby.
+export function toLocalRace(creature: L2Creature): Race {
+  return creature.Race as unknown as Race;
 }
 
-export function toLocalSex(user: L2User): Sex {
-  return user.Sex as unknown as Sex;
+export function toLocalSex(creature: L2Creature): Sex {
+  return creature.Sex as unknown as Sex;
 }
 
 // Fighter/mystic per classId, straight from CLASS_TREE's isMage (itself
@@ -42,8 +45,8 @@ function classifyBaseClass(classIdName: string): BaseClass {
   return CLASS_TREE[classId]?.isMage ? "mystic" : "fighter";
 }
 
-export function toLocalBaseClass(user: L2User): BaseClass {
-  return classifyBaseClass(user.ClassId as unknown as string);
+export function toLocalBaseClass(creature: L2Creature): BaseClass {
+  return classifyBaseClass(creature.ClassId as unknown as string);
 }
 
 // Root-archetype display label for any class down its tree, independent of

@@ -70,6 +70,46 @@ export function getBodyScale(race: Race, baseClass: BaseClass, sex: Sex): BodySc
   return CLASS_BODY_SCALE_OVERRIDES[race]?.[baseClass]?.[sex] ?? RACE_BODY_SCALE[race] ?? DEFAULT_BODY_SCALE;
 }
 
+export interface PlayerVariant {
+  race: Race;
+  baseClass: BaseClass;
+  sex: Sex;
+}
+
+// Only baseClass+sex actually distinguish the placeholder body color today
+// (race affects skin tone/body scale separately, see getSkinColor/getBodyScale
+// above) -- race is still part of the variant shape since callers always
+// have a full PlayerVariant on hand (from either the character list or a
+// nearby CharInfo), and skin/scale below do need it.
+const CLASS_COLORS: Record<BaseClass, { MALE: string; FEMALE: string }> = {
+  fighter: { MALE: "#8a4a3a", FEMALE: "#b06a4a" },
+  mystic: { MALE: "#3a5a8a", FEMALE: "#6a8ab0" },
+};
+
+export function colorForVariant(variant: PlayerVariant): string {
+  return CLASS_COLORS[variant.baseClass][variant.sex];
+}
+
+export interface PlayerVisual {
+  color: string;
+  skinColor: string;
+  heightScale: number;
+  widthScale: number;
+  hasCape: boolean;
+}
+
+/** Everything CharacterModel needs to render a player variant -- the single place this combination is computed, reused by PlayerModel (char-select/char-create/CreatureModel's player branch). */
+export function getPlayerVisualFromVariant(variant: PlayerVariant): PlayerVisual {
+  const bodyScale = getBodyScale(variant.race, variant.baseClass, variant.sex);
+  return {
+    color: colorForVariant(variant),
+    skinColor: getSkinColor(variant.race),
+    heightScale: bodyScale.height,
+    widthScale: bodyScale.width,
+    hasCape: variant.race === "KAMAEL",
+  };
+}
+
 export interface BaseStats {
   str: number;
   dex: number;

@@ -1,7 +1,7 @@
 import { DoubleSide } from "three";
 import { NicknameLabel } from "./nickname-label.component";
 
-interface CharacterMarkerProps {
+interface CharacterModelProps {
   x: number;
   /** World-up (three.js Y) foot position. Defaults to 0 (flat-floor scenes). */
   y?: number;
@@ -20,8 +20,12 @@ interface CharacterMarkerProps {
   onSelect?: () => void;
 }
 
-/** Simple procedural humanoid placeholder -- no character art exists yet. */
-export function CharacterMarker({
+/**
+ * Simple procedural humanoid placeholder -- no character art exists yet.
+ * Purely presentational: geometry/pose/label/click, decides nothing about
+ * what color/scale to use -- that's PlayerModel/CreatureModel's job.
+ */
+export function CharacterModel({
   x,
   y = 0,
   z,
@@ -34,7 +38,7 @@ export function CharacterMarker({
   nickname,
   selected = false,
   onSelect,
-}: CharacterMarkerProps) {
+}: CharacterModelProps) {
   return (
     <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
       {nickname && <NicknameLabel text={nickname} position={[0, 1.95 * heightScale, 0]} />}

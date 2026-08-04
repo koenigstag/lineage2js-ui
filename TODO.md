@@ -9,7 +9,8 @@
 - Radar
 - Real player movement with server packets -- geo-terrain-debug-scene.component.tsx is currently a dev-only local harness (WASD/click-to-move drives a local TestCharacterState), not wired to CommandMoveTo/MoveToLocation/ValidateLocation/StopMove
 - Movement without animation
-- Basic 3D models for mobs
+- Basic 3D models for mobs -- CreatureModel (components/core/scene/creature-model.component.tsx) is the extension point: its non-player branch currently just tints the same placeholder capsule by NpcRace, swap that branch's return for real per-archetype geometry when it exists, no caller changes needed
+- Equipped armor/weapon visuals -- for the local player it's straightforward (client.InventoryItems, filter IsEquipped, BodyPart is the paperdoll slot bitmask, L2Item.SLOT_* constants), but for other players CharInfo.ts currently reads and discards all 25 paperdoll display ids (`CharInfo.PAPERDOLL_ORDER.forEach(() => { const _slotItemDisplayId = this.readD() })`) -- same situation Race/Sex/ClassId were in before this session's CreatureModel work, needs a Paperdoll field added to L2Character plus storing those ids instead of throwing them away
 - Basic combat system
 - Basic Quests system
 - Add NPC dialog system -- render engine and actions
