@@ -33,21 +33,24 @@ export interface PaperdollSection {
   slotSize?: number;
   /** Gap between this section's own columns. Defaults to the standard column gap -- the accessories/hands sections use double that. */
   columnGap?: number;
+  /** Centers this section's grid within the panel instead of the default left alignment. */
+  center?: boolean;
 }
 
 const ACCESSORY_COLUMN_GAP = 20; // 2x the standard 10px column gap
 
-/** Visual layout for the inventory window's equip panel -- grouped into the same clusters (head / body / hands / accessories / decor / bracelets) as the retail paperdoll, each its own independently-sized grid stacked with a bigger gap between groups. */
+/** Visual layout for the inventory window's equip panel -- grouped into the same clusters (body / hands / accessories / decor / bracelets) as the retail paperdoll, each its own independently-sized grid stacked with a bigger gap between groups. */
 export const PAPERDOLL_SECTIONS: PaperdollSection[] = [
-  { rows: [["hair1", "head", "hair2"]] },
   {
-    // body
+    // body (hair/head share the same grid as the armor rows)
     rows: [
+      ["hair1", "head", "hair2"],
       ["gloves", "chest", "feet"],
       ["cloak", "legs", "belt"],
     ],
+    center: true,
   },
-  { rows: [["rhand", "lhand"]], columnGap: ACCESSORY_COLUMN_GAP }, // hands
+  { rows: [["rhand", "lhand"]], columnGap: ACCESSORY_COLUMN_GAP, center: true }, // hands
   {
     // accessories
     rows: [
@@ -55,6 +58,7 @@ export const PAPERDOLL_SECTIONS: PaperdollSection[] = [
       ["rfinger", "lfinger", "under"],
     ],
     columnGap: ACCESSORY_COLUMN_GAP,
+    center: true,
   },
   { rows: [["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"]], slotSize: 17 },
   { rows: [["rbracelet", "lbracelet"]] },

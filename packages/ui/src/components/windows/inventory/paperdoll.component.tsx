@@ -16,7 +16,7 @@ export const Paperdoll = observer(function Paperdoll() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: SECTION_GAP, flexShrink: 0 }}>
-      {PAPERDOLL_SECTIONS.map(({ rows, slotSize = SLOT_SIZE, columnGap = COLUMN_GAP }, sectionIndex) => (
+      {PAPERDOLL_SECTIONS.map(({ rows, slotSize = SLOT_SIZE, columnGap = COLUMN_GAP, center }, sectionIndex) => (
         <div
           key={sectionIndex}
           style={{
@@ -24,6 +24,7 @@ export const Paperdoll = observer(function Paperdoll() {
             gridTemplateColumns: `repeat(${rows[0].length}, ${slotSize}px)`,
             columnGap,
             rowGap: ROW_GAP,
+            justifyContent: center ? "center" : undefined,
           }}
         >
           {rows.flatMap((row, rowIndex) =>
