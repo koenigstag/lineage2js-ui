@@ -462,8 +462,9 @@ export interface TargetSnapshot {
   // Non-player race (see config/npc-race-mapping.ts), resolved from the
   // npc template id -- only known for ids present in the datapack-derived
   // table (mostly Monster-type npcs; Folk/quest-givers usually have none).
-  // Falls back to creatureKind's icon when this is undefined.
-  race?: NpcRace;
+  // Falls back to creatureKind's icon when this is undefined. Named to match
+  // WorldCreatureSnapshot.npcRace.
+  npcRace?: NpcRace;
   // Non-player level only (see config/npc-level-mapping.ts) -- intentionally
   // not set for L2Character targets (players already show their own level
   // via char-info/party-char-info, and their nameplate isn't con-colored).
@@ -519,7 +520,7 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
     // back to the id->name table for those.
     name: creature.Name || getNpcName(creature.Id, isAttackable),
     creatureKind: isAttackable ? "mob" : creature instanceof L2Summon ? "summon" : "npc",
-    race: getNpcRace(creature.Id),
+    npcRace: getNpcRace(creature.Id),
     level: getNpcLevel(creature.Id),
   };
 }
