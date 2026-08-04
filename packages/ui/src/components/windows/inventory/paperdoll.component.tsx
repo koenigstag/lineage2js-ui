@@ -9,13 +9,14 @@ const SLOT_SIZE = 34;
 const COLUMN_GAP = 10;
 const ROW_GAP = 20;
 const SECTION_GAP = 20;
+const PADDING = 20;
 
 export const Paperdoll = observer(function Paperdoll() {
   const game = useGameStore();
   const equippedBySlot = getEquippedItemsBySlot(game.inventoryItems);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: SECTION_GAP, flexShrink: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: SECTION_GAP, flexShrink: 0, padding: PADDING }}>
       {PAPERDOLL_SECTIONS.map(({ rows, slotSize = SLOT_SIZE, columnGap = COLUMN_GAP, center }, sectionIndex) => (
         <div
           key={sectionIndex}
