@@ -41,7 +41,7 @@ const BASE_COLUMN_GAP = 10;
 const BODY_COLUMN_GAP = BASE_COLUMN_GAP * 2; // 20
 const ACCESSORY_COLUMN_GAP = BASE_COLUMN_GAP * 4; // 40 (hands + accessories)
 const DECOR_COLUMN_GAP = BASE_COLUMN_GAP; // 10, kept separate from BODY_COLUMN_GAP so it doesn't move if body's gap changes again
-const BRACELET_COLUMN_GAP = BASE_COLUMN_GAP; // 10, between rbracelet and lbracelet (the agathion slot)
+const BRACELET_COLUMN_GAP = BASE_COLUMN_GAP * 3; // 30, between rbracelet and lbracelet (the agathion slot)
 
 const DECOR_SLOT_SIZE = 25.5; // 1.5x the previous half-size (17px) decor cell
 
