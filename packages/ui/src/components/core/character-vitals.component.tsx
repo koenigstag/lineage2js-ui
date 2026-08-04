@@ -18,6 +18,8 @@ export interface CharacterVitalsProps {
   vitalityPercent?: number;
   width?: number;
   height?: number;
+  /** Fires on clicking the name or level badge -- e.g. char-info.window.tsx wires this to game.selectSelfAsTarget(). Omitted (char-select's menu usage) means no click behavior, no cursor change either way. */
+  onIdentityClick?: () => void;
 }
 
 const levelBadgeStyle = {
@@ -46,12 +48,19 @@ export function CharacterVitals({
   vitalityPercent,
   width = 220,
   height = 16,
+  onIdentityClick,
 }: CharacterVitalsProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, width }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        {level !== undefined && <div style={levelBadgeStyle}>{level}</div>}
-        <div style={{ color: "#e6d9be", fontSize: 13 }}>{name}</div>
+        {level !== undefined && (
+          <div style={levelBadgeStyle} onClick={onIdentityClick}>
+            {level}
+          </div>
+        )}
+        <div style={{ color: "#e6d9be", fontSize: 13 }} onClick={onIdentityClick}>
+          {name}
+        </div>
       </div>
       {maxCp !== undefined && cp !== undefined && (
         <StatBar

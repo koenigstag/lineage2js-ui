@@ -22,6 +22,7 @@ export const CharInfoContent = observer(function CharInfoContent() {
       vitalityPercent={info.vitalityPercent}
       width={BAR_WIDTH}
       height={BAR_HEIGHT}
+      onIdentityClick={() => game.selectSelfAsTarget()}
     />
   );
 });
