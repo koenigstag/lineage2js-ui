@@ -8,6 +8,7 @@ import { ClassId } from "../enums/ClassId";
 import { Face } from "../enums/Face";
 import { HairStyle } from "../enums/HairStyle";
 import { HairColor } from "../enums/HairColor";
+import GameServerPacket from "../network/outgoing/game/GameServerPacket";
 
 export default abstract class L2Creature extends L2Object {
   private _hp!: number;
@@ -52,7 +53,14 @@ export default abstract class L2Creature extends L2Object {
   // know or care what kind of creature it has. No 3D asset pipeline renders
   // any of this yet, same "no character art" situation as everything else
   // in components/core/scene.
-  private _paperdoll: number[] = [];
+  //
+  // Densely pre-filled with undefined (not left as holes from sparse
+  // `arr[slot] = value` assignment) -- Array.prototype.forEach/map/etc.
+  // silently skip holes, so a caller iterating slots would miss unequipped
+  // ones entirely instead of seeing them as empty.
+  private _paperdoll: Array<number | undefined> = new Array<number | undefined>(GameServerPacket.PAPERDOLL_TOTALSLOTS).fill(
+    undefined
+  );
   private _sex!: Sex;
   private _recommHave!: number;
   private _classId!: ClassId;
@@ -161,11 +169,11 @@ export default abstract class L2Creature extends L2Object {
     this._target = value;
   }
 
-  public get Paperdoll(): number[] {
+  public get Paperdoll(): Array<number | undefined> {
     return this._paperdoll;
   }
 
-  public set Paperdoll(value: number[]) {
+  public set Paperdoll(value: Array<number | undefined>) {
     this._paperdoll = value;
   }
 

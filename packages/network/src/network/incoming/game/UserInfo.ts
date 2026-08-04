@@ -58,7 +58,10 @@ export default class UserInfo extends GameClientPacket {
       const _slotItemObjectId = this.readD();
     });
 
-    const paperdoll: number[] = [];
+    // Densely pre-filled, not left sparse -- see CharInfo.ts's identical comment.
+    const paperdoll: Array<number | undefined> = new Array<number | undefined>(GameServerPacket.PAPERDOLL_TOTALSLOTS).fill(
+      undefined
+    );
     GameServerPacket.PAPERDOLL_ORDER.forEach((slot) => {
       paperdoll[slot] = this.readD();
     });

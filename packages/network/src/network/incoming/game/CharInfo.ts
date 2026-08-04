@@ -50,7 +50,13 @@ export default class CharInfo extends GameClientPacket {
     this.Char.Sex = this.readD();
     this.Char.BaseClassId = (ClassId as any)[this.readD()];
 
-    const paperdoll: number[] = [];
+    // Densely pre-filled -- `arr[slot] = value` on a bare [] would leave the
+    // untouched slots (NECK/R_EAR/L_EAR/R_FINGER/L_FINGER, absent from
+    // PAPERDOLL_ORDER) as holes rather than undefined, which
+    // forEach/map/etc. silently skip instead of visiting.
+    const paperdoll: Array<number | undefined> = new Array<number | undefined>(GameServerPacket.PAPERDOLL_TOTALSLOTS).fill(
+      undefined
+    );
     CharInfo.PAPERDOLL_ORDER.forEach((slot) => {
       paperdoll[slot] = this.readD();
     });

@@ -51,8 +51,12 @@ export default class NpcInfo extends AbstractNpcInfo {
     const _collisionHeight = this.readF();
 
     // Same Paperdoll array/index space as players (L2Creature.Paperdoll) --
-    // just three of its 25 possible slots.
-    const paperdoll: number[] = [];
+    // just three of its 25 possible slots. Densely pre-filled, not left
+    // sparse -- see CharInfo.ts's identical comment (matters even more
+    // here, since 22 of the 25 slots are never touched at all).
+    const paperdoll: Array<number | undefined> = new Array<number | undefined>(GameServerPacket.PAPERDOLL_TOTALSLOTS).fill(
+      undefined
+    );
     paperdoll[GameServerPacket.PAPERDOLL_RHAND] = this.readD(); // right hand weapon display id
     paperdoll[GameServerPacket.PAPERDOLL_CHEST] = this.readD();
     paperdoll[GameServerPacket.PAPERDOLL_LHAND] = this.readD(); // left hand weapon display id
