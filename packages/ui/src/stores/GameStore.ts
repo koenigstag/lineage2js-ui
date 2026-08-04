@@ -266,14 +266,16 @@ interface DemoItemInit {
   bodyPart?: number;
   count?: number;
   grade?: ItemGrade;
+  equipped?: boolean;
 }
 
 // Builds a real L2Item, same shape a server ItemList/InventoryUpdate packet
-// would produce -- only ObjectId/ItemId/Type2/BodyPart/Count/IsQuest/Grade are
-// set, everything else stays at its default like an unread wire field would.
-// No Name: that's resolved from the item-name table via t("item.name.<id>"),
-// same as it would be for real server data (see config/item-mapping.ts).
-function demoItem({ id, type2, bodyPart, count, grade }: DemoItemInit): L2Item {
+// would produce -- only ObjectId/ItemId/Type2/BodyPart/Count/IsQuest/Grade/
+// IsEquipped are set, everything else stays at its default like an unread
+// wire field would. No Name: that's resolved from the item-name table via
+// t("item.name.<id>"), same as it would be for real server data (see
+// config/item-mapping.ts).
+function demoItem({ id, type2, bodyPart, count, grade, equipped }: DemoItemInit): L2Item {
   const item = new L2Item();
   item.ObjectId = nextObjectId++;
   item.Id = id;
@@ -282,11 +284,13 @@ function demoItem({ id, type2, bodyPart, count, grade }: DemoItemInit): L2Item {
   item.Count = count ?? 1;
   item.IsQuest = type2 === ItemType2.QuestItem;
   item.Grade = grade ?? ItemGrade.None;
+  item.IsEquipped = equipped ?? false;
   return item;
 }
 
 // Real item ids (see the item-name table this pairs with), picked to cover
-// one example of every inventory tab/slot type.
+// one example of every inventory tab/slot type. The bodyPart-bearing items
+// start equipped so the paperdoll has something to render out of the box.
 function createDemoInventory(): L2Item[] {
   return [
     demoItem({ id: 727, type2: ItemType2.Item, count: 25 }), // Healing Potion
@@ -295,14 +299,14 @@ function createDemoInventory(): L2Item[] {
     demoItem({ id: 702, type2: ItemType2.Item, count: 132 }), // Wolf Pelt
     demoItem({ id: 987, type2: ItemType2.QuestItem, count: 1 }), // Ancient Clay Tablet
     demoItem({ id: 57, type2: ItemType2.Adena, count: 15230 }), // Adena
-    demoItem({ id: 44, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_HEAD, grade: ItemGrade.D }), // Leather Helmet
-    demoItem({ id: 33, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_LEGS, grade: ItemGrade.D }), // Hard Leather Gaiters
-    demoItem({ id: 40, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_FEET, grade: ItemGrade.D }), // Leather Boots
-    demoItem({ id: 2, type2: ItemType2.Weapon, bodyPart: L2Item.SLOT_R_HAND, grade: ItemGrade.D }), // Long Sword
-    demoItem({ id: 875, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_FINGER }), // Ring of Knowledge
-    demoItem({ id: 906, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_NECK }), // Necklace of Knowledge
-    demoItem({ id: 115, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_EAR }), // Earring of Wisdom
-    demoItem({ id: 9589, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_BRACELET }), // Iron Bracelet
+    demoItem({ id: 44, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_HEAD, grade: ItemGrade.D, equipped: true }), // Leather Helmet
+    demoItem({ id: 33, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_LEGS, grade: ItemGrade.D, equipped: true }), // Hard Leather Gaiters
+    demoItem({ id: 40, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_FEET, grade: ItemGrade.D, equipped: true }), // Leather Boots
+    demoItem({ id: 2, type2: ItemType2.Weapon, bodyPart: L2Item.SLOT_R_HAND, grade: ItemGrade.D, equipped: true }), // Long Sword
+    demoItem({ id: 875, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_FINGER, equipped: true }), // Ring of Knowledge
+    demoItem({ id: 906, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_NECK, equipped: true }), // Necklace of Knowledge
+    demoItem({ id: 115, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_EAR, equipped: true }), // Earring of Wisdom
+    demoItem({ id: 9589, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_BRACELET, equipped: true }), // Iron Bracelet
   ];
 }
 

@@ -163,7 +163,6 @@ export const LANG_RU_RU: LangDictionary = {
       Quest: "Квест",
     },
     searchPlaceholder: "Поиск",
-    paperdollLabel: "Экипировка",
   },
   settings: {
     language: "Язык",

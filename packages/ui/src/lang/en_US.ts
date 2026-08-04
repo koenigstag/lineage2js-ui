@@ -163,7 +163,6 @@ export const LANG_EN_US: LangDictionary = {
       Quest: "Quest",
     },
     searchPlaceholder: "Search",
-    paperdollLabel: "Paperdoll",
   },
   settings: {
     language: "Language",
