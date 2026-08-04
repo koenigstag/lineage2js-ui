@@ -48,16 +48,24 @@ export default class UserInfo extends GameClientPacket {
 
     const _activeWeapon = this.readD() === 40; // 20 no weapon, 40 weapon equipped
 
-    GameServerPacket.PAPERDOLL_ORDER.forEach((value) => {
-      const _slot1 = this.readD();
+    // Three parallel arrays per paperdoll slot -- confirmed against
+    // lineage2ts's own UserInfo.ts (packets/send/UserInfo.ts): ObjectId
+    // (which specific inventory item instance occupies the slot), then
+    // ItemId (the item's template/display id -- the one CharInfo.ts's
+    // equivalent single array carries for other players), then
+    // AugmentationId.
+    GameServerPacket.PAPERDOLL_ORDER.forEach(() => {
+      const _slotItemObjectId = this.readD();
     });
 
-    GameServerPacket.PAPERDOLL_ORDER.forEach((value) => {
-      const _slot2 = this.readD();
+    const paperdoll: number[] = [];
+    GameServerPacket.PAPERDOLL_ORDER.forEach((slot) => {
+      paperdoll[slot] = this.readD();
     });
+    this.User.Paperdoll = paperdoll;
 
-    GameServerPacket.PAPERDOLL_ORDER.forEach((value) => {
-      const _slot3 = this.readD();
+    GameServerPacket.PAPERDOLL_ORDER.forEach(() => {
+      const _slotItemAugmentationId = this.readD();
     });
 
     const _talismanSlots = this.readD();

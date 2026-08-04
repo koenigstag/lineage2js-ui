@@ -50,9 +50,11 @@ export default class CharInfo extends GameClientPacket {
     this.Char.Sex = this.readD();
     this.Char.BaseClassId = (ClassId as any)[this.readD()];
 
-    CharInfo.PAPERDOLL_ORDER.forEach(() => {
-      const _slotItemDisplayId = this.readD();
+    const paperdoll: number[] = [];
+    CharInfo.PAPERDOLL_ORDER.forEach((slot) => {
+      paperdoll[slot] = this.readD();
     });
+    this.Char.Paperdoll = paperdoll;
 
     CharInfo.PAPERDOLL_ORDER.forEach(() => {
       const _slotItemAugmentationId = this.readD();

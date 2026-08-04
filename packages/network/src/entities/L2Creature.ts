@@ -44,6 +44,13 @@ export default abstract class L2Creature extends L2Object {
   private _isAttackable!: boolean;
   private _isTargetable!: boolean;
   private _target!: L2Object | null;
+  // NPC/mob equipped weapon+armor display ids -- NpcInfo carries these (a
+  // player's much larger paperdoll lives on L2Character.Paperdoll instead,
+  // 25 slots vs. these 3). No 3D asset pipeline renders them yet, same
+  // "no character art" situation as everything else in components/core/scene.
+  private _rHandId!: number;
+  private _chestId!: number;
+  private _lHandId!: number;
   private _sex!: Sex;
   private _recommHave!: number;
   private _classId!: ClassId;
@@ -150,6 +157,30 @@ export default abstract class L2Creature extends L2Object {
 
   public set Target(value: L2Object | null) {
     this._target = value;
+  }
+
+  public get RHandId(): number {
+    return this._rHandId;
+  }
+
+  public set RHandId(value: number) {
+    this._rHandId = value;
+  }
+
+  public get ChestId(): number {
+    return this._chestId;
+  }
+
+  public set ChestId(value: number) {
+    this._chestId = value;
+  }
+
+  public get LHandId(): number {
+    return this._lHandId;
+  }
+
+  public set LHandId(value: number) {
+    this._lHandId = value;
   }
 
   public get IsAttackable(): boolean {

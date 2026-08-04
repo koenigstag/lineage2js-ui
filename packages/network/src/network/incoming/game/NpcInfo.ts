@@ -49,12 +49,9 @@ export default class NpcInfo extends AbstractNpcInfo {
     const _collisionRadius = this.readF();
     const _collisionHeight = this.readF();
 
-    const rhandId = this.readD();
-    const chestId = this.readD();
-    const lhandId = this.readD();
-    // this.Creature.getTemplate().RhandId = this.readD(); // right hand weapon
-    // this.Creature.getTemplate().ChestId = this.readD();
-    // this.Creature.getTemplate().LhandId = this.readD(); // left hand weapon
+    this.Creature.RHandId = this.readD(); // right hand weapon display id
+    this.Creature.ChestId = this.readD();
+    this.Creature.LHandId = this.readD(); // left hand weapon display id
 
     const _unkn1 = this.readC(); // name above char 1=true ... ??
     this.Creature.IsRunning = this.readC() === 1;

@@ -10,11 +10,10 @@
 - Real player movement with server packets -- geo-terrain-debug-scene.component.tsx is currently a dev-only local harness (WASD/click-to-move drives a local TestCharacterState), not wired to CommandMoveTo/MoveToLocation/ValidateLocation/StopMove
 - Movement without animation
 - Basic 3D models for mobs -- CreatureModel (components/core/scene/creature-model.component.tsx) is the extension point: its non-player branch currently just tints the same placeholder capsule by NpcRace, swap that branch's return for real per-archetype geometry when it exists, no caller changes needed
-- Equipped armor/weapon visuals -- needed for both players and NPCs/mobs, rendered through CreatureModel/PlayerModel once the ids are actually captured:
-  - Local player: straightforward already, client.InventoryItems, filter IsEquipped, BodyPart is the paperdoll slot bitmask (L2Item.SLOT_* constants).
-  - Other players: CharInfo.ts currently reads and discards all 25 paperdoll display ids (`CharInfo.PAPERDOLL_ORDER.forEach(() => { const _slotItemDisplayId = this.readD() })`) -- same situation Race/Sex/ClassId were in before this session's CreatureModel work. Needs a Paperdoll field added to L2Character plus storing those ids instead of throwing them away.
-  - NPCs/mobs: NpcInfo.ts also reads and discards rhandId/chestId/lhandId (lines ~52-57, the assignment is literally commented out -- `// this.Creature.getTemplate().RhandId = this.readD();`) -- much smaller than the player paperdoll (3 slots, not 25) but the same fix shape: store instead of discard.
-  - Once stored, display ids need an actual asset/model lookup (icon vs. 3D geometry) to render anything beyond a color -- no such pipeline exists yet, likely the same "no character art yet" situation as the current procedural CharacterModel placeholder.
+- Equipped armor/weapon visuals -- needed for both players and NPCs/mobs, rendered through CreatureModel/PlayerModel once there's something to render them with:
+  - Parsing/storage done: L2Character.Paperdoll (25-slot display id array, index = GameServerPacket.PAPERDOLL_*) populated by both CharInfo.ts (other players) and UserInfo.ts (local player, which carries the same data across three parallel PAPERDOLL_ORDER arrays -- ObjectId/ItemId/AugmentationId, confirmed against lineage2ts's own UserInfo.ts -- only the ItemId one is stored, matching CharInfo's single array). L2Creature.RHandId/ChestId/LHandId populated by NpcInfo.ts for NPCs/mobs.
+  - Local player's actual inventory (not just display ids) is separately available too: client.InventoryItems, filter IsEquipped, BodyPart is the paperdoll slot bitmask (L2Item.SLOT_* constants).
+  - Still missing: an actual asset/model lookup (icon vs. 3D geometry) to render anything beyond a color from these ids -- no such pipeline exists yet, likely the same "no character art yet" situation as the current procedural CharacterModel placeholder. WorldCreatureSnapshot doesn't carry the ids yet either (add if/when a rendering plan exists, no point exposing unused data to the UI store).
 - Basic combat system
 - Basic Quests system
 - Add NPC dialog system -- render engine and actions

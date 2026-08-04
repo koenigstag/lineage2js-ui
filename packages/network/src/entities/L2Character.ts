@@ -9,6 +9,10 @@ export default class L2Character extends L2Creature {
   private _allyId!: number;
   private _clanCrestId!: number;
   private _allyCrestId!: number;
+  // Display id per paperdoll slot (index = GameServerPacket.PAPERDOLL_* --
+  // 25 slots total, PAPERDOLL_TOTALSLOTS), populated by CharInfo/UserInfo.
+  // No 3D asset pipeline renders these yet.
+  private _paperdoll: number[] = [];
 
   public get ClanId(): number {
     return this._clanId;
@@ -61,5 +65,12 @@ export default class L2Character extends L2Creature {
   }
   public set Level(value: number) {
     this._level = value;
+  }
+
+  public get Paperdoll(): number[] {
+    return this._paperdoll;
+  }
+  public set Paperdoll(value: number[]) {
+    this._paperdoll = value;
   }
 }
