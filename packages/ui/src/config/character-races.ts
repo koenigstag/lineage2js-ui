@@ -25,6 +25,12 @@ export function getBaseClassLabel(baseClass: BaseClass): string {
   return t(`classes.baseClass.${baseClass}`);
 }
 
+/**
+ * @deprecated Invented placeholder tones, not ported from any real art/
+ * reference source -- stand-ins for CharacterModel's capsule-and-sphere
+ * placeholder until real character models/skins exist, at which point this
+ * table becomes obsolete (delete rather than "correct" the colors).
+ */
 const RACE_SKIN_COLORS: Record<Race, string> = {
   HUMAN: "#d8b98a",
   ELF: "#e8cfa8",
@@ -34,6 +40,7 @@ const RACE_SKIN_COLORS: Record<Race, string> = {
   KAMAEL: "#f0d0d0",
 };
 
+/** @deprecated See RACE_SKIN_COLORS -- placeholder tone, not real reference data. */
 export function getSkinColor(race: Race): string {
   return RACE_SKIN_COLORS[race];
 }
@@ -76,16 +83,23 @@ export interface PlayerVariant {
   sex: Sex;
 }
 
-// Only baseClass+sex actually distinguish the placeholder body color today
-// (race affects skin tone/body scale separately, see getSkinColor/getBodyScale
-// above) -- race is still part of the variant shape since callers always
-// have a full PlayerVariant on hand (from either the character list or a
-// nearby CharInfo), and skin/scale below do need it.
+/**
+ * Only baseClass+sex actually distinguish the placeholder body color today
+ * (race affects skin tone/body scale separately, see getSkinColor/getBodyScale
+ * above) -- race is still part of the variant shape since callers always
+ * have a full PlayerVariant on hand (from either the character list or a
+ * nearby CharInfo), and skin/scale below do need it.
+ *
+ * @deprecated Invented placeholder tones, not ported from any real art/
+ * reference source -- same "temp until real models exist" status as
+ * RACE_SKIN_COLORS.
+ */
 const CLASS_COLORS: Record<BaseClass, { MALE: string; FEMALE: string }> = {
   fighter: { MALE: "#8a4a3a", FEMALE: "#b06a4a" },
   mystic: { MALE: "#3a5a8a", FEMALE: "#6a8ab0" },
 };
 
+/** @deprecated See CLASS_COLORS -- placeholder tone, not real reference data. */
 export function colorForVariant(variant: PlayerVariant): string {
   return CLASS_COLORS[variant.baseClass][variant.sex];
 }
