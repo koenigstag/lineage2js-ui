@@ -303,9 +303,12 @@ function createDemoInventory(): L2Item[] {
     demoItem({ id: 33, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_LEGS, grade: ItemGrade.D, equipped: true }), // Hard Leather Gaiters
     demoItem({ id: 40, type2: ItemType2.ShieldArmor, bodyPart: L2Item.SLOT_FEET, grade: ItemGrade.D, equipped: true }), // Leather Boots
     demoItem({ id: 2, type2: ItemType2.Weapon, bodyPart: L2Item.SLOT_R_HAND, grade: ItemGrade.D, equipped: true }), // Long Sword
-    demoItem({ id: 875, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_FINGER, equipped: true }), // Ring of Knowledge
+    // Rings/earrings only ever carry the shared dual-slot bitmask on the wire
+    // (real HighFive item data has no single-side R_FINGER/R_EAR template --
+    // see paperdoll-mapping.ts), so the demo data uses SLOT_LR_FINGER/LR_EAR too.
+    demoItem({ id: 875, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_LR_FINGER, equipped: true }), // Ring of Knowledge
     demoItem({ id: 906, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_NECK, equipped: true }), // Necklace of Knowledge
-    demoItem({ id: 115, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_EAR, equipped: true }), // Earring of Wisdom
+    demoItem({ id: 115, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_LR_EAR, equipped: true }), // Earring of Wisdom
     demoItem({ id: 9589, type2: ItemType2.RingEarringNecklace, bodyPart: L2Item.SLOT_R_BRACELET, equipped: true }), // Iron Bracelet
   ];
 }

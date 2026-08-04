@@ -6,8 +6,8 @@ import { getItemSlotType, getItemGradeLabel } from "../../../config/item-mapping
 import { PAPERDOLL_LAYOUT, getEquippedItemsBySlot } from "../../../config/paperdoll-mapping";
 
 const SLOT_SIZE = 34;
-const COLUMN_GAP = 5;
-const ROW_GAP = 10;
+const COLUMN_GAP = 10;
+const ROW_GAP = 20;
 
 export const Paperdoll = observer(function Paperdoll() {
   const game = useGameStore();
