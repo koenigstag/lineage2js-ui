@@ -1,11 +1,13 @@
 import { SessionStore } from "./SessionStore";
 import { UiStore } from "./UiStore";
+import { DatapackStore } from "./DatapackStore";
 import { GameStore } from "./GameStore";
 import { WindowManagerStore } from "./WindowManagerStore";
 
 export class RootStore {
   session = new SessionStore();
   ui = new UiStore();
+  datapack = new DatapackStore();
   game = new GameStore();
   windowManager = new WindowManagerStore();
 

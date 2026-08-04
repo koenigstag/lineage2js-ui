@@ -18,14 +18,14 @@ const TYPE_DOOR_NAME = 11;
 const TYPE_PLAYER_NAME = 12;
 const TYPE_SYSTEM_STRING = 13;
 
-// Reactive read, not a stored field: UiStore.systemMessages loads
-// asynchronously (see UiStore.loadSystemMessages()), same treatment as
+// Reactive read, not a stored field: DatapackStore.systemMessages loads
+// asynchronously (see DatapackStore.loadSystemMessages()), same treatment as
 // item-mapping.ts's getItemName(). The wire itself never sends message
-// text, only numeric ids (see AbstractMessagePacket.ts) -- UiStore merges
-// the English base table with the current lang's translated subset, so
-// this already reflects the active language.
+// text, only numeric ids (see AbstractMessagePacket.ts) -- DatapackStore
+// merges the English base table with the current lang's translated subset,
+// so this already reflects the active language.
 export function getSystemMessageTemplate(messageId: number): string | undefined {
-  return rootStore.ui.systemMessages[messageId];
+  return rootStore.datapack.systemMessages[messageId];
 }
 
 // Resolves one positional param to display text, based on its wire type tag.

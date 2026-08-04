@@ -161,7 +161,7 @@ function classIdNumeric(classId: ClassId): number | undefined {
 }
 
 // Sourced entirely from public/class-names/<lang>.json (loaded by
-// UiStore.loadClassNames() -- see its own comment for provenance:
+// DatapackStore.loadClassNames() -- see its own comment for provenance:
 // adrenalinebot.com's HighFive Classes table, which covers every real
 // ClassId 1:1, confirmed against this project's own enum). No derived
 // fallback -- L2Creature.ClassName/BaseClassName are declared in the network
@@ -170,7 +170,7 @@ function classIdNumeric(classId: ClassId): number | undefined {
 // over with a guessed name.
 export function getClassLabel(classId: ClassId | undefined): string {
   const id = classId !== undefined ? classIdNumeric(classId) : undefined;
-  return (id !== undefined && rootStore.ui.classNames[id]) || "";
+  return (id !== undefined && rootStore.datapack.classNames[id]) || "";
 }
 
 // "warrior" only as a last resort for ClassIds absent from CLASS_TREE

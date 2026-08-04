@@ -1,7 +1,7 @@
 import { rootStore } from "../stores/RootStore";
 
 // Every race value actually present in L2J_Mobius's HighFive datapack
-// (dist/game/data/stats/npcs/*.xml's <race>), see UiStore.loadNpcRaces().
+// (dist/game/data/stats/npcs/*.xml's <race>), see DatapackStore.loadNpcRaces().
 export type NpcRace =
   | "ANIMAL"
   | "BEAST"
@@ -27,12 +27,12 @@ export type NpcRace =
   | "SIEGE_WEAPON"
   | "UNDEAD";
 
-// Reactive read, not baked onto the entity: UiStore.npcRaces loads
-// asynchronously (see UiStore.loadNpcRaces()), same treatment as
+// Reactive read, not baked onto the entity: DatapackStore.npcRaces loads
+// asynchronously (see DatapackStore.loadNpcRaces()), same treatment as
 // item-mapping.ts's getItemName(). Not every npc template id has a race in
 // the datapack (Folk/quest-givers mostly don't) -- those return undefined.
 export function getNpcRace(npcId: number): NpcRace | undefined {
-  return rootStore.ui.npcRaces[npcId] as NpcRace | undefined;
+  return rootStore.datapack.npcRaces[npcId] as NpcRace | undefined;
 }
 
 // Flavor placeholder tint per NpcRace -- no per-monster art exists yet

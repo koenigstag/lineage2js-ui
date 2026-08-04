@@ -6,7 +6,7 @@ import { getItemIconUrl } from "./icon-urls";
 import { t } from "../lang/lang";
 
 // Reactive read, not a stored field: UiStore.itemNames loads asynchronously
-// (see UiStore.loadItemNames()), so this must be called at render time inside
+// (see DatapackStore.loadItemNames()), so this must be called at render time inside
 // an observer -- baking it into L2Item.Name at construction time would freeze
 // the fallback key forever for any item parsed before the table finishes loading.
 // Structural `{ Id }` rather than L2Item: a hotbar ITEM shortcut only carries

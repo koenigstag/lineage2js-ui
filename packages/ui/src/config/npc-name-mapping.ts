@@ -1,7 +1,7 @@
 import { rootStore } from "../stores/RootStore";
 
-// Reactive read, not baked onto the entity: UiStore.npcNames loads
-// asynchronously (see UiStore.loadNpcNames()), same treatment as
+// Reactive read, not baked onto the entity: DatapackStore.npcNames loads
+// asynchronously (see DatapackStore.loadNpcNames()), same treatment as
 // item-mapping.ts's getItemName(). Sourced from adrenalinebot.com's HighFive
 // database (public/npc-names/<lang>.json), since not every NpcInfo packet
 // carries a real name on the wire -- see NpcInfo.ts's own comment: some
@@ -11,5 +11,5 @@ import { rootStore } from "../stores/RootStore";
 // "Mob #<id>"/"NPC #<id>" placeholder this project has always shown when
 // the table doesn't have an entry either.
 export function getNpcName(npcId: number, isAttackable: boolean): string {
-  return rootStore.ui.npcNames[npcId] || `${isAttackable ? "Mob" : "NPC"} #${npcId}`;
+  return rootStore.datapack.npcNames[npcId] || `${isAttackable ? "Mob" : "NPC"} #${npcId}`;
 }

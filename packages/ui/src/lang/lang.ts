@@ -36,20 +36,20 @@ export function translate(
   params?: { [key: string]: string | number | boolean | null | undefined }
 ): string {
   // Special case: item/skill names come from lazily-fetched id->name tables
-  // (see UiStore.loadItemNames()/loadSkillNames()), not the static
+  // (see DatapackStore.loadItemNames()/loadSkillNames()), not the static
   // per-language dictionaries below -- the wire protocol never sends these
   // as strings (only numeric ids), so there's nothing to look up in LANGS.
   if (key.startsWith(ITEM_NAME_PREFIX)) {
     const itemId = key.slice(ITEM_NAME_PREFIX.length);
-    return rootStore.ui.itemNames[itemId] || key;
+    return rootStore.datapack.itemNames[itemId] || key;
   }
   if (key.startsWith(SKILL_NAME_PREFIX)) {
     const skillId = key.slice(SKILL_NAME_PREFIX.length);
-    return rootStore.ui.skillNames[skillId] || key;
+    return rootStore.datapack.skillNames[skillId] || key;
   }
   if (key.startsWith(ACTION_NAME_PREFIX)) {
     const actionId = key.slice(ACTION_NAME_PREFIX.length);
-    return rootStore.ui.actionNames[actionId] || key;
+    return rootStore.datapack.actionNames[actionId] || key;
   }
 
   const parts = key.split(".");

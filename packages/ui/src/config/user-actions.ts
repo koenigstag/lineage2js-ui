@@ -27,7 +27,7 @@ export interface Action {
   isEnabled?(game: GameStore): boolean;
 }
 
-/** Display name for an action, from the id->name table loaded by UiStore.loadActionNames() (see lang.ts's "action.name.<id>" special case). */
+/** Display name for an action, from the id->name table loaded by DatapackStore.loadActionNames() (see lang.ts's "action.name.<id>" special case). */
 export function getActionName(action: Action): string {
   return t(`action.name.${action.code}`);
 }
