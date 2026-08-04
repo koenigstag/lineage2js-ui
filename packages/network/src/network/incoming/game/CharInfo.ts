@@ -89,8 +89,8 @@ export default class CharInfo extends GameClientPacket {
     this.Char.SpeedMultiplier = this.readF();
     this.Char.AtkSpdMultiplier = this.readF();
 
-    const _collisionRadius = this.readF();
-    const _collisionHeight = this.readF();
+    this.Char.CollisionRadius = this.readF();
+    this.Char.CollisionHeight = this.readF();
 
     this.Char.HairStyle = (HairStyle as any)[this.readD()];
     this.Char.HairColor = (HairColor as any)[this.readD()];

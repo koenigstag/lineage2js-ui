@@ -38,6 +38,8 @@ export default abstract class L2Creature extends L2Object {
   private _swimWalkSpeed!: number;
   private _flyRunSpeed!: number;
   private _flyWalkSpeed!: number;
+  private _collisionRadius!: number;
+  private _collisionHeight!: number;
   private _title!: string;
   private _isInCombat!: boolean;
   private _isNoble!: boolean;
@@ -356,6 +358,28 @@ export default abstract class L2Creature extends L2Object {
 
   public set AtkSpdMultiplier(value: number) {
     this._atkSpdMultiplier = value;
+  }
+
+  // Server-reported collision cylinder radius/height for this creature's
+  // current template/transform -- sent fresh in CharInfo/UserInfo/NpcInfo
+  // (see those packets' readImpl()), not derived client-side. NpcInfo
+  // actually writes this pair twice per packet (a real protocol quirk, not
+  // a vendored-parser bug -- confirmed against lineage2ts's NpcInfoWithCharacters
+  // writer); both occurrences carry the same value, so only the first is kept.
+  public get CollisionRadius(): number {
+    return this._collisionRadius;
+  }
+
+  public set CollisionRadius(value: number) {
+    this._collisionRadius = value;
+  }
+
+  public get CollisionHeight(): number {
+    return this._collisionHeight;
+  }
+
+  public set CollisionHeight(value: number) {
+    this._collisionHeight = value;
   }
 
   public get PAtk(): number {

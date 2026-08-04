@@ -99,8 +99,8 @@ export default class UserInfo extends GameClientPacket {
 
     this.User.SpeedMultiplier = this.readF();
     this.User.AtkSpdMultiplier = this.readF();
-    const _collisionRadius = this.readF();
-    const _collisionHeight = this.readF();
+    this.User.CollisionRadius = this.readF();
+    this.User.CollisionHeight = this.readF();
 
     this.User.HairStyle = (HairStyle as any)[this.readD()];
     this.User.HairColor = (HairColor as any)[this.readD()];

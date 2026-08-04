@@ -47,8 +47,8 @@ export default class NpcInfo extends AbstractNpcInfo {
 
     this.Creature.SpeedMultiplier = this.readF();
     this.Creature.AtkSpdMultiplier = this.readF();
-    const _collisionRadius = this.readF();
-    const _collisionHeight = this.readF();
+    this.Creature.CollisionRadius = this.readF();
+    this.Creature.CollisionHeight = this.readF();
 
     // Same Paperdoll array/index space as players (L2Creature.Paperdoll) --
     // just three of its 25 possible slots. Densely pre-filled, not left
@@ -102,8 +102,13 @@ export default class NpcInfo extends AbstractNpcInfo {
     const _insideZone = this.readC(); // 1=water, 2=flying
     const _teamId = this.readC();
 
-    const _collisionRadius1 = this.readF();
-    const _collisionHeight2 = this.readF();
+    // Real protocol quirk, not a vendored-parser bug: NpcInfo writes
+    // collision radius/height a second time here (confirmed against
+    // lineage2ts's NpcInfoWithCharacters writer -- both writes use the same
+    // source value), so this repeat is intentionally discarded in favor of
+    // the first occurrence assigned to Creature.CollisionRadius/Height above.
+    const _collisionRadiusRepeat = this.readF();
+    const _collisionHeightRepeat = this.readF();
     const _enchantEffect = this.readD(); // C4
     const _isFlying = this.readD() === 1; // C6
     const _pad5 = this.readD();
