@@ -4,6 +4,7 @@ import {
   L2Creature,
   Race as NetworkRace,
   Sex as NetworkSex,
+  reverseEnumMap,
   type CharacterTemplate,
 } from "@lineage2js/network";
 import {
@@ -22,19 +23,26 @@ import { CLASS_TREE } from "./class-tree";
 // L2Creature.Race/Sex are stored as the raw numeric wire value (matching
 // the Race/Sex enum's ordinals directly -- CharacterCreate.ts even writes
 // Race back out with a plain writeD(), no encoding); the display string is
-// purely a UI-facing concern, produced here via the numeric TS enum's own
-// reverse lookup (NetworkRace[0] === "HUMAN"). RaceNames/SexNames's local
-// type literals are spelled to match those enum key names exactly (see
-// character-races.ts). Typed against L2Creature (not L2User) since
-// Race/Sex/ClassId are declared there -- shared by players (CharInfo/UserInfo)
-// so the same conversion works whether the creature is the local player or
-// one seen nearby.
+// purely a UI-facing concern, produced here via reverseEnumMap() (see its
+// own doc comment for why not a direct NetworkRace[value] index) rather than
+// character-races.ts's own separate constant. Built once and reused below
+// instead of re-filtering the enum on every conversion.
+const RACE_NAMES = reverseEnumMap(NetworkRace);
+const SEX_NAMES = reverseEnumMap(NetworkSex);
+
+// Typed against L2Creature (not L2User) since Race/Sex/ClassId are declared
+// there -- shared by players (CharInfo/UserInfo) so the same conversion
+// works whether the creature is the local player or one seen nearby. The
+// cast narrows RACE_NAMES's full 24-value range (every Race enum member) down
+// to RaceNames's 6 playable ones -- safe here because only player-populating
+// packets (CharInfo/UserInfo/CharSelectionInfo) ever write L2Creature.Race,
+// and they only ever encode one of those 6.
 export function toLocalRace(creature: L2Creature): RaceNames {
-  return NetworkRace[creature.Race] as unknown as RaceNames;
+  return RACE_NAMES.get(creature.Race) as RaceNames;
 }
 
 export function toLocalSex(creature: L2Creature): SexNames {
-  return NetworkSex[creature.Sex] as unknown as SexNames;
+  return SEX_NAMES.get(creature.Sex) as SexNames;
 }
 
 // Fighter/mystic per classId, straight from CLASS_TREE's isMage (itself
@@ -61,7 +69,7 @@ export function getRootClassLabel(classIdName: string): string | undefined {
   const entry = CLASS_TREE[classId];
   if (!entry) return undefined;
 
-  const race = NetworkRace[entry.race] as unknown as RaceNames;
+  const race = RACE_NAMES.get(entry.race) as RaceNames;
   const baseClass: BaseClass = entry.isMage ? "mystic" : "fighter";
   return `${getRaceLabel(race)} ${getBaseClassLabel(baseClass)}`;
 }
@@ -103,16 +111,16 @@ export function findCharacterTemplate(
 // follows along on its own instead of needing a code change here. Only falls
 // back to the static table before requestCharacterTemplates() has run yet
 // (e.g. templates is still empty).
-export function getAvailableRacesFromTemplates(templates: CharacterTemplate[]): RaceNames[] {
+export function getAvailableRacesFromTemplates(templates: CharacterTemplate[]): readonly RaceNames[] {
   if (templates.length === 0) {
     return RACES;
   }
-  const present = new Set(templates.map((template) => NetworkRace[template.Race] as unknown as RaceNames));
+  const present = new Set(templates.map((template) => RACE_NAMES.get(template.Race) as RaceNames));
   return RACES.filter((race) => present.has(race));
 }
 
 export function getAvailableBaseClassesFromTemplates(templates: CharacterTemplate[], race: RaceNames): BaseClass[] {
-  const classesForRace = templates.filter((template) => (NetworkRace[template.Race] as unknown as RaceNames) === race);
+  const classesForRace = templates.filter((template) => RACE_NAMES.get(template.Race) === race);
   if (classesForRace.length === 0) {
     return getAvailableBaseClasses(race);
   }
@@ -166,6 +174,10 @@ export function buildNewCharacter(input: NewCharacterInput, templates: Character
   const char = new L2Character();
 
   char.Name = input.nickname;
+  // Forward direction (name -> number): a direct enum property access is
+  // fine here, unlike the reverse direction above -- RACES/SEXES's
+  // `satisfies` check guarantees input.race/input.sex are real keys of
+  // NetworkRace/NetworkSex, so this can't return undefined.
   char.Race = NetworkRace[input.race];
   char.Sex = NetworkSex[input.sex];
   char.ClassId = getStartingClassId(input.race, input.baseClass, input.sex);

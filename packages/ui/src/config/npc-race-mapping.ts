@@ -1,31 +1,14 @@
+import { Race as NetworkRace } from "@lineage2js/network";
 import { rootStore } from "../stores/RootStore";
 
-// Every race value actually present in L2J_Mobius's HighFive datapack
-// (dist/game/data/stats/npcs/*.xml's <race>), see DatapackStore.loadNpcRaces().
-export type NpcRace =
-  | "ANIMAL"
-  | "BEAST"
-  | "BUG"
-  | "CASTLE_GUARD"
-  | "CONSTRUCT"
-  | "DARK_ELF"
-  | "DEMONIC"
-  | "DIVINE"
-  | "DRAGON"
-  | "DWARF"
-  | "ELEMENTAL"
-  | "ELF"
-  | "ETC"
-  | "FAIRY"
-  | "GIANT"
-  | "HUMAN"
-  | "HUMANOID"
-  | "KAMAEL"
-  | "MERCENARY"
-  | "ORC"
-  | "PLANT"
-  | "SIEGE_WEAPON"
-  | "UNDEAD";
+// Every race value the network's Race enum can represent, except NONE (a
+// "no race" sentinel, not a displayable one) -- derived from the enum's own
+// key names via keyof typeof rather than hand-duplicated, so it can't
+// silently drift if Race.ts ever gains/loses/renames a member. Confirmed
+// identical to L2J_Mobius's HighFive datapack race vocabulary (dist/game/
+// data/stats/npcs/*.xml's <race>), see DatapackStore.loadNpcRaces() -- and a
+// strict superset of character-races.ts's RaceNames (the 6 playable races).
+export type NpcRace = Exclude<keyof typeof NetworkRace, "NONE">;
 
 // Reactive read, not baked onto the entity: DatapackStore.npcRaces loads
 // asynchronously (see DatapackStore.loadNpcRaces()), same treatment as

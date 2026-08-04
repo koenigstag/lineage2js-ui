@@ -1,15 +1,20 @@
+import { Race as NetworkRace, Sex as NetworkSex } from "@lineage2js/network";
 import { t } from "../lang/lang";
 import { rootStore } from "../stores/RootStore";
 
-// Matches @lineage2js/network's RaceNames/SexNames enum key names exactly. L2User.RaceNames
-// and .SexNames come back from the server as raw numbers (matching the enum's
-// ordinals) -- toLocalRace()/toLocalSex() (network-mapping.ts) convert to
-// these string literals via the numeric enum's own reverse lookup.
-export type RaceNames = "HUMAN" | "ELF" | "DARK_ELF" | "ORC" | "DWARF" | "KAMAEL";
-export type BaseClass = "fighter" | "mystic";
-export type SexNames = "MALE" | "FEMALE";
+// The 6 playable races/2 selectable sexes -- which subset of the network's
+// full Race/Sex enums a player can actually be is domain knowledge that has
+// to be hand-curated here, but `satisfies` checks every literal against the
+// enums' own key names, so a typo or a renamed/removed enum member fails
+// the build instead of silently drifting out of sync (see toLocalRace()/
+// toLocalSex() in network-mapping.ts for the reverse direction).
+export const RACES = ["HUMAN", "ELF", "DARK_ELF", "ORC", "DWARF", "KAMAEL"] as const satisfies readonly (keyof typeof NetworkRace)[];
+export type RaceNames = (typeof RACES)[number];
 
-export const RACES: RaceNames[] = ["HUMAN", "ELF", "DARK_ELF", "ORC", "DWARF", "KAMAEL"];
+export const SEXES = ["MALE", "FEMALE"] as const satisfies readonly (keyof typeof NetworkSex)[];
+export type SexNames = (typeof SEXES)[number];
+
+export type BaseClass = "fighter" | "mystic";
 
 export function getRaceLabel(race: RaceNames): string {
   return t(`classes.race.${race}`);
