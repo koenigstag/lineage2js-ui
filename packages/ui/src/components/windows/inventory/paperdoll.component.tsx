@@ -16,13 +16,13 @@ export const Paperdoll = observer(function Paperdoll() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: SECTION_GAP, flexShrink: 0 }}>
-      {PAPERDOLL_SECTIONS.map(({ rows, slotSize = SLOT_SIZE }, sectionIndex) => (
+      {PAPERDOLL_SECTIONS.map(({ rows, slotSize = SLOT_SIZE, columnGap = COLUMN_GAP }, sectionIndex) => (
         <div
           key={sectionIndex}
           style={{
             display: "grid",
             gridTemplateColumns: `repeat(${rows[0].length}, ${slotSize}px)`,
-            columnGap: COLUMN_GAP,
+            columnGap,
             rowGap: ROW_GAP,
           }}
         >
