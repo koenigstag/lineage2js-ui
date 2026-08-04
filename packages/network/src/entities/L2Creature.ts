@@ -44,13 +44,15 @@ export default abstract class L2Creature extends L2Object {
   private _isAttackable!: boolean;
   private _isTargetable!: boolean;
   private _target!: L2Object | null;
-  // NPC/mob equipped weapon+armor display ids -- NpcInfo carries these (a
-  // player's much larger paperdoll lives on L2Character.Paperdoll instead,
-  // 25 slots vs. these 3). No 3D asset pipeline renders them yet, same
-  // "no character art" situation as everything else in components/core/scene.
-  private _rHandId!: number;
-  private _chestId!: number;
-  private _lHandId!: number;
+  // Display id per paperdoll slot (index = GameServerPacket.PAPERDOLL_* --
+  // 25 slots total, PAPERDOLL_TOTALSLOTS), shared by every creature kind:
+  // CharInfo/UserInfo populate all of it for players, NpcInfo populates
+  // just the RHAND/CHEST/LHAND indices for NPCs/mobs. Same shape either
+  // way, so a caller reads Paperdoll[PAPERDOLL_RHAND] without needing to
+  // know or care what kind of creature it has. No 3D asset pipeline renders
+  // any of this yet, same "no character art" situation as everything else
+  // in components/core/scene.
+  private _paperdoll: number[] = [];
   private _sex!: Sex;
   private _recommHave!: number;
   private _classId!: ClassId;
@@ -159,28 +161,12 @@ export default abstract class L2Creature extends L2Object {
     this._target = value;
   }
 
-  public get RHandId(): number {
-    return this._rHandId;
+  public get Paperdoll(): number[] {
+    return this._paperdoll;
   }
 
-  public set RHandId(value: number) {
-    this._rHandId = value;
-  }
-
-  public get ChestId(): number {
-    return this._chestId;
-  }
-
-  public set ChestId(value: number) {
-    this._chestId = value;
-  }
-
-  public get LHandId(): number {
-    return this._lHandId;
-  }
-
-  public set LHandId(value: number) {
-    this._lHandId = value;
+  public set Paperdoll(value: number[]) {
+    this._paperdoll = value;
   }
 
   public get IsAttackable(): boolean {

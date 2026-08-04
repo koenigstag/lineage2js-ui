@@ -2,6 +2,7 @@ import AbstractNpcInfo from "./AbstractNpcInfo";
 import L2Npc from "../../../entities/L2Npc";
 import L2Mob from "../../../entities/L2Mob";
 import L2Creature from "../../../entities/L2Creature";
+import GameServerPacket from "../../outgoing/game/GameServerPacket";
 
 export default class NpcInfo extends AbstractNpcInfo {
   ObjectId!: number;
@@ -49,9 +50,13 @@ export default class NpcInfo extends AbstractNpcInfo {
     const _collisionRadius = this.readF();
     const _collisionHeight = this.readF();
 
-    this.Creature.RHandId = this.readD(); // right hand weapon display id
-    this.Creature.ChestId = this.readD();
-    this.Creature.LHandId = this.readD(); // left hand weapon display id
+    // Same Paperdoll array/index space as players (L2Creature.Paperdoll) --
+    // just three of its 25 possible slots.
+    const paperdoll: number[] = [];
+    paperdoll[GameServerPacket.PAPERDOLL_RHAND] = this.readD(); // right hand weapon display id
+    paperdoll[GameServerPacket.PAPERDOLL_CHEST] = this.readD();
+    paperdoll[GameServerPacket.PAPERDOLL_LHAND] = this.readD(); // left hand weapon display id
+    this.Creature.Paperdoll = paperdoll;
 
     const _unkn1 = this.readC(); // name above char 1=true ... ??
     this.Creature.IsRunning = this.readC() === 1;
