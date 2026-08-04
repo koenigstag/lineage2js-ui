@@ -4,40 +4,53 @@ export type PaperdollSlotKey =
   | "hair1"
   | "head"
   | "hair2"
-  | "under"
-  | "chest"
-  | "belt"
   | "gloves"
-  | "legs"
+  | "chest"
   | "feet"
-  | "rarm"
-  | "larm"
   | "cloak"
+  | "legs"
+  | "belt"
+  | "rhand"
+  | "lhand"
   | "rear"
   | "lear"
   | "neklace"
-  | "rring"
-  | "lring"
-  | "rbracelet"
+  | "rfinger"
+  | "lfinger"
+  | "under"
   | "decor1"
   | "decor2"
   | "decor3"
   | "decor4"
   | "decor5"
   | "decor6"
+  | "rbracelet"
   | "lbracelet";
 
-/** Visual grid for the inventory window's equip panel, 3 columns x 9 rows (null = empty filler cell). */
-export const PAPERDOLL_LAYOUT: (PaperdollSlotKey | null)[][] = [
-  ["hair1", "head", "hair2"],
-  ["under", "chest", "belt"],
-  ["gloves", "legs", "feet"],
-  ["rarm", "larm", "cloak"],
-  ["rear", "neklace", "lear"],
-  ["rring", "lbracelet", "lring"],
-  ["decor1", "decor2", "decor3"],
-  ["decor4", "decor5", "decor6"],
-  ["rbracelet", null, null],
+export interface PaperdollSection {
+  rows: (PaperdollSlotKey | null)[][];
+  /** Square cell size in px for every slot in this section. Defaults to the standard 34px slot -- decor cells render at half that. */
+  slotSize?: number;
+}
+
+/** Visual layout for the inventory window's equip panel -- grouped into the same clusters (head / armor / weapons / jewelry / decor / bracelets) as the retail paperdoll, each its own compact grid stacked with a bigger gap between groups. */
+export const PAPERDOLL_SECTIONS: PaperdollSection[] = [
+  { rows: [["hair1", "head", "hair2"]] },
+  {
+    rows: [
+      ["gloves", "chest", "feet"],
+      ["cloak", "legs", "belt"],
+    ],
+  },
+  { rows: [["rhand", null, "lhand"]] },
+  {
+    rows: [
+      ["rear", "lear", "neklace"],
+      ["rfinger", "lfinger", "under"],
+    ],
+  },
+  { rows: [["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"]], slotSize: 17 },
+  { rows: [["rbracelet", "lbracelet"]] },
 ];
 
 /**
@@ -65,9 +78,9 @@ const SLOT_KEYS_BY_BODY_PART: Partial<Record<number, PaperdollSlotKey[]>> = {
   [L2Item.SLOT_GLOVES]: ["gloves"],
   [L2Item.SLOT_LEGS]: ["legs"],
   [L2Item.SLOT_FEET]: ["feet"],
-  [L2Item.SLOT_LR_HAND]: ["rarm", "larm"],
-  [L2Item.SLOT_R_HAND]: ["rarm"],
-  [L2Item.SLOT_L_HAND]: ["larm"],
+  [L2Item.SLOT_LR_HAND]: ["rhand", "lhand"],
+  [L2Item.SLOT_R_HAND]: ["rhand"],
+  [L2Item.SLOT_L_HAND]: ["lhand"],
   [L2Item.SLOT_BACK]: ["cloak"],
   [L2Item.SLOT_NECK]: ["neklace"],
   [L2Item.SLOT_R_BRACELET]: ["rbracelet"],
@@ -76,7 +89,7 @@ const SLOT_KEYS_BY_BODY_PART: Partial<Record<number, PaperdollSlotKey[]>> = {
 
 const DECOR_SLOT_KEYS: PaperdollSlotKey[] = ["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"];
 const EAR_SLOT_KEYS: PaperdollSlotKey[] = ["rear", "lear"];
-const FINGER_SLOT_KEYS: PaperdollSlotKey[] = ["rring", "lring"];
+const FINGER_SLOT_KEYS: PaperdollSlotKey[] = ["rfinger", "lfinger"];
 
 /** Fills `keys[index]` (if any slot is still free) and returns the next index to try. */
 function assignNextFree<T>(
