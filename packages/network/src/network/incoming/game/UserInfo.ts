@@ -5,6 +5,8 @@ import { HairStyle } from "../../../enums/HairStyle";
 import { HairColor } from "../../../enums/HairColor";
 import { Face } from "../../../enums/Face";
 import { ClassId } from "../../../enums/ClassId";
+import { Race } from "../../../enums/Race";
+import { Sex } from "../../../enums/Sex";
 
 export default class UserInfo extends GameClientPacket {
   User!: L2User;
@@ -22,8 +24,11 @@ export default class UserInfo extends GameClientPacket {
 
     this.User.ObjectId = this.readD();
     this.User.Name = this.readS();
-    this.User.Race = this.readD();
-    this.User.Sex = this.readD();
+    // Reverse-mapped to the enum key name -- see CharInfo.ts's identical
+    // comment; must match how the same fields are populated for every other
+    // creature, since toLocalRace()/toLocalSex() cast this straight through.
+    this.User.Race = (Race as any)[this.readD()];
+    this.User.Sex = (Sex as any)[this.readD()];
 
     this.User.BaseClassId = (ClassId as any)[this.readD()];
     this.User.Level = this.readD();

@@ -35,7 +35,7 @@ import { getNpcLevel } from "../config/npc-level-mapping";
 import { getNpcName } from "../config/npc-name-mapping";
 import { formatSystemMessage, isNoisySystemMessage } from "../config/system-message-mapping";
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
-import type { BaseClass, Race, Sex } from "../config/character-races";
+import type { BaseClass, Sex } from "../config/character-races";
 
 /**
  * Any nearby creature (NPC/mob/player, including the local player -- see
@@ -53,16 +53,19 @@ export interface WorldCreatureSnapshot {
   heading: number;
   kind: "player" | "mob" | "summon" | "npc";
   isDead: boolean;
-  // Player-specific (kind === "player") -- lets CreatureModel pick the
-  // right visual via getPlayerVisualFromVariant, same as char-select/char-create.
-  race?: Race;
-  baseClass?: BaseClass;
-  sex?: Sex;
-  // Non-player only (kind !== "player") -- resolved from the npc template id
-  // (see config/npc-race-mapping.ts), only known for ids present in the
+  // Race, for every creature kind -- Race's 6 player-race values are a
+  // literal subset of NpcRace's 23 (verified: identical spelling for every
+  // shared key), so one field covers both instead of two parallel
+  // player-only/non-player-only fields. Players: real value via
+  // toLocalRace(). Non-players: resolved from the npc template id (see
+  // config/npc-race-mapping.ts), only known for ids present in the
   // datapack-derived table (mostly Monster-type npcs; Folk/quest-givers
   // usually have none).
-  npcRace?: NpcRace;
+  race?: NpcRace;
+  // Player-specific (kind === "player") -- lets CreatureModel pick the
+  // right visual via getPlayerVisualFromVariant, same as char-select/char-create.
+  baseClass?: BaseClass;
+  sex?: Sex;
 }
 
 export const MAX_CHARACTERS = 7;
@@ -463,7 +466,7 @@ export interface TargetSnapshot {
   // npc template id -- only known for ids present in the datapack-derived
   // table (mostly Monster-type npcs; Folk/quest-givers usually have none).
   // Falls back to creatureKind's icon when this is undefined. Named to match
-  // WorldCreatureSnapshot.npcRace.
+  // WorldCreatureSnapshot.race.
   npcRace?: NpcRace;
   // Non-player level only (see config/npc-level-mapping.ts) -- intentionally
   // not set for L2Character targets (players already show their own level
@@ -545,10 +548,9 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
     heading: creature.Heading,
     kind,
     isDead: creature.IsDead,
-    race: kind === "player" ? toLocalRace(creature) : undefined,
+    race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,
-    npcRace: kind === "player" ? undefined : getNpcRace(creature.Id),
   };
 }
 
