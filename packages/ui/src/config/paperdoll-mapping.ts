@@ -37,7 +37,13 @@ export interface PaperdollSection {
   center?: boolean;
 }
 
-const ACCESSORY_COLUMN_GAP = 20; // 2x the standard 10px column gap
+const BASE_COLUMN_GAP = 10;
+const BODY_COLUMN_GAP = BASE_COLUMN_GAP * 2; // 20
+const ACCESSORY_COLUMN_GAP = BASE_COLUMN_GAP * 4; // 40 (hands + accessories)
+const DECOR_COLUMN_GAP = BASE_COLUMN_GAP; // 10, kept separate from BODY_COLUMN_GAP so it doesn't move if body's gap changes again
+const BRACELET_COLUMN_GAP = BASE_COLUMN_GAP; // 10, between rbracelet and lbracelet (the agathion slot)
+
+const DECOR_SLOT_SIZE = 25.5; // 1.5x the previous half-size (17px) decor cell
 
 /** Visual layout for the inventory window's equip panel -- grouped into the same clusters (body / hands / accessories / decor / bracelets) as the retail paperdoll, each its own independently-sized grid stacked with a bigger gap between groups. */
 export const PAPERDOLL_SECTIONS: PaperdollSection[] = [
@@ -48,6 +54,7 @@ export const PAPERDOLL_SECTIONS: PaperdollSection[] = [
       ["gloves", "chest", "feet"],
       ["cloak", "legs", "belt"],
     ],
+    columnGap: BODY_COLUMN_GAP,
     center: true,
   },
   { rows: [["rhand", "lhand"]], columnGap: ACCESSORY_COLUMN_GAP, center: true }, // hands
@@ -60,8 +67,8 @@ export const PAPERDOLL_SECTIONS: PaperdollSection[] = [
     columnGap: ACCESSORY_COLUMN_GAP,
     center: true,
   },
-  { rows: [["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"]], slotSize: 17 },
-  { rows: [["rbracelet", "lbracelet"]] },
+  { rows: [["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"]], slotSize: DECOR_SLOT_SIZE, columnGap: DECOR_COLUMN_GAP },
+  { rows: [["rbracelet", "lbracelet"]], columnGap: BRACELET_COLUMN_GAP },
 ];
 
 /**
