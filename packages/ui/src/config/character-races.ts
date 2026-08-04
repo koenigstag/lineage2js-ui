@@ -1,4 +1,5 @@
 import { t } from "../lang/lang";
+import { rootStore } from "../stores/RootStore";
 
 // Matches @lineage2js/network's Race/Sex enum key names exactly (L2User.Race
 // and .Sex come back from the server as those key strings, e.g. "HUMAN",
@@ -133,24 +134,22 @@ export interface BaseStats {
   men: number;
 }
 
-/**
- * Flavor/demo base stats per race -- not exact game formulas, just enough
- * differentiation to read as distinct archetypes (no server data yet).
- *
- * @deprecated Invented placeholder values, not ported from any real
- * server/datapack formula -- replace with the real per-race starting stats
- * once that data is sourced, don't try to "correct" these numbers in place.
- */
-const RACE_BASE_STATS: Record<Race, BaseStats> = {
-  HUMAN: { str: 40, dex: 30, con: 43, int: 21, wit: 11, men: 25 },
-  ELF: { str: 36, dex: 30, con: 38, int: 21, wit: 11, men: 34 },
-  DARK_ELF: { str: 39, dex: 34, con: 36, int: 21, wit: 11, men: 29 },
-  ORC: { str: 42, dex: 26, con: 44, int: 19, wit: 10, men: 29 },
-  DWARF: { str: 40, dex: 30, con: 46, int: 21, wit: 9, men: 24 },
-  KAMAEL: { str: 41, dex: 33, con: 40, int: 19, wit: 9, men: 28 },
-};
+// Brief pre-load fallback only -- DatapackStore.characterBaseStats starts
+// empty until loadCharacterBaseStats() resolves (see App.tsx), same "loads
+// asynchronously" gap as classNames/getClassLabel()'s "" fallback. In
+// practice this never shows: char-create is reached well after the app-mount
+// fetch has settled.
+const FALLBACK_BASE_STATS: BaseStats = { str: 25, dex: 25, con: 25, int: 25, wit: 25, men: 25 };
 
-/** @deprecated See RACE_BASE_STATS -- placeholder values, not real reference data. */
-export function getBaseStats(race: Race): BaseStats {
-  return RACE_BASE_STATS[race];
+/**
+ * Real starting STR/DEX/CON/INT/WIT/MEN, sourced from L2J_Mobius's HighFive
+ * datapack (see DatapackStore.characterBaseStats for provenance) -- reactive
+ * read, not baked onto any entity, same treatment as getNpcRace(). Only used
+ * as network-mapping.ts's getTemplateStats() fallback before the real
+ * server-provided CharacterTemplate list has loaded; once it has, the
+ * server's own numbers win (and should match this table, since both trace
+ * back to the same datapack).
+ */
+export function getBaseStats(race: Race, baseClass: BaseClass, sex: Sex): BaseStats {
+  return rootStore.datapack.characterBaseStats[race]?.[baseClass]?.[sex] ?? FALLBACK_BASE_STATS;
 }

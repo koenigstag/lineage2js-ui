@@ -24,6 +24,7 @@ export const App = observer(function App() {
     datapack.loadNpcRaces();
     datapack.loadNpcLevels();
     datapack.loadSkillEffectFields();
+    datapack.loadCharacterBaseStats();
   }, [datapack]);
 
   // Per-language tables -- re-fetched (or served from cache) whenever ui.lang changes.

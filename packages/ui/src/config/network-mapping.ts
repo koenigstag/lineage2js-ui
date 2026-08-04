@@ -120,11 +120,11 @@ export function getAvailableBaseClassesFromTemplates(templates: CharacterTemplat
 }
 
 // Prefers the real server-provided template (see requestCharacterTemplates())
-// and only falls back to the flavor table if it isn't available yet.
+// and only falls back to the datapack-sourced table if it isn't available yet.
 export function getTemplateStats(templates: CharacterTemplate[], race: Race, baseClass: BaseClass, sex: Sex): BaseStats {
   const template = findCharacterTemplate(templates, race, baseClass, sex);
   if (!template) {
-    return getBaseStats(race);
+    return getBaseStats(race, baseClass, sex);
   }
   return {
     str: template.STR,

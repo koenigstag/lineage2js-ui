@@ -1,0 +1,54 @@
+{
+  "HUMAN": {
+    "fighter": {
+      "MALE": { "str": 40, "dex": 30, "con": 43, "int": 21, "wit": 11, "men": 25 },
+      "FEMALE": { "str": 40, "dex": 30, "con": 43, "int": 21, "wit": 11, "men": 25 }
+    },
+    "mystic": {
+      "MALE": { "str": 22, "dex": 21, "con": 27, "int": 41, "wit": 20, "men": 39 },
+      "FEMALE": { "str": 22, "dex": 21, "con": 27, "int": 41, "wit": 20, "men": 39 }
+    }
+  },
+  "ELF": {
+    "fighter": {
+      "MALE": { "str": 36, "dex": 35, "con": 36, "int": 23, "wit": 14, "men": 26 },
+      "FEMALE": { "str": 36, "dex": 35, "con": 36, "int": 23, "wit": 14, "men": 26 }
+    },
+    "mystic": {
+      "MALE": { "str": 21, "dex": 24, "con": 25, "int": 37, "wit": 23, "men": 40 },
+      "FEMALE": { "str": 21, "dex": 24, "con": 25, "int": 37, "wit": 23, "men": 40 }
+    }
+  },
+  "DARK_ELF": {
+    "fighter": {
+      "MALE": { "str": 41, "dex": 34, "con": 32, "int": 25, "wit": 12, "men": 26 },
+      "FEMALE": { "str": 41, "dex": 34, "con": 32, "int": 25, "wit": 12, "men": 26 }
+    },
+    "mystic": {
+      "MALE": { "str": 23, "dex": 23, "con": 24, "int": 44, "wit": 19, "men": 37 },
+      "FEMALE": { "str": 23, "dex": 23, "con": 24, "int": 44, "wit": 19, "men": 37 }
+    }
+  },
+  "ORC": {
+    "fighter": {
+      "MALE": { "str": 40, "dex": 26, "con": 47, "int": 18, "wit": 12, "men": 27 },
+      "FEMALE": { "str": 40, "dex": 26, "con": 47, "int": 18, "wit": 12, "men": 27 }
+    },
+    "mystic": {
+      "MALE": { "str": 27, "dex": 24, "con": 31, "int": 31, "wit": 15, "men": 42 },
+      "FEMALE": { "str": 27, "dex": 24, "con": 31, "int": 31, "wit": 15, "men": 42 }
+    }
+  },
+  "DWARF": {
+    "fighter": {
+      "MALE": { "str": 39, "dex": 29, "con": 45, "int": 20, "wit": 10, "men": 27 },
+      "FEMALE": { "str": 39, "dex": 29, "con": 45, "int": 20, "wit": 10, "men": 27 }
+    }
+  },
+  "KAMAEL": {
+    "fighter": {
+      "MALE": { "str": 41, "dex": 33, "con": 31, "int": 29, "wit": 11, "men": 25 },
+      "FEMALE": { "str": 39, "dex": 35, "con": 30, "int": 28, "wit": 11, "men": 27 }
+    }
+  }
+}

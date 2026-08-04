@@ -1,5 +1,6 @@
 import { makeAutoObservable } from "mobx";
 import type { LANG } from "../lang/lang";
+import type { BaseStats, BaseClass, Race, Sex } from "../config/character-races";
 
 // Static reference data the wire protocol never sends as strings/codes --
 // item/skill/action/class/npc/quest names, npc race/level, skill effect
@@ -49,6 +50,21 @@ export class DatapackStore {
   /** skillId -> [magicClass, operateType, isDebuff], see config/skill-effect-mapping.ts and @lineage2js/network's EffectCategory.ts. Same datapack source/gap as npcRaces -- AbnormalStatusUpdate never sends a buff's category over the wire. */
   skillEffectFields: Record<string, [number, string, number]> = {};
   private skillEffectFieldsRequested = false;
+  /**
+   * race -> baseClass -> sex -> starting STR/DEX/CON/INT/WIT/MEN, see
+   * config/character-races.ts's getBaseStats(). Sourced from L2J_Mobius's
+   * HighFive datapack (dist/game/data/stats/chars/baseStats/<ClassName>.xml's
+   * base* fields, one file per starting classId) -- only used as the
+   * char-create preview's fallback before the real server-provided
+   * CharacterTemplate list loads (see network-mapping.ts's getTemplateStats()),
+   * so it's keyed by our own Race/BaseClass/Sex rather than the wire's
+   * numeric classId. MALE/FEMALE duplicate the same values for every race
+   * except Kamael, where the two starting classes (Male/Female Soldier)
+   * genuinely differ. Not exhaustive: Dwarf/Kamael have no "mystic" entry
+   * since neither race offers a mystic starting class.
+   */
+  characterBaseStats: Partial<Record<Race, Partial<Record<BaseClass, Record<Sex, BaseStats>>>>> = {};
+  private characterBaseStatsRequested = false;
   /** questId -> name for the current lang, see config/quest-mapping.ts's getQuestName(). Forward-looking -- no quest window built yet. Same source/caching as itemNames/skillNames. */
   questNames: Record<string, string> = {};
   private questNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
@@ -264,6 +280,23 @@ export class DatapackStore {
       this.setSkillEffectFields(fields);
     } catch {
       this.skillEffectFieldsRequested = false;
+    }
+  }
+
+  setCharacterBaseStats(stats: Partial<Record<Race, Partial<Record<BaseClass, Record<Sex, BaseStats>>>>>) {
+    this.characterBaseStats = stats;
+  }
+
+  /** Fetches public/character-base-stats/data.json once, same treatment as loadNpcRaces(). */
+  async loadCharacterBaseStats() {
+    if (this.characterBaseStatsRequested) return;
+    this.characterBaseStatsRequested = true;
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}character-base-stats/data.json`);
+      const stats: Partial<Record<Race, Partial<Record<BaseClass, Record<Sex, BaseStats>>>>> = await response.json();
+      this.setCharacterBaseStats(stats);
+    } catch {
+      this.characterBaseStatsRequested = false;
     }
   }
 
