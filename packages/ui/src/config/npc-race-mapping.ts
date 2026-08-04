@@ -35,12 +35,19 @@ export function getNpcRace(npcId: number): NpcRace | undefined {
   return rootStore.datapack.npcRaces[npcId] as NpcRace | undefined;
 }
 
-// Flavor placeholder tint per NpcRace -- no per-monster art exists yet
-// (same "no character art" situation as PlayerModel's placeholder capsule),
-// this just gives CreatureModel something more distinct than one flat color
-// per kind. Not exhaustive by design: any NpcRace missing here (and any npc
-// with no resolvable race at all, e.g. Folk/quest-givers) falls back to
-// CreatureModel's per-kind default color.
+/**
+ * Flavor placeholder tint per NpcRace -- no per-monster art exists yet
+ * (same "no character art" situation as PlayerModel's placeholder capsule),
+ * this just gives CreatureModel something more distinct than one flat color
+ * per kind. Not exhaustive by design: any NpcRace missing here (and any npc
+ * with no resolvable race at all, e.g. Folk/quest-givers) falls back to
+ * CreatureModel's per-kind default color.
+ *
+ * @deprecated Invented colors, not ported from any datapack/reference
+ * source (unlike NpcRace itself). Once real per-monster models/art land,
+ * this table (and CreatureModel's placeholder-color path) becomes obsolete
+ * -- delete rather than trying to "correct" the colors.
+ */
 const NPC_RACE_COLORS: Partial<Record<NpcRace, string>> = {
   ANIMAL: "#8a6a4a",
   BEAST: "#6a4a3a",
@@ -66,6 +73,7 @@ const NPC_RACE_COLORS: Partial<Record<NpcRace, string>> = {
   UNDEAD: "#4a4a5a",
 };
 
+/** @deprecated See NPC_RACE_COLORS -- placeholder tint, not real reference data. */
 export function getNpcRaceColor(race: NpcRace | undefined): string | undefined {
   return race ? NPC_RACE_COLORS[race] : undefined;
 }
