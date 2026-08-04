@@ -133,8 +133,14 @@ export interface BaseStats {
   men: number;
 }
 
-// Flavor/demo base stats per race -- not exact game formulas, just enough
-// differentiation to read as distinct archetypes (no server data yet).
+/**
+ * Flavor/demo base stats per race -- not exact game formulas, just enough
+ * differentiation to read as distinct archetypes (no server data yet).
+ *
+ * @deprecated Invented placeholder values, not ported from any real
+ * server/datapack formula -- replace with the real per-race starting stats
+ * once that data is sourced, don't try to "correct" these numbers in place.
+ */
 const RACE_BASE_STATS: Record<Race, BaseStats> = {
   HUMAN: { str: 40, dex: 30, con: 43, int: 21, wit: 11, men: 25 },
   ELF: { str: 36, dex: 30, con: 38, int: 21, wit: 11, men: 34 },
@@ -144,6 +150,7 @@ const RACE_BASE_STATS: Record<Race, BaseStats> = {
   KAMAEL: { str: 41, dex: 33, con: 40, int: 19, wit: 9, men: 28 },
 };
 
+/** @deprecated See RACE_BASE_STATS -- placeholder values, not real reference data. */
 export function getBaseStats(race: Race): BaseStats {
   return RACE_BASE_STATS[race];
 }
