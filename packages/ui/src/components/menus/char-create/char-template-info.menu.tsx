@@ -1,16 +1,16 @@
 import { observer } from "mobx-react-lite";
 import { useSessionStore } from "../../../stores/StoreContext";
 import { getTemplateStats } from "../../../config/network-mapping";
-import { type BaseClass, type BaseStats, type Race, type Sex } from "../../../config/character-races";
+import { type BaseClass, type BaseStats, type RaceNames, type SexNames } from "../../../config/character-races";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 import { t } from "../../../lang/lang";
 
 const STAT_KEYS: Array<keyof BaseStats> = ["str", "dex", "con", "int", "wit", "men"];
 
 interface CharTemplateInfoMenuProps {
-  race: Race;
+  race: RaceNames;
   baseClass: BaseClass;
-  sex: Sex;
+  sex: SexNames;
 }
 
 /** Base stats preview for the race/class/sex currently focused in the create-char scene, from the real server template when available. */

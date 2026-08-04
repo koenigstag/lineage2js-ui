@@ -4,7 +4,7 @@ import { Object3D } from "three";
 import { PlayerModel } from "../../../core/scene/player-model.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
-import { RACES, type Race, type BaseClass, type Sex } from "../../../../config/character-races";
+import { RACES, type RaceNames, type BaseClass, type SexNames } from "../../../../config/character-races";
 import { RACE_GALLERY, type GalleryVariant } from "./race-gallery.utils";
 import { CameraRig } from "./camera-rig.component";
 
@@ -17,7 +17,7 @@ const CLASS_GAP_EXTRA = 0.9;
 // neighboring group (see CameraRig).
 const GROUP_SPACING = 10;
 
-function groupXForRace(race: Race): number {
+function groupXForRace(race: RaceNames): number {
   return RACES.indexOf(race) * GROUP_SPACING;
 }
 
@@ -55,10 +55,10 @@ function MoonLight({ groupX }: MoonLightProps) {
 }
 
 export interface CharCreateSceneProps {
-  race: Race;
+  race: RaceNames;
   baseClass: BaseClass;
-  sex: Sex;
-  onSelectVariant: (race: Race, baseClass: BaseClass, sex: Sex) => void;
+  sex: SexNames;
+  onSelectVariant: (race: RaceNames, baseClass: BaseClass, sex: SexNames) => void;
 }
 
 /** Character-creation backdrop: camera focuses on the selected race's group of class/sex placeholders. */

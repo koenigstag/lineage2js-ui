@@ -1,6 +1,6 @@
 import { makeAutoObservable } from "mobx";
 import type { LANG } from "../lang/lang";
-import type { BaseStats, BaseClass, Race, Sex } from "../config/character-races";
+import type { BaseStats, BaseClass, RaceNames, SexNames } from "../config/character-races";
 
 // Static reference data the wire protocol never sends as strings/codes --
 // item/skill/action/class/npc/quest names, npc race/level, skill effect
@@ -57,13 +57,13 @@ export class DatapackStore {
    * base* fields, one file per starting classId) -- only used as the
    * char-create preview's fallback before the real server-provided
    * CharacterTemplate list loads (see network-mapping.ts's getTemplateStats()),
-   * so it's keyed by our own Race/BaseClass/Sex rather than the wire's
+   * so it's keyed by our own RaceNames/BaseClass/SexNames rather than the wire's
    * numeric classId. MALE/FEMALE duplicate the same values for every race
    * except Kamael, where the two starting classes (Male/Female Soldier)
    * genuinely differ. Not exhaustive: Dwarf/Kamael have no "mystic" entry
    * since neither race offers a mystic starting class.
    */
-  characterBaseStats: Partial<Record<Race, Partial<Record<BaseClass, Record<Sex, BaseStats>>>>> = {};
+  characterBaseStats: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<SexNames, BaseStats>>>>> = {};
   private characterBaseStatsRequested = false;
   /** questId -> name for the current lang, see config/quest-mapping.ts's getQuestName(). Forward-looking -- no quest window built yet. Same source/caching as itemNames/skillNames. */
   questNames: Record<string, string> = {};
@@ -283,7 +283,7 @@ export class DatapackStore {
     }
   }
 
-  setCharacterBaseStats(stats: Partial<Record<Race, Partial<Record<BaseClass, Record<Sex, BaseStats>>>>>) {
+  setCharacterBaseStats(stats: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<SexNames, BaseStats>>>>>) {
     this.characterBaseStats = stats;
   }
 
@@ -293,7 +293,7 @@ export class DatapackStore {
     this.characterBaseStatsRequested = true;
     try {
       const response = await fetch(`${import.meta.env.BASE_URL}character-base-stats/data.json`);
-      const stats: Partial<Record<Race, Partial<Record<BaseClass, Record<Sex, BaseStats>>>>> = await response.json();
+      const stats: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<SexNames, BaseStats>>>>> = await response.json();
       this.setCharacterBaseStats(stats);
     } catch {
       this.characterBaseStatsRequested = false;

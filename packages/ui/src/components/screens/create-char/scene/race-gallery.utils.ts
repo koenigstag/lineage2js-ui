@@ -1,4 +1,4 @@
-import { RACES, getAvailableBaseClasses, type PlayerVariant, type Race, type Sex } from "../../../../config/character-races";
+import { RACES, getAvailableBaseClasses, type PlayerVariant, type RaceNames, type SexNames } from "../../../../config/character-races";
 
 // Same shape as PlayerVariant -- kept as its own name since it's specifically
 // what RACE_GALLERY enumerates, not every caller with a player variant on
@@ -8,11 +8,11 @@ import { RACES, getAvailableBaseClasses, type PlayerVariant, type Race, type Sex
 export type GalleryVariant = PlayerVariant;
 
 export interface GalleryGroup {
-  race: Race;
+  race: RaceNames;
   variants: GalleryVariant[];
 }
 
-const SEXES: Sex[] = ["MALE", "FEMALE"];
+const SEXES: SexNames[] = ["MALE", "FEMALE"];
 
 export const RACE_GALLERY: GalleryGroup[] = RACES.map((race) => {
   const variants: GalleryVariant[] = [];

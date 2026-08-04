@@ -14,8 +14,8 @@ import {
   getRaceLabel,
   type BaseClass,
   type BaseStats,
-  type Race,
-  type Sex,
+  type RaceNames,
+  type SexNames,
 } from "./character-races";
 import { CLASS_TREE } from "./class-tree";
 
@@ -23,18 +23,18 @@ import { CLASS_TREE } from "./class-tree";
 // the Race/Sex enum's ordinals directly -- CharacterCreate.ts even writes
 // Race back out with a plain writeD(), no encoding); the display string is
 // purely a UI-facing concern, produced here via the numeric TS enum's own
-// reverse lookup (NetworkRace[0] === "HUMAN"). Race/Sex's local type
-// literals are spelled to match those enum key names exactly (see
+// reverse lookup (NetworkRace[0] === "HUMAN"). RaceNames/SexNames's local
+// type literals are spelled to match those enum key names exactly (see
 // character-races.ts). Typed against L2Creature (not L2User) since
 // Race/Sex/ClassId are declared there -- shared by players (CharInfo/UserInfo)
 // so the same conversion works whether the creature is the local player or
 // one seen nearby.
-export function toLocalRace(creature: L2Creature): Race {
-  return NetworkRace[creature.Race] as unknown as Race;
+export function toLocalRace(creature: L2Creature): RaceNames {
+  return NetworkRace[creature.Race] as unknown as RaceNames;
 }
 
-export function toLocalSex(creature: L2Creature): Sex {
-  return NetworkSex[creature.Sex] as unknown as Sex;
+export function toLocalSex(creature: L2Creature): SexNames {
+  return NetworkSex[creature.Sex] as unknown as SexNames;
 }
 
 // Fighter/mystic per classId, straight from CLASS_TREE's isMage (itself
@@ -61,14 +61,14 @@ export function getRootClassLabel(classIdName: string): string | undefined {
   const entry = CLASS_TREE[classId];
   if (!entry) return undefined;
 
-  const race = NetworkRace[entry.race] as unknown as Race;
+  const race = NetworkRace[entry.race] as unknown as RaceNames;
   const baseClass: BaseClass = entry.isMage ? "mystic" : "fighter";
   return `${getRaceLabel(race)} ${getBaseClassLabel(baseClass)}`;
 }
 
 // The tier-0 ClassId a freshly created character starts as. Kamael is the
 // only race where it depends on sex instead of just race+baseClass.
-export function getStartingClassId(race: Race, baseClass: BaseClass, sex: Sex): ClassId {
+export function getStartingClassId(race: RaceNames, baseClass: BaseClass, sex: SexNames): ClassId {
   switch (race) {
     case "HUMAN":
       return baseClass === "mystic" ? ClassId.Mage : ClassId.Fighter;
@@ -90,9 +90,9 @@ export function getStartingClassId(race: Race, baseClass: BaseClass, sex: Sex): 
 // name to match against it.
 export function findCharacterTemplate(
   templates: CharacterTemplate[],
-  race: Race,
+  race: RaceNames,
   baseClass: BaseClass,
-  sex: Sex
+  sex: SexNames
 ): CharacterTemplate | undefined {
   const startingClassId = ClassId[getStartingClassId(race, baseClass, sex)];
   return templates.find((template) => (template.ClassId as unknown as string) === startingClassId);
@@ -103,16 +103,16 @@ export function findCharacterTemplate(
 // follows along on its own instead of needing a code change here. Only falls
 // back to the static table before requestCharacterTemplates() has run yet
 // (e.g. templates is still empty).
-export function getAvailableRacesFromTemplates(templates: CharacterTemplate[]): Race[] {
+export function getAvailableRacesFromTemplates(templates: CharacterTemplate[]): RaceNames[] {
   if (templates.length === 0) {
     return RACES;
   }
-  const present = new Set(templates.map((template) => NetworkRace[template.Race] as unknown as Race));
+  const present = new Set(templates.map((template) => NetworkRace[template.Race] as unknown as RaceNames));
   return RACES.filter((race) => present.has(race));
 }
 
-export function getAvailableBaseClassesFromTemplates(templates: CharacterTemplate[], race: Race): BaseClass[] {
-  const classesForRace = templates.filter((template) => (NetworkRace[template.Race] as unknown as Race) === race);
+export function getAvailableBaseClassesFromTemplates(templates: CharacterTemplate[], race: RaceNames): BaseClass[] {
+  const classesForRace = templates.filter((template) => (NetworkRace[template.Race] as unknown as RaceNames) === race);
   if (classesForRace.length === 0) {
     return getAvailableBaseClasses(race);
   }
@@ -122,7 +122,12 @@ export function getAvailableBaseClassesFromTemplates(templates: CharacterTemplat
 
 // Prefers the real server-provided template (see requestCharacterTemplates())
 // and only falls back to the datapack-sourced table if it isn't available yet.
-export function getTemplateStats(templates: CharacterTemplate[], race: Race, baseClass: BaseClass, sex: Sex): BaseStats {
+export function getTemplateStats(
+  templates: CharacterTemplate[],
+  race: RaceNames,
+  baseClass: BaseClass,
+  sex: SexNames
+): BaseStats {
   const template = findCharacterTemplate(templates, race, baseClass, sex);
   if (!template) {
     return getBaseStats(race, baseClass, sex);
@@ -139,9 +144,9 @@ export function getTemplateStats(templates: CharacterTemplate[], race: Race, bas
 
 export interface NewCharacterInput {
   nickname: string;
-  race: Race;
+  race: RaceNames;
   baseClass: BaseClass;
-  sex: Sex;
+  sex: SexNames;
   /** 0-based, matches the Face enum directly. */
   face: number;
   /** 0-based, matches the HairStyle enum directly. */

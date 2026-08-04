@@ -3,7 +3,7 @@ import { Campfire } from "./campfire.component";
 import { PlayerModel } from "../../../core/scene/player-model.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
-import type { Race, BaseClass, Sex } from "../../../../config/character-races";
+import type { RaceNames, BaseClass, SexNames } from "../../../../config/character-races";
 
 const SKY_SIZE: [number, number] = [70, 45];
 const SKY_Z = -25;
@@ -54,9 +54,9 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
           const x = Math.cos(angle) * CIRCLE_RADIUS;
           const z = Math.sin(angle) * CIRCLE_RADIUS;
 
-          const race = character.race as Race;
+          const race = character.race as RaceNames;
           const baseClass = character.baseClass as BaseClass;
-          const sex = character.sex as Sex;
+          const sex = character.sex as SexNames;
 
           return (
             <PlayerModel

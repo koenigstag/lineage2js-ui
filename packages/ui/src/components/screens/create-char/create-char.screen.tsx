@@ -7,19 +7,19 @@ import { CharTemplateInfoMenu } from "../../menus/char-create/char-template-info
 import { CharCreateScene } from "./scene/char-create-scene.component";
 import { useSessionStore } from "../../../stores/StoreContext";
 import { getAvailableRacesFromTemplates, getAvailableBaseClassesFromTemplates } from "../../../config/network-mapping";
-import { type Race, type BaseClass, type Sex } from "../../../config/character-races";
+import { type RaceNames, type BaseClass, type SexNames } from "../../../config/character-races";
 
 export const CreateCharScreen = observer(function CreateCharScreen() {
   const session = useSessionStore();
   const availableRaces = getAvailableRacesFromTemplates(session.characterTemplates);
 
-  const [race, setRace] = useState<Race>(availableRaces[0]);
+  const [race, setRace] = useState<RaceNames>(availableRaces[0]);
   const [baseClass, setBaseClass] = useState<BaseClass>(
     getAvailableBaseClassesFromTemplates(session.characterTemplates, availableRaces[0])[0]
   );
-  const [sex, setSex] = useState<Sex>("MALE");
+  const [sex, setSex] = useState<SexNames>("MALE");
 
-  function handleRaceChange(nextRace: Race) {
+  function handleRaceChange(nextRace: RaceNames) {
     setRace(nextRace);
     const available = getAvailableBaseClassesFromTemplates(session.characterTemplates, nextRace);
     if (!available.includes(baseClass)) {
@@ -27,7 +27,7 @@ export const CreateCharScreen = observer(function CreateCharScreen() {
     }
   }
 
-  function handleSelectVariant(nextRace: Race, nextBaseClass: BaseClass, nextSex: Sex) {
+  function handleSelectVariant(nextRace: RaceNames, nextBaseClass: BaseClass, nextSex: SexNames) {
     setRace(nextRace);
     setBaseClass(nextBaseClass);
     setSex(nextSex);

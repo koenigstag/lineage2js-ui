@@ -1,24 +1,24 @@
 import { t } from "../lang/lang";
 import { rootStore } from "../stores/RootStore";
 
-// Matches @lineage2js/network's Race/Sex enum key names exactly. L2User.Race
-// and .Sex come back from the server as raw numbers (matching the enum's
+// Matches @lineage2js/network's RaceNames/SexNames enum key names exactly. L2User.RaceNames
+// and .SexNames come back from the server as raw numbers (matching the enum's
 // ordinals) -- toLocalRace()/toLocalSex() (network-mapping.ts) convert to
 // these string literals via the numeric enum's own reverse lookup.
-export type Race = "HUMAN" | "ELF" | "DARK_ELF" | "ORC" | "DWARF" | "KAMAEL";
+export type RaceNames = "HUMAN" | "ELF" | "DARK_ELF" | "ORC" | "DWARF" | "KAMAEL";
 export type BaseClass = "fighter" | "mystic";
-export type Sex = "MALE" | "FEMALE";
+export type SexNames = "MALE" | "FEMALE";
 
-export const RACES: Race[] = ["HUMAN", "ELF", "DARK_ELF", "ORC", "DWARF", "KAMAEL"];
+export const RACES: RaceNames[] = ["HUMAN", "ELF", "DARK_ELF", "ORC", "DWARF", "KAMAEL"];
 
-export function getRaceLabel(race: Race): string {
+export function getRaceLabel(race: RaceNames): string {
   return t(`classes.race.${race}`);
 }
 
 // Dwarves and Kamael have no Mystic subclasses.
-const RACES_WITHOUT_MYSTIC = new Set<Race>(["DWARF", "KAMAEL"]);
+const RACES_WITHOUT_MYSTIC = new Set<RaceNames>(["DWARF", "KAMAEL"]);
 
-export function getAvailableBaseClasses(race: Race): BaseClass[] {
+export function getAvailableBaseClasses(race: RaceNames): BaseClass[] {
   return RACES_WITHOUT_MYSTIC.has(race) ? ["fighter"] : ["fighter", "mystic"];
 }
 
@@ -32,7 +32,7 @@ export function getBaseClassLabel(baseClass: BaseClass): string {
  * placeholder until real character models/skins exist, at which point this
  * table becomes obsolete (delete rather than "correct" the colors).
  */
-const RACE_SKIN_COLORS: Record<Race, string> = {
+const RACE_SKIN_COLORS: Record<RaceNames, string> = {
   HUMAN: "#d8b98a",
   ELF: "#e8cfa8",
   DARK_ELF: "#a8a49c",
@@ -42,7 +42,7 @@ const RACE_SKIN_COLORS: Record<Race, string> = {
 };
 
 /** @deprecated See RACE_SKIN_COLORS -- placeholder tone, not real reference data. */
-export function getSkinColor(race: Race): string {
+export function getSkinColor(race: RaceNames): string {
   return RACE_SKIN_COLORS[race];
 }
 
@@ -53,14 +53,14 @@ export interface BodyScale {
 
 const DEFAULT_BODY_SCALE: BodyScale = { height: 1, width: 1 };
 
-// Race-wide defaults (apply regardless of class unless overridden below).
-const RACE_BODY_SCALE: Partial<Record<Race, BodyScale>> = {
+// RaceNames-wide defaults (apply regardless of class unless overridden below).
+const RACE_BODY_SCALE: Partial<Record<RaceNames, BodyScale>> = {
   ELF: { height: 1, width: 0.82 },
   DARK_ELF: { height: 1, width: 0.82 },
 };
 
 // Class/sex-specific overrides, checked before the race-wide default.
-const CLASS_BODY_SCALE_OVERRIDES: Partial<Record<Race, Partial<Record<BaseClass, Record<Sex, BodyScale>>>>> = {
+const CLASS_BODY_SCALE_OVERRIDES: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<SexNames, BodyScale>>>>> = {
   HUMAN: {
     fighter: { MALE: { height: 1, width: 1.3 }, FEMALE: { height: 1, width: 1.05 } },
     mystic: { MALE: { height: 1, width: 1 }, FEMALE: { height: 1, width: 1 } },
@@ -74,14 +74,14 @@ const CLASS_BODY_SCALE_OVERRIDES: Partial<Record<Race, Partial<Record<BaseClass,
   },
 };
 
-export function getBodyScale(race: Race, baseClass: BaseClass, sex: Sex): BodyScale {
+export function getBodyScale(race: RaceNames, baseClass: BaseClass, sex: SexNames): BodyScale {
   return CLASS_BODY_SCALE_OVERRIDES[race]?.[baseClass]?.[sex] ?? RACE_BODY_SCALE[race] ?? DEFAULT_BODY_SCALE;
 }
 
 export interface PlayerVariant {
-  race: Race;
+  race: RaceNames;
   baseClass: BaseClass;
-  sex: Sex;
+  sex: SexNames;
 }
 
 /**
@@ -150,6 +150,6 @@ const FALLBACK_BASE_STATS: BaseStats = { str: 25, dex: 25, con: 25, int: 25, wit
  * server's own numbers win (and should match this table, since both trace
  * back to the same datapack).
  */
-export function getBaseStats(race: Race, baseClass: BaseClass, sex: Sex): BaseStats {
+export function getBaseStats(race: RaceNames, baseClass: BaseClass, sex: SexNames): BaseStats {
   return rootStore.datapack.characterBaseStats[race]?.[baseClass]?.[sex] ?? FALLBACK_BASE_STATS;
 }

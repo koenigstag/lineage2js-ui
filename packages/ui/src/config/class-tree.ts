@@ -138,20 +138,12 @@ export const CLASS_TREE: Partial<Record<ClassId, ClassTreeEntry>> = {
   [ClassId.Judicator]: { isMage: false, isSummoner: false, race: Race.KAMAEL, parent: ClassId.Inspector, role: "warrior" },
 };
 
-// L2Character.ClassId/L2User.ClassId comes back inconsistently depending on
-// which packet set it: CharSelected assigns the raw numeric wire value, while
-// UserInfo reverse-maps it through the ClassId enum first and assigns the
-// resulting string key name instead (see UserInfo.ts's
-// `(ClassId as any)[this.readD()]`) -- the same quirk toLocalRace/toLocalSex
-// handle for Race/Sex in character-races.ts. Normalizes either shape back to
-// the PascalCase key name ("FortuneSeeker").
-// L2Character.ClassId/L2User.ClassId comes back inconsistently depending on
-// which packet set it: CharSelected assigns the raw numeric wire value, while
-// UserInfo reverse-maps it through the ClassId enum first and assigns the
-// resulting string key name instead (see UserInfo.ts's
-// `(ClassId as any)[this.readD()]`) -- the same quirk toLocalRace/toLocalSex
-// handle for Race/Sex in character-races.ts. Normalizes either shape back to
-// the numeric id, needed to index into UiStore.classNames (keyed numerically,
+// L2Character.ClassId/L2User.ClassId always comes back reverse-mapped to the
+// enum's string key name (every packet parser applies
+// `(ClassId as any)[this.readD()]`, unlike Race/Sex which are stored as the
+// raw numeric wire value -- see toLocalRace/toLocalSex in network-mapping.ts).
+// Normalizes that string key name back to the numeric id, needed to index
+// into UiStore.classNames (keyed numerically,
 // straight off adrenalinebot.com's HighFive Classes table -- see
 // public/class-names/*.json).
 function classIdNumeric(classId: ClassId): number | undefined {

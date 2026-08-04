@@ -7,7 +7,7 @@ import { useAlert } from "../../core/alert-modal";
 import { useGameStore, useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
 import { buildNewCharacter, getAvailableBaseClassesFromTemplates, getAvailableRacesFromTemplates } from "../../../config/network-mapping";
-import { getRaceLabel, getBaseClassLabel, type Race, type BaseClass, type Sex } from "../../../config/character-races";
+import { getRaceLabel, getBaseClassLabel, type RaceNames, type BaseClass, type SexNames } from "../../../config/character-races";
 import {
   MAX_CHARACTER_NAME_LENGTH,
   validateCharacterName,
@@ -21,7 +21,7 @@ const NAME_ERROR_KEYS: Record<CharacterNameError, string> = {
   taken: "charCreate.nameErrorTaken",
 };
 
-const SEX_OPTIONS: Array<{ value: Sex; labelKey: string }> = [
+const SEX_OPTIONS: Array<{ value: SexNames; labelKey: string }> = [
   { value: "MALE", labelKey: "charCreate.sexMale" },
   { value: "FEMALE", labelKey: "charCreate.sexFemale" },
 ];
@@ -49,12 +49,12 @@ const HAIR_COLOR_OPTIONS: Array<{ value: string; labelKey: string }> = [
 ];
 
 interface CharCreateMenuProps {
-  race: Race;
+  race: RaceNames;
   baseClass: BaseClass;
-  sex: Sex;
-  onRaceChange: (race: Race) => void;
+  sex: SexNames;
+  onRaceChange: (race: RaceNames) => void;
   onBaseClassChange: (baseClass: BaseClass) => void;
-  onSexChange: (sex: Sex) => void;
+  onSexChange: (sex: SexNames) => void;
 }
 
 export const CharCreateMenu = observer(function CharCreateMenu({
@@ -154,13 +154,13 @@ export const CharCreateMenu = observer(function CharCreateMenu({
         maxLength={MAX_CHARACTER_NAME_LENGTH}
         onChange={setNickname}
       />
-      <SelectInput options={raceOptions} value={race} onChange={(value) => onRaceChange(value as Race)} />
+      <SelectInput options={raceOptions} value={race} onChange={(value) => onRaceChange(value as RaceNames)} />
       <SelectInput
         options={baseClassOptions}
         value={baseClass}
         onChange={(value) => onBaseClassChange(value as BaseClass)}
       />
-      <SelectInput options={sexOptions} value={sex} onChange={(value) => onSexChange(value as Sex)} />
+      <SelectInput options={sexOptions} value={sex} onChange={(value) => onSexChange(value as SexNames)} />
       <SelectInput options={faceOptions} value={face} onChange={setFace} />
       <SelectInput options={hairOptions} value={hair} onChange={setHair} />
       <SelectInput options={hairColorOptions} value={hairColor} onChange={setHairColor} />

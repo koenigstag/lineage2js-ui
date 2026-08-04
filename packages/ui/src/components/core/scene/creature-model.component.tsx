@@ -1,7 +1,7 @@
 import { CharacterModel } from "./character-model.component";
 import { PlayerModel } from "./player-model.component";
 import { getNpcRaceColor } from "../../../config/npc-race-mapping";
-import type { Race } from "../../../config/character-races";
+import type { RaceNames } from "../../../config/character-races";
 import type { WorldCreatureSnapshot } from "../../../stores/GameStore";
 
 interface CreatureModelProps {
@@ -34,9 +34,9 @@ export function CreatureModel({ creature, ...position }: CreatureModelProps) {
         {...position}
         // Safe narrowing cast: kind === "player" means this WorldCreatureSnapshot.race
         // was populated by toLocalRace() (see GameStore.ts), which only ever produces
-        // one of Race's 6 values -- NpcRace is a wider superset field shared with
+        // one of RaceNames's 6 values -- NpcRace is a wider superset field shared with
         // non-players, TS just can't see the kind-based guarantee.
-        variant={{ race: creature.race as Race, baseClass: creature.baseClass, sex: creature.sex }}
+        variant={{ race: creature.race as RaceNames, baseClass: creature.baseClass, sex: creature.sex }}
         nickname={creature.name}
       />
     );

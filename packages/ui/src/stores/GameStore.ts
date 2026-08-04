@@ -35,7 +35,7 @@ import { getNpcLevel } from "../config/npc-level-mapping";
 import { getNpcName } from "../config/npc-name-mapping";
 import { formatSystemMessage, isNoisySystemMessage } from "../config/system-message-mapping";
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
-import type { BaseClass, Sex } from "../config/character-races";
+import type { BaseClass, SexNames } from "../config/character-races";
 
 /**
  * Any nearby creature (NPC/mob/player, including the local player -- see
@@ -53,7 +53,7 @@ export interface WorldCreatureSnapshot {
   heading: number;
   kind: "player" | "mob" | "summon" | "npc";
   isDead: boolean;
-  // Race, for every creature kind -- Race's 6 player-race values are a
+  // RaceNames, for every creature kind -- RaceNames's 6 player-race values are a
   // literal subset of NpcRace's 23 (verified: identical spelling for every
   // shared key), so one field covers both instead of two parallel
   // player-only/non-player-only fields. Players: real value via
@@ -65,7 +65,7 @@ export interface WorldCreatureSnapshot {
   // Player-specific (kind === "player") -- lets CreatureModel pick the
   // right visual via getPlayerVisualFromVariant, same as char-select/char-create.
   baseClass?: BaseClass;
-  sex?: Sex;
+  sex?: SexNames;
 }
 
 export const MAX_CHARACTERS = 7;
