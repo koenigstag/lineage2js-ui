@@ -16,8 +16,8 @@ interface ImportMetaEnv {
   readonly VITE_LOGIN_BACKGROUND_IMAGE_BASE_URL: string;
   /** e.g. "http://localhost:4000/legacy/videos/titlescreens/{id}.mp4" -- same "{id}" + "count" endpoint convention as the image variant. */
   readonly VITE_LOGIN_BACKGROUND_VIDEO_BASE_URL: string;
-  /** e.g. "http://localhost:4000/geodata/{tileX}_{tileY}.bin" -- "{tileX}"/"{tileY}" get replaced with the tile's coordinates. */
-  readonly VITE_GEODATA_BASE_URL: string;
+  /** e.g. "http://localhost:4000/geodata/{regionX}_{regionY}.l2j" -- raw L2J geodata region file, "{regionX}"/"{regionY}" get replaced with the region's coordinates. Sliced into the smaller streaming tile unit in memory, see l2j-region-parser.ts. */
+  readonly VITE_GEODATA_REGION_BASE_URL: string;
   /** @lineage2js/network Logger verbosity bitmask (NONE=0, INFO=1, WARNING=2, ERROR=4, DEBUG=8). Defaults to INFO. */
   readonly VITE_L2JSC_LOG_LEVEL: string;
   /** L2 login server host, e.g. "127.0.0.1". Defaults to 127.0.0.1 if unset. */

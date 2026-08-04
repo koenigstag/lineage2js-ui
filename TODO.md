@@ -17,6 +17,8 @@
 - Add the other revive points to the death modal (death-modal.tsx currently only offers RestartPoint.TOWN) -- Clan Hall/Castle/Fortress/Siege HQ/Fixed/Agathion need ownership/availability data (clan hall or castle ownership, siege participation, Fixed-point item, Agathion state) that isn't modeled anywhere in this client yet
 - Remaining confirm-dialog flows, each blocked on a parent feature that doesn't exist yet: friend invite (Friends List), party room join (party-matching rooms), command channel invite (RequestExAskJoinMPCC), pledge war surrender confirm (clan war), and ConfirmDlgType.CONFIRM_EXECUTE_COMMAND's generic bypass-command prompts (NPC dialog/bypass system)
 - Private Store search window and Mini-Game (Cube Game) HUD -- Actions FIND_STORE/MINI_GAME (user-actions.ts) stay icon-only until these exist; neither has a request packet at all (confirmed against RequestActionUse.java's switch and the ExCubeGame* server-push packets), so there's nothing to wire until the window itself is built
+- l2j-region-parser.ts collapses MultiLayer geodata blocks (bridges/tunnels, multiple Z per cell) to a single representative height (the highest layer) since GeoTile only models one height per cell -- no under-bridge wireframe until GeoTile grows per-cell layer support
+- generate-geodata.ts (assets-server) still emits the old per-tile .bin format, not raw .l2j region files -- stale relative to l2j-region-parser.ts/use-geo-tiles.ts's region-based fetch+slice pipeline; needs updating to emit synthetic .l2j regions (or removal) so local dev/testing without a real geodata source still works
 
 
 # Long-term TODOs
