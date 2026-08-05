@@ -127,6 +127,31 @@ const SLOT_KEYS_BY_BODY_PART: Partial<Record<number, PaperdollSlotKey[]>> = {
   [L2Item.SLOT_L_BRACELET]: ["lbracelet"],
 };
 
+// The 3 BodyPart values that fill two cells with the SAME physical item
+// (hair1+hair2, rhand+lhand, chest+legs) -- mapped here to whichever of the
+// two is the *secondary* cell. Checked against lineage2ts's own item data
+// (cli/overrides/data/csv/items/itemIcons.csv): every item has exactly one
+// icon id, no separate one for a second cell, so the secondary cell is
+// purely a visual "this is occupied by the paired item" marker (dimmed,
+// not independently clickable) rather than a distinct icon/item -- see
+// isSecondaryCombinedSlot.
+const SECONDARY_SLOT_BY_COMBINED_BODY_PART: Partial<Record<number, PaperdollSlotKey>> = {
+  [L2Item.SLOT_HAIRALL]: "hair2",
+  [L2Item.SLOT_LR_HAND]: "lhand",
+  [L2Item.SLOT_FULL_ARMOR]: "legs",
+};
+
+/**
+ * True when `item` occupies `slotKey` only as the secondary half of a
+ * combined-slot pair (see SECONDARY_SLOT_BY_COMBINED_BODY_PART) -- the
+ * primary cell (hair1/rhand/chest) is where equip/unequip actually happens;
+ * the secondary cell just shows the same item is there too and can't be
+ * unequipped on its own (it's the same physical item, not a separate one).
+ */
+export function isSecondaryCombinedSlot(slotKey: PaperdollSlotKey, item: { BodyPart: number }): boolean {
+  return SECONDARY_SLOT_BY_COMBINED_BODY_PART[item.BodyPart] === slotKey;
+}
+
 const DECOR_SLOT_KEYS: PaperdollSlotKey[] = ["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"];
 const EAR_SLOT_KEYS: PaperdollSlotKey[] = ["rear", "lear"];
 const FINGER_SLOT_KEYS: PaperdollSlotKey[] = ["rfinger", "lfinger"];

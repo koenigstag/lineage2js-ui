@@ -10,6 +10,7 @@ import {
   PAPERDOLL_BLOCKS,
   getEquippedItemsBySlot,
   getUnequipSlot,
+  isSecondaryCombinedSlot,
   type PaperdollSection,
   type PaperdollSlotKey,
 } from "../../../config/paperdoll-mapping";
@@ -142,15 +143,26 @@ function renderSection(
             <Slot type="inventory" size={slotSize} />
           );
 
+          // Combined-slot items (hair1+hair2, rhand+lhand, chest+legs -- one
+          // physical item filling two cells, see isSecondaryCombinedSlot)
+          // only act from their primary cell. The secondary cell shows the
+          // same icon dimmed and non-interactive -- it can't be unequipped
+          // on its own since it isn't a separate item, and there's no real
+          // per-cell icon to differentiate it with (checked against
+          // lineage2ts's item data, see isSecondaryCombinedSlot's comment).
+          const isSecondary = item ? isSecondaryCombinedSlot(slotKey, item) : false;
+
           // Double-click to unequip, same trigger as the inventory grid's
           // equip toggle -- a single click would fire on every hover-to-inspect
           // click, unequipping by accident. Resolved via useClickOrDoubleClick
           // (single click is a no-op for now -- no per-item click action exists
           // yet) rather than the native onDoubleClick event.
-          const clickable = item ? (
-            <PaperdollItemCell onUnequip={() => onUnequip(slotKey, item)}>{content}</PaperdollItemCell>
-          ) : (
+          const clickable = !item ? (
             content
+          ) : isSecondary ? (
+            <div style={{ opacity: 0.55, pointerEvents: "none" }}>{content}</div>
+          ) : (
+            <PaperdollItemCell onUnequip={() => onUnequip(slotKey, item)}>{content}</PaperdollItemCell>
           );
 
           if (slotKey === "hair1") {
