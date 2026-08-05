@@ -50,10 +50,10 @@ const SLOT_GAP = 2;
 
 // const INVENTORY_ICON_BORDER: IconBorder = { from: "#2a170c", to: "#2a170c" };
 
-// Adena/Weight bars sit together in one 200px-wide block, wrapped together
+// Adena/Weight bars sit together in one 150px-wide block, wrapped together
 // with the delete slot into one flex item so the outer row's space-between
 // only spreads two things apart: the sell block and this bars+delete group.
-const BARS_BLOCK_WIDTH = 200;
+const BARS_BLOCK_WIDTH = 150;
 const BARS_BLOCK_LABEL_WIDTH = 20; // LabeledBar's own default, spelled out here so the bar-width math below is self-explanatory
 const BARS_BLOCK_GAP = 8; // LabeledBar's own fixed label/bar gap
 const BARS_BLOCK_BAR_WIDTH = BARS_BLOCK_WIDTH - BARS_BLOCK_LABEL_WIDTH - BARS_BLOCK_GAP;
