@@ -13,6 +13,15 @@ export default abstract class AbstractGameCommand implements ICommand {
   // unless a command overrides this to false. Only login() and
   // selectServer() do: login() only ever touches LoginClient, and
   // selectServer() is what establishes the GameClient connection itself.
+  //
+  // Because of this, calling code should NOT re-check
+  // `client.GameClient.IsConnected` before calling a `client.xxx()` command
+  // -- it's already handled here, for every command, unconditionally. The
+  // only thing worth an explicit IsConnected check at the call site is
+  // deciding between two genuinely different behaviors (e.g. an
+  // offline/demo-mode fallback that simulates the result locally) -- not as
+  // a guard just to avoid calling into a command that's already safe to
+  // call while disconnected.
   static requiresGameConnection = true;
 
   constructor(public LoginClient: LoginClient, public GameClient: GameClient) {}

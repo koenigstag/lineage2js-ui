@@ -41,12 +41,13 @@ function resolveSlotIndex(key: string, ctrlPressed: boolean): number | undefined
 
 const HOTBAR_ICON_BORDER: IconBorder = { from: "#a9af7f", to: "#6f5c31" };
 
-/** Sends the network request a hotbar shortcut maps to. No-ops for types that have no client command yet (ACTION/MACRO/RECIPE/BOOKMARK). */
+/**
+ * Sends the network request a hotbar shortcut maps to. No-ops for types that
+ * have no client command yet (ACTION/MACRO/RECIPE/BOOKMARK) -- also safe to
+ * call while disconnected, no IsConnected check needed (see
+ * AbstractGameCommand.requiresGameConnection).
+ */
 function activateShortcut(shortcut: L2Shortcut, client: ReturnType<typeof useSessionStore>["client"], inventoryItems: L2Item[]) {
-  if (!client.GameClient.IsConnected) {
-    return;
-  }
-
   switch (shortcut.Type) {
     case ShortcutType.SKILL:
       client.cast(shortcut.TargetId);

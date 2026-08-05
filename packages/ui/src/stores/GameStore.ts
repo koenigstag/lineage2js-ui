@@ -801,16 +801,14 @@ export class GameStore {
    * waiting for a MyTargetSelected/StatusUpdate round-trip.
    */
   selectTarget(member: L2PartyMember) {
-    if (this.client?.GameClient.IsConnected) {
-      this.client.hit(member);
-    }
+    // No IsConnected check needed -- client.xxx() commands are already safe
+    // to call while disconnected, see AbstractGameCommand.requiresGameConnection.
+    this.client?.hit(member);
     this.target = targetSnapshotFromCreature(member, this.pledgeCache);
   }
 
   clearTarget() {
-    if (this.client?.GameClient.IsConnected) {
-      this.client.cancelTarget();
-    }
+    this.client?.cancelTarget();
     this.target = undefined;
   }
 
@@ -825,9 +823,7 @@ export class GameStore {
     if (!me) {
       return;
     }
-    if (this.client?.GameClient.IsConnected) {
-      this.client.hit(me);
-    }
+    this.client?.hit(me);
     this.target = targetSnapshotFromCreature(me, this.pledgeCache);
   }
 
@@ -1062,16 +1058,15 @@ export class GameStore {
   }
 
   /**
-   * Opens the skill's detail window and, when connected, asks the trainer
-   * for its authoritative SpCost/Requirements (RequestAcquireSkillInfo) --
+   * Opens the skill's detail window and asks the trainer for its
+   * authoritative SpCost/Requirements (RequestAcquireSkillInfo) --
    * syncSkillRequirements picks up the AcquireSkillInfo reply and fills in
-   * requiredItem. Offline/demo mode just uses the snapshot as-is.
+   * requiredItem. Offline/demo mode just uses the snapshot as-is (the
+   * command itself no-ops while disconnected).
    */
   selectLearnableSkill(skill: LearnableSkillSnapshot) {
     this.selectedLearnableSkill = skill;
-    if (this.client?.GameClient.IsConnected) {
-      this.client.requestAcquireSkillInfo(skill.id, skill.level, AcquireSkillType.CLASS);
-    }
+    this.client?.requestAcquireSkillInfo(skill.id, skill.level, AcquireSkillType.CLASS);
   }
 
   clearSelectedLearnableSkill() {
