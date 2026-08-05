@@ -4,6 +4,7 @@ import L2Creature from "../entities/L2Creature";
 import L2Item from "../entities/L2Item";
 import L2Object from "../entities/L2Object";
 import L2Server from "../entities/L2Server";
+import L2Shortcut from "../entities/L2Shortcut";
 import L2User from "../entities/L2User";
 import { Actions } from "../enums/Actions";
 import { AcquireSkillType } from "../enums/AcquireSkillType";
@@ -320,6 +321,21 @@ export default interface ClientCommands {
    * @param subType only used for AcquireSkillType.SUBPLEDGE
    */
   requestAcquireSkill(id: number, level: number, type: AcquireSkillType, subType?: number): void;
+  /**
+   * Registers/updates a hotbar shortcut server-side (RequestShortCutReg).
+   * The server always echoes back a ShortCutRegister packet to confirm --
+   * that's what actually updates the client's shortcut list (see
+   * GameStore.bindToClient's syncHotbar), not this call itself.
+   * @param shortcut
+   */
+  registerShortcut(shortcut: L2Shortcut): void;
+  /**
+   * Removes a hotbar shortcut server-side (RequestShortCutDel). Unlike
+   * registerShortcut, the server sends no confirmation packet back, so the
+   * caller must clear the slot client-side itself.
+   * @param slot combined slot index (page*12 + column), matches L2Shortcut.Slot
+   */
+  deleteShortcut(slot: number): void;
 }
 
 export default abstract class ClientCommands {

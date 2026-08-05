@@ -747,9 +747,21 @@ export class GameStore {
   selectedLearnableSkill: LearnableSkillSnapshot | undefined = undefined;
   /** Set once by bindToClient -- used by selectTarget/clearTarget to dispatch outgoing packets. */
   client: Client | undefined;
+  /**
+   * slot -> Date.now() when clearHotbarSlot last told the server to delete
+   * it. Defends against a server that re-sends a full ShortCutInit snapshot
+   * a moment after processing a delete, but before that delete has actually
+   * persisted server-side -- observed in practice: the just-deleted slot
+   * reappears in that stale snapshot a second or two later. syncHotbar
+   * blanks any slot still listed here when a fresh ShortCutInit arrives,
+   * for a short grace window (see HOTBAR_DELETE_GRACE_MS). Not observable --
+   * pure bookkeeping, never read by a component.
+   */
+  pendingHotbarDeletes = new Map<number, number>();
+  private static readonly HOTBAR_DELETE_GRACE_MS = 8000;
 
   constructor() {
-    makeAutoObservable(this, { client: false });
+    makeAutoObservable(this, { client: false, pendingHotbarDeletes: false });
   }
 
   selectCharacter(id: number | undefined) {
@@ -764,29 +776,61 @@ export class GameStore {
    * target slot (if anything) is moved back into the source slot instead of
    * being lost, i.e. a real swap rather than an overwrite.
    *
-   * Local-only for now -- there's no outgoing RequestShortCutReg packet in
-   * the network layer yet (see packages/network/src/network/incoming/game/
-   * ShortCutRegister.ts, incoming-only), so this doesn't round-trip through
-   * a connected server the way e.g. sendChatMessage does.
+   * When connected, sends RequestShortCutReg (registerShortcut) and relies
+   * on the server's echoed ShortCutRegister packet to actually update
+   * hotbarSlots (see bindToClient's syncHotbar) -- same "no local echo,
+   * server is authoritative" treatment as sendChatMessage. A displaced slot
+   * from a hotbar-to-hotbar move gets its own registerShortcut call (moved
+   * to the source slot); an empty source instead goes through
+   * clearHotbarSlot, since a delete gets no server confirmation at all.
+   * Offline/demo mode mutates hotbarSlots directly instead.
    */
   setHotbarSlot(slot: number, shortcut: L2Shortcut, source?: { from: "hotbar"; slot: number }) {
-    const next = [...this.hotbarSlots];
-    const displaced = next[slot];
+    const displaced = this.hotbarSlots[slot];
     shortcut.Slot = slot;
-    next[slot] = shortcut;
 
+    if (this.client?.GameClient.IsConnected) {
+      // This slot is being actively reasserted -- no longer needs
+      // protecting from a stale ShortCutInit resurrecting an old delete.
+      this.pendingHotbarDeletes.delete(slot);
+      this.client.registerShortcut(shortcut);
+      if (source?.from === "hotbar" && source.slot !== slot) {
+        if (displaced) {
+          displaced.Slot = source.slot;
+          this.pendingHotbarDeletes.delete(source.slot);
+          this.client.registerShortcut(displaced);
+        } else {
+          this.clearHotbarSlot(source.slot);
+        }
+      }
+      return;
+    }
+
+    const next = [...this.hotbarSlots];
+    next[slot] = shortcut;
     if (source?.from === "hotbar" && source.slot !== slot) {
       if (displaced) {
         displaced.Slot = source.slot;
       }
       next[source.slot] = displaced;
     }
-
     this.hotbarSlots = next;
   }
 
-  /** Clears a hotbar slot -- used when a shortcut is dragged off the hotbar entirely. */
+  /**
+   * Clears a hotbar slot -- used when a shortcut is dragged off the hotbar
+   * entirely (and internally by setHotbarSlot for a hotbar move with no
+   * displaced slot to swap back). Sends RequestShortCutDel when connected,
+   * but always also clears hotbarSlots directly: unlike registerShortcut,
+   * the server sends no confirmation packet back for a delete (see
+   * RequestShortcutDel.java upstream: "client needs no confirmation, this
+   * packet is just to inform the server"), so there's no echo to wait on.
+   */
   clearHotbarSlot(slot: number) {
+    if (this.client?.GameClient.IsConnected) {
+      this.client.deleteShortcut(slot);
+      this.pendingHotbarDeletes.set(slot, Date.now());
+    }
     const next = [...this.hotbarSlots];
     next[slot] = undefined;
     this.hotbarSlots = next;
@@ -1238,6 +1282,22 @@ export class GameStore {
           slots[shortcut.Slot] = shortcut;
         }
       });
+      // Guards against a server that re-sends a full ShortCutInit a moment
+      // after processing a delete, but before that delete has actually
+      // persisted server-side -- the just-deleted slot can reappear in that
+      // stale snapshot. Blank any slot we recently told the server to
+      // delete, for a short grace window, instead of trusting it back in.
+      const now = Date.now();
+      for (const [pendingSlot, deletedAt] of this.pendingHotbarDeletes) {
+        if (now - deletedAt > GameStore.HOTBAR_DELETE_GRACE_MS) {
+          this.pendingHotbarDeletes.delete(pendingSlot);
+          continue;
+        }
+        if (slots[pendingSlot]) {
+          slots[pendingSlot] = undefined;
+        }
+      }
+
       this.hotbarSlots = slots;
     });
     const syncCharInfo = () => runInAction(() => {

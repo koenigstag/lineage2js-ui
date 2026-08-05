@@ -18,6 +18,7 @@ import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
 import CommandDeclineResurrect from "./CommandDeclineResurrect";
 import CommandDeclineTradeRequest from "./CommandDeclineTradeRequest";
 import CommandDestroyItem from "./CommandDestroyItem";
+import CommandDeleteShortcut from "./CommandDeleteShortcut";
 import CommandDismissPartyMember from "./CommandDismissPartyMember";
 import CommandDropItem from "./CommandDropItem";
 import CommandDwarvenCraftRecipes from "./CommandDwarvenCraftRecipes";
@@ -29,6 +30,7 @@ import CommandLogout from "./CommandLogout";
 import CommandMoveTo from "./CommandMoveTo";
 import CommandNextTarget from "./CommandNextTarget";
 import CommandRecommend from "./CommandRecommend";
+import CommandRegisterShortcut from "./CommandRegisterShortcut";
 import CommandRequestAcquireSkill from "./CommandRequestAcquireSkill";
 import CommandRequestAcquireSkillInfo from "./CommandRequestAcquireSkillInfo";
 import CommandRequestBypass from "./CommandRequestBypass";
@@ -75,6 +77,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   declineResurrect: CommandDeclineResurrect.prototype,
   declineTradeRequest: CommandDeclineTradeRequest.prototype,
   destroyItem: CommandDestroyItem.prototype,
+  deleteShortcut: CommandDeleteShortcut.prototype,
   dismissPartyMember: CommandDismissPartyMember.prototype,
   dropItem: CommandDropItem.prototype,
   dwarvenCraftRecipes: CommandDwarvenCraftRecipes.prototype,
@@ -86,6 +89,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   moveTo: CommandMoveTo.prototype,
   nextTarget: CommandNextTarget.prototype,
   recommend: CommandRecommend.prototype,
+  registerShortcut: CommandRegisterShortcut.prototype,
   requestAcquireSkill: CommandRequestAcquireSkill.prototype,
   requestAcquireSkillInfo: CommandRequestAcquireSkillInfo.prototype,
   requestBypass: CommandRequestBypass.prototype,
