@@ -18,29 +18,41 @@ import { getItemSlotType, getItemGradeLabel, isShotItem } from "../../../config/
  * cleanly over everything already drawn and stays out of the slot's own
  * click/drag handlers via pointer-events: none.
  *
- * The outer border is a bevel (gray top/left, dark bottom/right, like a
- * sunken lens) -- real per-side CSS border rather than the shared
- * IconBorder gradient (IconFrame's borderFrom/borderTo is a single 90deg
- * 2-stop gradient, it can't express 4 independent side colors), boxSizing
- * border-box so it draws inward within the icon's own box instead of
- * growing it.
+ * Inner ring 3px in from the icon's edge -- outline (not border) so it
+ * doesn't affect layout, negative offset pulls it inward instead of
+ * drawing outside the box.
  */
 const AUTO_SHOT_GLASS_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   zIndex: 3,
   pointerEvents: "none",
-  boxSizing: "border-box",
   backgroundColor: "rgba(255, 255, 255, 0.2)",
+  outline: "1px solid #9a9a9a",
+  outlineOffset: -3,
+};
+
+/**
+ * Bevel border (gray top/left, dark bottom/right, like a sunken lens),
+ * inset 2px from the icon's edge -- a separate layer from
+ * AUTO_SHOT_GLASS_STYLE (whose own inset:0 stays the true icon edge for the
+ * background wash/outline) so this one can sit 2px inside without moving
+ * those. Real per-side CSS border rather than the shared IconBorder
+ * gradient (IconFrame's borderFrom/borderTo is a single 90deg 2-stop
+ * gradient, it can't express 4 independent side colors); boxSizing
+ * border-box so the border draws inward within this already-inset box
+ * instead of growing it.
+ */
+const AUTO_SHOT_BEVEL_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 2,
+  zIndex: 3,
+  pointerEvents: "none",
+  boxSizing: "border-box",
   borderTop: "1px solid #b5b5b5",
   borderLeft: "1px solid #b5b5b5",
   borderBottom: "1px solid #3a3a3a",
   borderRight: "1px solid #3a3a3a",
-  // Inner ring 2px in from the edge -- outline (not border) so it doesn't
-  // affect layout, negative offset pulls it inward instead of drawing
-  // outside the box.
-  outline: "1px solid #9a9a9a",
-  outlineOffset: -2,
 };
 
 interface ShortcutSlotProps {
@@ -107,6 +119,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
         <div style={{ position: "relative" }}>
           {slot}
           <div style={AUTO_SHOT_GLASS_STYLE} />
+          <div style={AUTO_SHOT_BEVEL_STYLE} />
         </div>
       );
     }
