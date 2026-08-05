@@ -50,10 +50,13 @@ const SLOT_GAP = 2;
 
 // const INVENTORY_ICON_BORDER: IconBorder = { from: "#2a170c", to: "#2a170c" };
 
-// Adena/Weight bars sit together in one ~100px-wide block (button-width column
-// between the sell and delete drop slots), much narrower than char-info's/
-// character.window.tsx's full-size bars.
-const BARS_BLOCK_BAR_WIDTH = 70;
+// Adena/Weight bars sit together in one 200px-wide block, wrapped together
+// with the delete slot into one flex item so the outer row's space-between
+// only spreads two things apart: the sell block and this bars+delete group.
+const BARS_BLOCK_WIDTH = 200;
+const BARS_BLOCK_LABEL_WIDTH = 20; // LabeledBar's own default, spelled out here so the bar-width math below is self-explanatory
+const BARS_BLOCK_GAP = 8; // LabeledBar's own fixed label/bar gap
+const BARS_BLOCK_BAR_WIDTH = BARS_BLOCK_WIDTH - BARS_BLOCK_LABEL_WIDTH - BARS_BLOCK_GAP;
 const BUTTON_SIZE = 32;
 const SELL_COLOR = "#3a4a2e";
 const DELETE_COLOR = "#4a2e2e";
@@ -191,7 +194,7 @@ export const InventoryContent = observer(function InventoryContent() {
         </div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-          <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", gap: 5 }}>
             <DnDButton
               icon="$"
               color={SELL_COLOR}
@@ -200,18 +203,20 @@ export const InventoryContent = observer(function InventoryContent() {
               onDropItem={handleSellDrop}
             />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, width: 100 }}>
-            <LabeledBar label={t("inventory.adenaLabel")} percent={100} text={`${adenaCount}`} color={SP_COLOR} width={BARS_BLOCK_BAR_WIDTH} />
-            <WeightBar load={game.charInfo.load} maxLoad={game.charInfo.maxLoad} />
-          </div>
-          <div style={{ display: "flex", gap: 4 }}>
-            <DnDButton
-              icon="X"
-              color={DELETE_COLOR}
-              size={BUTTON_SIZE}
-              title={t("inventory.deleteButtonTitle")}
-              onDropItem={handleDeleteDrop}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, width: BARS_BLOCK_WIDTH }}>
+              <LabeledBar label={t("inventory.adenaLabel")} percent={100} text={`${adenaCount}`} color={SP_COLOR} width={BARS_BLOCK_BAR_WIDTH} />
+              <WeightBar load={game.charInfo.load} maxLoad={game.charInfo.maxLoad} />
+            </div>
+            <div style={{ display: "flex", gap: 5 }}>
+              <DnDButton
+                icon="X"
+                color={DELETE_COLOR}
+                size={BUTTON_SIZE}
+                title={t("inventory.deleteButtonTitle")}
+                onDropItem={handleDeleteDrop}
+              />
+            </div>
           </div>
         </div>
       </div>
