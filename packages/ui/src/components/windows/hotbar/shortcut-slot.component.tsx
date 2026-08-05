@@ -6,7 +6,10 @@ import { ItemSlot } from "../core/item-slot.component";
 import { ActionSlot } from "../core/action-slot.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { resolveShortcutItem, resolveShortcutSkill, getShortcutFallbackContent } from "../../../config/shortcut-mapping";
-import { getItemSlotType, getItemGradeLabel } from "../../../config/item-mapping";
+import { getItemSlotType, getItemGradeLabel, isShotItem } from "../../../config/item-mapping";
+
+/** Border shown on a shot's icon while its auto-use (RequestAutoSoulShot) is toggled on -- see GameStore.toggleAutoShot, hotbar's RMB handler. */
+const AUTO_SHOT_ICON_BORDER: IconBorder = { from: "#f4d35e", to: "#8a6d1a" };
 
 interface ShortcutSlotProps {
   slotKey?: string;
@@ -52,6 +55,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
           <Slot type="hotbar" slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} content={getShortcutFallbackContent("item-misc")} />
         );
       }
+      const autoActive = isShotItem(item) && game.isAutoShotEnabled(item.Id);
       return (
         <ItemSlot
           id={item.Id}
@@ -61,7 +65,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
           detail="short"
           slotKey={slotKey}
           pressed={pressed}
-          iconBorder={iconBorder}
+          iconBorder={autoActive ? AUTO_SHOT_ICON_BORDER : iconBorder}
         />
       );
     }

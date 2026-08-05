@@ -1,4 +1,4 @@
-import { L2Item, ItemType2, ItemGrade } from "@lineage2js/network";
+import { L2Item, ItemType2, ItemGrade, ShotsType } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 import type { SlotContent } from "../components/windows/core/slot.component";
 import type { TooltipDetail } from "../components/core/tooltip.component";
@@ -35,6 +35,11 @@ export const EQUIPMENT_SLOT_TYPES = new Set<IconSlotType>([
   "item-armor",
   "item-jewelry",
 ]);
+
+/** True for soulshot/spiritshot item templates (RequestAutoSoulShot's `ShotsType` reverse-lookup guard, same check the wire packet itself enforces). */
+export function isShotItem(item: { Id: number }): boolean {
+  return ShotsType[item.Id] !== undefined;
+}
 
 // The wire protocol has no notion of "this misc item is a usable potion" vs
 // "this is a raw crafting material" -- both are just Type2.Item. Real clients

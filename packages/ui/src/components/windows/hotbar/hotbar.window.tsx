@@ -1,11 +1,13 @@
-import { useEffect, useState, type DragEvent } from "react";
+import { useEffect, useState, type DragEvent, type MouseEvent } from "react";
 import { observer } from "mobx-react-lite";
-import { L2Shortcut, ShortcutType, type L2Item } from "@lineage2js/network";
+import { L2Shortcut, ShortcutType, type Actions } from "@lineage2js/network";
 import type { IconBorder } from "../core/slot.component";
 import { ShortcutSlot } from "./shortcut-slot.component";
 import { hasHotbarDragPayload, readHotbarDragPayload, setHotbarDragPayload } from "../core/dnd";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { resolveShortcutItem } from "../../../config/shortcut-mapping";
+import { isShotItem } from "../../../config/item-mapping";
+import { findActionByCode } from "../../../config/user-actions";
 
 const ROW_1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
 const ROW_2 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "[", "]"];
@@ -42,25 +44,57 @@ function resolveSlotIndex(key: string, ctrlPressed: boolean): number | undefined
 const HOTBAR_ICON_BORDER: IconBorder = { from: "#a9af7f", to: "#6f5c31" };
 
 /**
- * Sends the network request a hotbar shortcut maps to. No-ops for types that
- * have no client command yet (ACTION/MACRO/RECIPE/BOOKMARK) -- also safe to
- * call while disconnected, no IsConnected check needed (see
- * AbstractGameCommand.requiresGameConnection).
+ * Sends the network request a hotbar shortcut maps to (left-click/keyboard
+ * activation). No-ops for types that have no client command yet (MACRO --
+ * see TODO.md, no macro data model exists anywhere in this codebase yet --
+ * and RECIPE/BOOKMARK) -- also safe to call while disconnected, no
+ * IsConnected check needed (see AbstractGameCommand.requiresGameConnection).
  */
-function activateShortcut(shortcut: L2Shortcut, client: ReturnType<typeof useSessionStore>["client"], inventoryItems: L2Item[]) {
+function activateShortcut(shortcut: L2Shortcut, game: ReturnType<typeof useGameStore>, client: ReturnType<typeof useSessionStore>["client"]) {
   switch (shortcut.Type) {
     case ShortcutType.SKILL:
       client.cast(shortcut.TargetId);
       break;
     case ShortcutType.ITEM: {
-      const item = resolveShortcutItem(shortcut, inventoryItems);
+      // Same UseItem (0x19) call for both equip/unequip toggle and consuming
+      // a potion -- the server decides which based on the item's own type,
+      // there's no separate client-side branch needed (see CommandUseItem).
+      const item = resolveShortcutItem(shortcut, game.inventoryItems);
       if (item) {
         client.useItem(item);
       }
       break;
     }
+    case ShortcutType.ACTION: {
+      // Reuses the exact same Action definitions (dispatch + guards) as
+      // actions.window.tsx, so a hotbar-bound action honors the same
+      // preconditions (e.g. RECOMMEND needing a target) it would there.
+      const action = findActionByCode(shortcut.TargetId as Actions);
+      if (action?.dispatch && game.isBasicActionAllowed(action.code) && (!action.isEnabled || action.isEnabled(game))) {
+        action.dispatch(game);
+      }
+      break;
+    }
     default:
       break;
+  }
+}
+
+/**
+ * Right-click activation -- currently only shots (soulshot/spiritshot ITEM
+ * shortcuts) do anything here, toggling auto-use (RequestAutoSoulShot, see
+ * GameStore.toggleAutoShot). Skills/macros intentionally have no RMB
+ * behavior yet: real retail auto-use for those is a purely client-side
+ * re-cast timer with no dedicated wire packet, deferred as a separate
+ * feature rather than folded into this pass.
+ */
+function activateShortcutSecondary(shortcut: L2Shortcut, game: ReturnType<typeof useGameStore>) {
+  if (shortcut.Type !== ShortcutType.ITEM) {
+    return;
+  }
+  const item = resolveShortcutItem(shortcut, game.inventoryItems);
+  if (item && isShotItem(item)) {
+    game.toggleAutoShot(item);
   }
 }
 
@@ -134,13 +168,30 @@ export const HotbarContent = observer(function HotbarContent() {
 
       const shortcut = game.hotbarSlots[slotIndex];
       if (shortcut) {
-        activateShortcut(shortcut, session.client, game.inventoryItems);
+        activateShortcut(shortcut, game, session.client);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [game, session]);
+
+  function flashPressed(slotIndex: number) {
+    setPressedSlot(slotIndex);
+    window.setTimeout(() => setPressedSlot((current) => (current === slotIndex ? undefined : current)), PRESS_FLASH_MS);
+  }
+
+  function handleSlotClick(slotIndex: number, shortcut: L2Shortcut | undefined) {
+    if (!shortcut) return;
+    flashPressed(slotIndex);
+    activateShortcut(shortcut, game, session.client);
+  }
+
+  function handleSlotContextMenu(e: MouseEvent<HTMLDivElement>, shortcut: L2Shortcut | undefined) {
+    e.preventDefault();
+    if (!shortcut) return;
+    activateShortcutSecondary(shortcut, game);
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column-reverse", gap: 2 }}>
@@ -159,6 +210,8 @@ export const HotbarContent = observer(function HotbarContent() {
                 onDragLeave={() => handleSlotDragLeave(slotIndex)}
                 onDrop={(e) => handleSlotDrop(e, slotIndex)}
                 onDragEnd={(e) => handleSlotDragEnd(e, slotIndex)}
+                onClick={() => handleSlotClick(slotIndex, shortcut)}
+                onContextMenu={(e) => handleSlotContextMenu(e, shortcut)}
                 style={{
                   outline: isDragOver ? "2px solid #d4af6a" : undefined,
                   outlineOffset: isDragOver ? -2 : undefined,

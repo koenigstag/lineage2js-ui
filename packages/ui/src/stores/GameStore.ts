@@ -715,6 +715,8 @@ export class GameStore {
   shortBuff: L2Buff | undefined = undefined;
   /** Action ids the server currently allows (ExBasicActionList) -- undefined until the first one arrives, which isBasicActionAllowed() treats as "no restriction known" rather than "nothing allowed" (keeps the Actions window fully enabled offline/in demo mode). */
   basicActionIds: Set<number> | undefined = undefined;
+  /** Item ids currently toggled into auto-use (RequestAutoSoulShot) -- see toggleAutoShot, hotbar's RMB handler for shot slots. Purely local UI state, mirroring what the real client tracks for the same feature (the server has no "list my auto shots" query). */
+  autoShotItemIds = new Set<number>();
   charInfo: CharInfoSnapshot = createDemoCharInfo();
   party: L2PartyMember[] = createDemoParty();
   /** Currently selected attack/spell/buff target, if any -- see target-select window. */
@@ -1080,6 +1082,21 @@ export class GameStore {
   /** True if the server hasn't told us otherwise yet (see basicActionIds' field comment) or explicitly allows this action id right now (ExBasicActionList -- the full set normally, a restricted set while transformed). */
   isBasicActionAllowed(code: Actions): boolean {
     return !this.basicActionIds || this.basicActionIds.has(code);
+  }
+
+  isAutoShotEnabled(itemId: number): boolean {
+    return this.autoShotItemIds.has(itemId);
+  }
+
+  /** Toggles auto-use for a soulshot/spiritshot item (RequestAutoSoulShot) -- hotbar's RMB handler for shot slots only (see item-mapping.ts's isShotItem, hotbar.window.tsx). */
+  toggleAutoShot(item: L2Item) {
+    const enable = !this.autoShotItemIds.has(item.Id);
+    if (enable) {
+      this.autoShotItemIds.add(item.Id);
+    } else {
+      this.autoShotItemIds.delete(item.Id);
+    }
+    this.client?.autoShots(item, enable);
   }
 
   /**

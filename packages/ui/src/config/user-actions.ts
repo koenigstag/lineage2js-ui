@@ -32,6 +32,17 @@ export function getActionName(action: Action): string {
   return t(`action.name.${action.code}`);
 }
 
+/** Looks up the shared Action definition (dispatch/isEnabled) for a hotbar ACTION shortcut's TargetId -- same source of truth actions.window.tsx renders from, so hotbar activation doesn't reimplement any of its per-action guards. */
+export function findActionByCode(code: Actions): Action | undefined {
+  for (const actions of Object.values(USER_ACTIONS)) {
+    const found = actions.find((action) => action.code === code);
+    if (found) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
 // EXCHANGE_BOWS/HIGH_FIVE/COUPLE_DANCE need the target's agreement (server
 // relays the request as ExAskCoupleAction -- see GameStore.pairActionRequest)
 // unlike every other social action, hence their own icon-frame gradient
