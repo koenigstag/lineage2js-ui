@@ -3,10 +3,12 @@ import { observer } from "mobx-react-lite";
 import { ShortcutType, ItemType2, type L2Item } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
 import { ItemSlot } from "../core/item-slot.component";
-import { setHotbarDragPayload } from "../core/dnd";
+import { DnDButton } from "../core/dnd-button.component";
+import { setHotbarDragPayload, type HotbarDragPayload } from "../core/dnd";
 import { BaseInput } from "../../core/inputs/base.input";
 import { LabeledBar } from "../../core/stat-bar.component";
 import { Tooltip, useTooltipTarget } from "../../core/tooltip.component";
+import { useConfirmation } from "../../core/confirmation-modal";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { SP_COLOR, WG_COLOR } from "../../../config/stat-colors";
@@ -48,8 +50,13 @@ const SLOT_GAP = 2;
 
 // const INVENTORY_ICON_BORDER: IconBorder = { from: "#2a170c", to: "#2a170c" };
 
-const BAR_WIDTH = 300;
-const BAR_LABEL_WIDTH = 40;
+// Adena/Weight bars sit together in one ~100px-wide block (button-width column
+// between the sell and delete drop slots), much narrower than char-info's/
+// character.window.tsx's full-size bars.
+const BARS_BLOCK_BAR_WIDTH = 70;
+const BUTTON_SIZE = 32;
+const SELL_COLOR = "#3a4a2e";
+const DELETE_COLOR = "#4a2e2e";
 
 /** Weight bar with a hover tooltip showing the raw load/maxLoad -- the bar itself only has room for the percentage. */
 function WeightBar({ load, maxLoad }: { load: number; maxLoad: number }) {
@@ -66,10 +73,9 @@ function WeightBar({ load, maxLoad }: { load: number; maxLoad: number }) {
       <LabeledBar
         label={t("charInfo.wg")}
         percent={percent}
-        text={`${percent.toFixed(2)}%`}
+        text={`${percent.toFixed(0)}%`}
         color={WG_COLOR}
-        width={BAR_WIDTH}
-        labelWidth={BAR_LABEL_WIDTH}
+        width={BARS_BLOCK_BAR_WIDTH}
       />
       <Tooltip target={target} />
     </div>
@@ -80,6 +86,7 @@ export const InventoryContent = observer(function InventoryContent() {
   const game = useGameStore();
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [search, setSearch] = useState("");
+  const { confirm, modal } = useConfirmation();
 
   const adenaCount = game.inventoryItems.find((item) => item.Type2 === ItemType2.Adena)?.Count ?? 0;
 
@@ -87,6 +94,30 @@ export const InventoryContent = observer(function InventoryContent() {
   const filteredItems = game.inventoryItems.filter(
     (item) => matchesTab(item, activeTab) && (query === "" || getItemName(item).toLowerCase().includes(query))
   );
+
+  function resolveDroppedItem(payload: HotbarDragPayload): L2Item | undefined {
+    if (payload.shortcutType !== ShortcutType.ITEM) return undefined;
+    return game.inventoryItems.find((item) => item.ObjectId === payload.targetId);
+  }
+
+  // No RequestSellItem is sent yet -- it needs a live NPC shop session
+  // (listId) this client has no shop window/state for. Confirming just
+  // closes the modal for now; wiring the real sell packet is future work
+  // once a shop UI exists.
+  async function handleSellDrop(payload: HotbarDragPayload) {
+    const item = resolveDroppedItem(payload);
+    if (!item) return;
+    await confirm(t("inventory.sellConfirm", { name: getItemName(item) }));
+  }
+
+  // No destroy-item packet exists in the network layer yet (only
+  // RequestDropItem, which drops on the ground -- a different action).
+  // Confirming just closes the modal for now.
+  async function handleDeleteDrop(payload: HotbarDragPayload) {
+    const item = resolveDroppedItem(payload);
+    if (!item) return;
+    await confirm(t("inventory.deleteConfirm", { name: getItemName(item) }));
+  }
 
   return (
     <div style={{ display: "flex", gap: 8 }}>
@@ -159,18 +190,32 @@ export const InventoryContent = observer(function InventoryContent() {
           })}
         </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
-          <LabeledBar
-            label={t("inventory.adenaLabel")}
-            percent={100}
-            text={`[ ${adenaCount} ]`}
-            color={SP_COLOR}
-            width={BAR_WIDTH}
-            labelWidth={BAR_LABEL_WIDTH}
-          />
-          <WeightBar load={game.charInfo.load} maxLoad={game.charInfo.maxLoad} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            <DnDButton
+              icon="$"
+              color={SELL_COLOR}
+              size={BUTTON_SIZE}
+              title={t("inventory.sellButtonTitle")}
+              onDropItem={handleSellDrop}
+            />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, width: 100 }}>
+            <LabeledBar label={t("inventory.adenaLabel")} percent={100} text={`${adenaCount}`} color={SP_COLOR} width={BARS_BLOCK_BAR_WIDTH} />
+            <WeightBar load={game.charInfo.load} maxLoad={game.charInfo.maxLoad} />
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <DnDButton
+              icon="X"
+              color={DELETE_COLOR}
+              size={BUTTON_SIZE}
+              title={t("inventory.deleteButtonTitle")}
+              onDropItem={handleDeleteDrop}
+            />
+          </div>
         </div>
       </div>
+      {modal}
     </div>
   );
 });

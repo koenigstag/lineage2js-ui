@@ -164,6 +164,10 @@ export const LANG_RU_RU: LangDictionary = {
     },
     searchPlaceholder: "Поиск",
     adenaLabel: "Адена",
+    sellButtonTitle: "Продать",
+    sellConfirm: "Продать {name}?",
+    deleteButtonTitle: "Уничтожить",
+    deleteConfirm: "Уничтожить {name}?",
   },
   settings: {
     language: "Язык",

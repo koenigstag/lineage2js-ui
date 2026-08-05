@@ -164,6 +164,10 @@ export const LANG_EN_US: LangDictionary = {
     },
     searchPlaceholder: "Search",
     adenaLabel: "Adena",
+    sellButtonTitle: "Sell",
+    sellConfirm: "Sell {name}?",
+    deleteButtonTitle: "Destroy",
+    deleteConfirm: "Destroy {name}?",
   },
   settings: {
     language: "Language",
