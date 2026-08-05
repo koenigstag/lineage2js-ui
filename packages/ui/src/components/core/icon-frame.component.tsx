@@ -106,6 +106,13 @@ export function IconFrame({
         <img
           src={iconUrl}
           alt=""
+          // Browsers make <img> natively draggable by default -- left unset,
+          // a real (successfully loaded) icon image hijacks the drag gesture
+          // for its own "drag this image out" behavior instead of the
+          // slot's own onDragStart (see Slot/hotbar/inventory's draggable
+          // wrapper divs), silently breaking hotbar drag-and-drop for
+          // whichever items/skills/actions happen to have a working icon.
+          draggable={false}
           onError={() => setImageFailed(true)}
           style={{
             position: "absolute",
