@@ -1,4 +1,5 @@
 export enum Actions {
+  UNKNOWN = -1, // Unknown action (placeholder for unrecognized action codes)
   SIT_STAND = 0, // Sit/Stand
 
   WALK_RUN = 1, // Walk/Run

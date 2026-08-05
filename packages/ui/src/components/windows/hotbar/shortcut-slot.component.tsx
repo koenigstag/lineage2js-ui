@@ -8,6 +8,7 @@ import { ActionSlot } from "../core/action-slot.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { resolveShortcutItem, resolveShortcutSkill, getShortcutFallbackContent } from "../../../config/shortcut-mapping";
 import { getItemSlotType, getItemGradeLabel, isShotItem } from "../../../config/item-mapping";
+import { getActionIdByCode } from "../../../config/user-actions";
 
 /**
  * "Glass" overlay for a shot slot with auto-use (RequestAutoSoulShot)
@@ -116,8 +117,11 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
       );
     }
 
-    case ShortcutType.ACTION:
-      return <ActionSlot code={shortcut.TargetId as Actions} slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} />;
+    case ShortcutType.ACTION: {
+      const id = getActionIdByCode(shortcut.TargetId as Actions);
+      if (id === undefined) return <Slot type="hotbar" slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} content={getShortcutFallbackContent("action")} />;
+      return <ActionSlot id={id} code={shortcut.TargetId as Actions} slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} />;
+    }
 
     case ShortcutType.MACRO:
       return <Slot type="hotbar" slotKey={slotKey} pressed={pressed} iconBorder={iconBorder} content={getShortcutFallbackContent("macro")} />;

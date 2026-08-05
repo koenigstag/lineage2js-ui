@@ -6,6 +6,7 @@ import { LoginScreen } from "./components/screens/login/login.screen";
 import { CharSelectScreen } from "./components/screens/character-select/char-select.screen";
 import { CreateCharScreen } from "./components/screens/create-char/create-char.screen";
 import { GameScreen } from "./components/screens/game/game.screen";
+import { loadIconMaps } from "./config/icon-urls";
 
 export const App = observer(function App() {
   const ui = useUiStore();
@@ -21,6 +22,7 @@ export const App = observer(function App() {
 
   // Language-independent tables -- fetched once, never re-fetched on lang change.
   useEffect(() => {
+    loadIconMaps();
     datapack.loadNpcRaces();
     datapack.loadNpcLevels();
     datapack.loadSkillEffectFields();

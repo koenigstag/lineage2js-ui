@@ -40,6 +40,7 @@ export const ActionsContent = observer(function ActionsContent() {
               return (
                 <div key={action.code} draggable onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.ACTION, action.code)}>
                   <ActionSlot
+                    id={action.id}
                     code={action.code}
                     category={category}
                     disabled={!enabled}

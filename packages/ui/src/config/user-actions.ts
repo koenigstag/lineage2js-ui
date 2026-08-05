@@ -21,6 +21,7 @@ export type ActionCategory = "basic" | "party" | "target" | "social" | "pet";
  * needs (e.g. RECOMMEND below requiring a valid target), not a visual state.
  */
 export interface Action {
+  id: number;
   code: Actions;
   dispatch?(game: GameStore): void;
   /** Click-time guard, checked right before dispatch -- does not affect the slot's visual disabled state (see this file's doc comment above). */
@@ -28,7 +29,7 @@ export interface Action {
 }
 
 /** Display name for an action, from the id->name table loaded by DatapackStore.loadActionNames() (see lang.ts's "action.name.<id>" special case). */
-export function getActionName(action: Action): string {
+export function getActionName(action: Pick<Action, 'code'>): string {
   return t(`action.name.${action.code}`);
 }
 
@@ -54,6 +55,7 @@ const PAIR_ACTION_CODES: ReadonlySet<Actions> = new Set([
 ]);
 
 export interface ActionSlotParams {
+  id: number;
   code: Actions;
   /** "pet" gets the pet-action gradient, everything else (including hotbar shortcuts, which don't carry a category) the regular action one. */
   category?: ActionCategory;
@@ -61,18 +63,19 @@ export interface ActionSlotParams {
 }
 
 /** Builds the Slot component's content for an action icon -- no full/short tooltip split like Skill/Item, actions only ever show their name. */
-export function getActionSlotContent({ code, category, name }: ActionSlotParams): SlotContent {
+export function getActionSlotContent({ id, code, category, name }: ActionSlotParams): SlotContent {
   return {
     type: PAIR_ACTION_CODES.has(code) ? "pair-action" : category === "pet" ? "pet-action" : "action",
     data: { code, category },
-    iconUrl: getActionIconUrl(code),
+    iconUrl: getActionIconUrl(id),
     tooltip: { kind: "simple", name: name ?? getActionName({ code }) },
   };
 }
 
 /** An action with no precondition beyond the server's ExBasicActionList check (already reflected in the slot's visual state) -- just fires RequestActionUse. */
-function simpleAction(code: Actions): Action {
+function requestActionUse(id: number, code: Actions): Action {
   return {
+    id,
     code,
     dispatch: (game) => game.useBasicAction(Actions[code] as keyof typeof Actions),
   };
@@ -83,8 +86,9 @@ function requiresPlayerTarget(game: GameStore): boolean {
   return Boolean(game.target && !game.target.creatureKind);
 }
 
-function pairAction(code: Actions, actionKey: "EXCHANGE_BOWS" | "HIGH_FIVE" | "COUPLE_DANCE"): Action {
+function pairAction(id: number, code: Actions, actionKey: "EXCHANGE_BOWS" | "HIGH_FIVE" | "COUPLE_DANCE"): Action {
   return {
+    id,
     code,
     dispatch: (game) => game.requestPairAction(actionKey),
     // Mirrors GameStore.requestPairAction()'s own guard (a different player target).
@@ -93,6 +97,7 @@ function pairAction(code: Actions, actionKey: "EXCHANGE_BOWS" | "HIGH_FIVE" | "C
 }
 
 const RECOMMEND: Action = {
+  id: 40,
   // Not handled by RequestActionUse in the H5 reference server -- sent via
   // RequestVoteNew instead (see Actions.RECOMMEND's own comment and
   // GameStore.recommend()).
@@ -103,12 +108,14 @@ const RECOMMEND: Action = {
 };
 
 const ATTACK: Action = {
+  id: 3,
   code: Actions.ATTACK,
   dispatch: (game) => game.attack(),
   isEnabled: (game) => Boolean(game.target),
 };
 
 const ASSIST: Action = {
+  id: 10,
   code: Actions.ASSIST,
   dispatch: (game) => game.assist(),
   // Mirrors GameStore.assist()'s own guard (target must be a party member) --
@@ -121,16 +128,19 @@ const ASSIST: Action = {
 };
 
 const NEXT_TARGET: Action = {
+  id: 7,
   code: Actions.NEXT_TARGET,
   dispatch: (game) => game.selectNextTarget(),
 };
 
 const PICK_UP: Action = {
+  id: 8,
   code: Actions.PICK_UP,
   dispatch: (game) => game.pickUpNearestItem(),
 };
 
 const INVITE: Action = {
+  id: 11,
   code: Actions.INVITE,
   dispatch: (game) => game.inviteToParty(),
   // Mirrors GameStore.inviteToParty()'s own guard (player target, not already in the party).
@@ -141,12 +151,14 @@ const INVITE: Action = {
 };
 
 const LEAVE_PARTY: Action = {
+  id: 12,
   code: Actions.LEAVE_PARTY,
   dispatch: (game) => game.leaveParty(),
   isEnabled: (game) => game.party.length > 0,
 };
 
 const DUEL: Action = {
+  id: 47,
   code: Actions.DUEL,
   dispatch: (game) => game.challengeToDuel(),
   // Mirrors GameStore.challengeToDuel()'s own guard (player target).
@@ -154,12 +166,14 @@ const DUEL: Action = {
 };
 
 const PARTY_DUEL: Action = {
+  id: 49,
   code: Actions.PARTY_DUEL,
   dispatch: (game) => game.challengeToDuel(true),
   isEnabled: requiresPlayerTarget,
 };
 
 const EXCHANGE: Action = {
+  id: 5,
   code: Actions.EXCHANGE,
   dispatch: (game) => game.requestTrade(),
   // Mirrors GameStore.requestTrade()'s own guard (player target).
@@ -179,6 +193,7 @@ function canManagePartyTarget(game: GameStore): boolean {
 }
 
 const DISMISS_PARTY_MEMBER: Action = {
+  id: 13,
   code: Actions.DISMISS_PARTY_MEMBER,
   dispatch: (game) => game.dismissPartyMember(),
   // Mirrors GameStore.dismissPartyMember()'s own guard.
@@ -186,38 +201,39 @@ const DISMISS_PARTY_MEMBER: Action = {
 };
 
 const CHANGE_PARTY_LEADER: Action = {
+  id: 41,
   code: Actions.CHANGE_PARTY_LEADER,
   dispatch: (game) => game.changePartyLeader(),
   // Mirrors GameStore.changePartyLeader()'s own guard.
   isEnabled: canManagePartyTarget,
 };
 
-const EXCHANGE_BOWS = pairAction(Actions.EXCHANGE_BOWS, "EXCHANGE_BOWS");
-const HIGH_FIVE = pairAction(Actions.HIGH_FIVE, "HIGH_FIVE");
-const COUPLE_DANCE = pairAction(Actions.COUPLE_DANCE, "COUPLE_DANCE");
+const EXCHANGE_BOWS = pairAction(60, Actions.EXCHANGE_BOWS, "EXCHANGE_BOWS");
+const HIGH_FIVE = pairAction(61, Actions.HIGH_FIVE, "HIGH_FIVE");
+const COUPLE_DANCE = pairAction(62, Actions.COUPLE_DANCE, "COUPLE_DANCE");
 
 export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
   basic: [
-    simpleAction(Actions.SIT_STAND),
-    simpleAction(Actions.WALK_RUN),
+    requestActionUse(1, Actions.SIT_STAND),
+    requestActionUse(2, Actions.WALK_RUN),
     ATTACK,
     EXCHANGE,
     NEXT_TARGET,
     PICK_UP,
     ASSIST,
-    simpleAction(Actions.PRIVATE_STORE_SELL),
-    simpleAction(Actions.PRIVATE_STORE_BUY),
-    simpleAction(Actions.PRIVATE_STORE_PACKAGE_SELL),
+    requestActionUse(18, Actions.PRIVATE_STORE_SELL),
+    requestActionUse(28, Actions.PRIVATE_STORE_BUY),
+    requestActionUse(50, Actions.PRIVATE_STORE_PACKAGE_SELL),
     // FIND_STORE/MINI_GAME have no case in RequestActionUse's switch either
     // (confirmed against the reference server, same as PICK_UP) -- unlike
     // Pick Up though, there's no alternate click-based mechanism to fall
     // back on: both are purely client-side UI panels (private store search,
     // Cube Game HUD fed entirely by server-pushed ExCubeGame* packets) that
     // this client hasn't built yet, so no dispatch until they exist.
-    { code: Actions.FIND_STORE },
+    { id: 46, code: Actions.FIND_STORE },
     RECOMMEND,
     DUEL,
-    { code: Actions.MINI_GAME },
+    { id: 52, code: Actions.MINI_GAME },
   ],
   party: [
     INVITE,
@@ -229,38 +245,58 @@ export const USER_ACTIONS: Record<ActionCategory, Action[]> = {
   // Not a real client tab -- placeholder for target-related actions
   // (attack/next target/assist/pick up/exchange), still undecided which of
   // those belong here vs. basic. Left empty on purpose for now.
-  target: [],
+  target: [
+    { id: 67, code: -1 },
+    { id: 68, code: -1 },
+    { id: 69, code: -1 },
+    { id: 70, code: -1 },
+    { id: 71, code: -1 },
+    { id: 72, code: -1 },
+    { id: 73, code: -1 },
+    { id: 74, code: -1 },
+  ],
   social: [
-    simpleAction(Actions.SOCIAL_GREETING),
-    simpleAction(Actions.SOCIAL_VICROTY),
-    simpleAction(Actions.SOCIAL_ADVANCE),
-    simpleAction(Actions.SOCIAL_YES),
-    simpleAction(Actions.SOCIAL_NO),
-    simpleAction(Actions.SOCIAL_BOW),
-    simpleAction(Actions.SOCIAL_UNWARE),
-    simpleAction(Actions.SOCIAL_WAITING),
-    simpleAction(Actions.SOCIAL_LAUGH),
-    simpleAction(Actions.SOCIAL_APPLAUD),
-    simpleAction(Actions.SOCIAL_DANCE),
-    simpleAction(Actions.SOCIAL_SORROW),
-    simpleAction(Actions.SOCIAL_CHARM),
-    simpleAction(Actions.SOCIAL_SHYNESS),
+    requestActionUse(15, Actions.SOCIAL_GREETING),
+    requestActionUse(16, Actions.SOCIAL_VICROTY),
+    requestActionUse(17, Actions.SOCIAL_ADVANCE),
+    requestActionUse(20, Actions.SOCIAL_YES),
+    requestActionUse(21, Actions.SOCIAL_NO),
+    requestActionUse(22, Actions.SOCIAL_BOW),
+    requestActionUse(29, Actions.SOCIAL_UNWARE),
+    requestActionUse(30, Actions.SOCIAL_WAITING),
+    requestActionUse(31, Actions.SOCIAL_LAUGH),
+    requestActionUse(32, Actions.SOCIAL_APPLAUD),
+    requestActionUse(33, Actions.SOCIAL_DANCE),
+    requestActionUse(34, Actions.SOCIAL_SORROW),
+    requestActionUse(51, Actions.SOCIAL_CHARM),
+    requestActionUse(55, Actions.SOCIAL_SHYNESS),
     EXCHANGE_BOWS,
     HIGH_FIVE,
     COUPLE_DANCE,
   ],
   pet: [
-    { code: Actions.MOUNT_DISMOUNT },
-    { code: Actions.PET_CHANGE_MOVEMENT_MODE },
-    { code: Actions.PET_ATTACK },
-    { code: Actions.PET_STOP },
-    { code: Actions.PET_PICKUP },
-    { code: Actions.PET_UNSUMMON },
-    { code: Actions.PET_MOVE_TO_TARGET },
-    { code: Actions.SERVITOR_CHANGE_MOVEMENT_MODE },
-    { code: Actions.SERVITOR_ATTACK },
-    { code: Actions.SERVITOR_SOP },
-    { code: Actions.SERVITOR_UNSUMMON },
-    { code: Actions.SERVITOR_MOVE_TO_TARGET },
+    { id: 36, code: Actions.MOUNT_DISMOUNT },
+    // { code: Actions.PET_CHANGE_MOVEMENT_MODE },
+    // { code: Actions.PET_ATTACK },
+    // { code: Actions.PET_STOP },
+    // { code: Actions.PET_PICKUP },
+    // { code: Actions.PET_UNSUMMON },
+    // { code: Actions.PET_MOVE_TO_TARGET },
+    // { code: Actions.SERVITOR_CHANGE_MOVEMENT_MODE },
+    // { code: Actions.SERVITOR_ATTACK },
+    // { code: Actions.SERVITOR_SOP },
+    // { code: Actions.SERVITOR_UNSUMMON },
+    // { code: Actions.SERVITOR_MOVE_TO_TARGET },
   ],
 };
+
+export const getActionIdByCode = (code: Actions): number | undefined => {
+  for (const category of Object.values(USER_ACTIONS)) {
+    for (const action of category) {
+      if (action.code === code) {
+        return action.id;
+      }
+    }
+  }
+  return undefined;
+}
