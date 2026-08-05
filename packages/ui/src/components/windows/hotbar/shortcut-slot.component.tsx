@@ -10,11 +10,11 @@ import { resolveShortcutItem, resolveShortcutSkill, getShortcutFallbackContent }
 import { getItemSlotType, getItemGradeLabel, isShotItem } from "../../../config/item-mapping";
 
 /** Border shown on a shot's icon while its auto-use (RequestAutoSoulShot) is toggled on -- see GameStore.toggleAutoShot, hotbar's RMB handler. */
-const AUTO_SHOT_ICON_BORDER: IconBorder = { from: "#ffffff", to: "#ffffff" };
+const AUTO_SHOT_ICON_BORDER: IconBorder = { from: "#9a9a9a", to: "#9a9a9a" };
 
 /**
  * "Glass" overlay for a shot slot with auto-use active -- a flat white
- * layer at 50% opacity composited on top of the icon, not a CSS filter:
+ * layer at 20% opacity composited on top of the icon, not a CSS filter:
  * filter operates on the whole element (icon, count badge, border)
  * uniformly, whereas a separate absolutely-positioned layer composites
  * cleanly over everything already drawn and stays out of the slot's own
@@ -25,7 +25,7 @@ const AUTO_SHOT_GLASS_STYLE: CSSProperties = {
   inset: 0,
   zIndex: 3,
   pointerEvents: "none",
-  backgroundColor: "rgba(255, 255, 255, 0.5)",
+  backgroundColor: "rgba(255, 255, 255, 0.2)",
 };
 
 interface ShortcutSlotProps {
