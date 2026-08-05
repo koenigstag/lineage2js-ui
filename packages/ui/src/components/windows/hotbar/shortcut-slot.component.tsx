@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import type { CSSProperties } from "react";
 import { ShortcutType, type Actions, type L2Shortcut } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
 import { SkillSlot } from "../core/skill-slot.component";
@@ -9,7 +10,23 @@ import { resolveShortcutItem, resolveShortcutSkill, getShortcutFallbackContent }
 import { getItemSlotType, getItemGradeLabel, isShotItem } from "../../../config/item-mapping";
 
 /** Border shown on a shot's icon while its auto-use (RequestAutoSoulShot) is toggled on -- see GameStore.toggleAutoShot, hotbar's RMB handler. */
-const AUTO_SHOT_ICON_BORDER: IconBorder = { from: "#f4d35e", to: "#8a6d1a" };
+const AUTO_SHOT_ICON_BORDER: IconBorder = { from: "#ffffff", to: "#ffffff" };
+
+/**
+ * "Glass" overlay for a shot slot with auto-use active -- a flat white
+ * layer at 50% opacity composited on top of the icon, not a CSS filter:
+ * filter operates on the whole element (icon, count badge, border)
+ * uniformly, whereas a separate absolutely-positioned layer composites
+ * cleanly over everything already drawn and stays out of the slot's own
+ * click/drag handlers via pointer-events: none.
+ */
+const AUTO_SHOT_GLASS_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: 3,
+  pointerEvents: "none",
+  backgroundColor: "rgba(255, 255, 255, 0.5)",
+};
 
 interface ShortcutSlotProps {
   slotKey?: string;
@@ -56,7 +73,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
         );
       }
       const autoActive = isShotItem(item) && game.isAutoShotEnabled(item.Id);
-      return (
+      const slot = (
         <ItemSlot
           id={item.Id}
           slotType={getItemSlotType(item)}
@@ -67,6 +84,15 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
           pressed={pressed}
           iconBorder={autoActive ? AUTO_SHOT_ICON_BORDER : iconBorder}
         />
+      );
+      if (!autoActive) {
+        return slot;
+      }
+      return (
+        <div style={{ position: "relative" }}>
+          {slot}
+          <div style={AUTO_SHOT_GLASS_STYLE} />
+        </div>
       );
     }
 
