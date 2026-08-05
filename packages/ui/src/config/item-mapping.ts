@@ -69,8 +69,16 @@ const GRADE_LABELS: Partial<Record<ItemGrade, string>> = {
   [ItemGrade.S84]: "S84",
 };
 
+// Retail shows no grade tag at all for ItemGrade.None (confirmed against
+// lineage2ts's/L2J_Mobius's source -- no UI-facing "NG" string exists
+// anywhere server-side, it's purely an internal code identifier). This
+// project deliberately shows "NG" instead, but only for the item kinds a
+// grade is actually meaningful for -- equipment (weapon/shield/armor/
+// jewelry) and shots -- not the thousands of ungraded quest items/
+// materials/consumables that would otherwise get a noisy "NG" too.
+const NG_LABEL = "NG";
+
 /**
- * No label for ItemGrade.None/unset -- nothing to show in the tooltip.
  * item.Grade itself is never populated from real wire data (no item packet
  * sends grade/crystal_type, see DatapackStore.itemGrades' comment and
  * TODO.md) -- it's only ever explicitly set by demo data (GameStore.
@@ -79,7 +87,10 @@ const GRADE_LABELS: Partial<Record<ItemGrade, string>> = {
  */
 export function getItemGradeLabel(item: L2Item): string | undefined {
   const grade = item.Grade || rootStore.datapack.itemGrades[item.Id];
-  return GRADE_LABELS[grade];
+  if (grade) {
+    return GRADE_LABELS[grade];
+  }
+  return EQUIPMENT_SLOT_TYPES.has(getItemSlotType(item)) || isShotItem(item) ? NG_LABEL : undefined;
 }
 
 export interface ItemSlotParams {
