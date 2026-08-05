@@ -8,7 +8,7 @@ import { setHotbarDragPayload, type HotbarDragPayload } from "../core/dnd";
 import { BaseInput } from "../../core/inputs/base.input";
 import { LabeledBar } from "../../core/stat-bar.component";
 import { Tooltip, useTooltipTarget } from "../../core/tooltip.component";
-import { useConfirmation } from "../../core/confirmation-modal";
+import { useItemCountPrompt } from "../../core/item-count-modal";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { useClickOrDoubleClick } from "../../../lib/useClickOrDoubleClick";
@@ -112,7 +112,7 @@ export const InventoryContent = observer(function InventoryContent() {
   const session = useSessionStore();
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [search, setSearch] = useState("");
-  const { confirm, modal } = useConfirmation();
+  const { promptCount, modal } = useItemCountPrompt();
 
   const adenaCount = game.inventoryItems.find((item) => item.Type2 === ItemType2.Adena)?.Count ?? 0;
 
@@ -140,13 +140,13 @@ export const InventoryContent = observer(function InventoryContent() {
   }
 
   // No RequestSellItem is sent yet -- it needs a live NPC shop session
-  // (listId) this client has no shop window/state for. Confirming just
-  // closes the modal for now; wiring the real sell packet is future work
-  // once a shop UI exists.
+  // (listId) this client has no shop window/state for. Prompting for a
+  // count just closes the modal for now; wiring the real sell packet is
+  // future work once a shop UI exists.
   async function handleSellDrop(payload: HotbarDragPayload) {
     const item = resolveDroppedItem(payload);
     if (!item) return;
-    await confirm(t("inventory.sellConfirm", { name: getItemName(item) }));
+    await promptCount(getItemName(item), t("inventory.sellAction"), item.Count);
   }
 
   // RequestDestroyItem (opcode 0x60) -- confirmed against lineage2ts as a
@@ -158,8 +158,9 @@ export const InventoryContent = observer(function InventoryContent() {
   async function handleDeleteDrop(payload: HotbarDragPayload) {
     const item = resolveDroppedItem(payload);
     if (!item) return;
-    if (!(await confirm(t("inventory.deleteConfirm", { name: getItemName(item) })))) return;
-    session.client.destroyItem(item.ObjectId, item.Count);
+    const count = await promptCount(getItemName(item), t("inventory.deleteAction"), item.Count);
+    if (count === undefined) return;
+    session.client.destroyItem(item.ObjectId, count);
   }
 
   return (

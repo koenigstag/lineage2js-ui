@@ -165,9 +165,10 @@ export const LANG_RU_RU: LangDictionary = {
     searchPlaceholder: "Поиск",
     adenaLabel: "Адена",
     sellButtonTitle: "Продать",
-    sellConfirm: "Продать {name}?",
+    sellAction: "продать",
     deleteButtonTitle: "Уничтожить",
-    deleteConfirm: "Уничтожить {name}?",
+    deleteAction: "уничтожить",
+    itemCountPrompt: "Сколько {name} вы хотите {action}?",
   },
   settings: {
     language: "Язык",

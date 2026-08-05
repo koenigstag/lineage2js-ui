@@ -7,7 +7,7 @@ export interface BaseInputProps {
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   maxLength?: number;
-  type?: "text" | "password";
+  type?: "text" | "password" | "number";
   style?: CSSProperties;
 }
 
