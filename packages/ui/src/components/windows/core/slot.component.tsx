@@ -35,11 +35,13 @@ export interface SlotProps {
 
 const SLOT_SIZE = 34;
 
-function getEmptySlotStyle(size: number): CSSProperties {
+// Inventory-type empty slots (main grid + paperdoll equip cells) render
+// borderless -- only hotbar keeps the bordered placeholder look.
+function getEmptySlotStyle(size: number, type: SlotProps["type"]): CSSProperties {
   return {
     width: size,
     height: size,
-    border: "1px solid #393839",
+    border: type === "inventory" ? undefined : "1px solid #393839",
     backgroundColor: "#101010",
     boxShadow: "inset 0 0 6px 1px #080808",
   };
@@ -95,7 +97,7 @@ const countdownStyle: CSSProperties = {
   userSelect: "none",
 };
 
-export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE, pressed }: SlotProps) {
+export function Slot({ type, content, slotKey, iconBorder, size = SLOT_SIZE, pressed }: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { target, showTooltip, hideTooltip } = useTooltipTarget();
   const tooltip = content?.tooltip;
@@ -126,7 +128,7 @@ export function Slot({ content, slotKey, iconBorder, size = SLOT_SIZE, pressed }
           borderTo={iconBorder?.to}
         />
       ) : (
-        <div style={getEmptySlotStyle(size)} />
+        <div style={getEmptySlotStyle(size, type)} />
       )}
       {slotKey && <div style={slotKeyStyle}>{slotKey}</div>}
       {content?.count !== undefined && content.count > 1 && <div style={slotCountStyle}>{formatCount(content.count)}</div>}

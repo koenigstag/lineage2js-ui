@@ -162,7 +162,7 @@ export default class CharInfo extends GameClientPacket {
 
     const _reputationScore = this.readD();
     const _transformationDisplayId = this.readD();
-    const _agathionId = this.readD();
+    this.Char.AgathionId = this.readD();
 
     const _pad3 = this.readD();
 

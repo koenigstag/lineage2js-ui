@@ -85,3 +85,29 @@ export function StatBar({
     </div>
   );
 }
+
+const LABELED_BAR_TEXT_SHADOW = "1px 0.5px 0 rgba(0, 0, 0, 0.9)";
+
+export interface LabeledBarProps {
+  /** External label to the left of the bar, e.g. "SP"/"WG" -- distinct from StatBar's own optional pinned-inside label. */
+  label: string;
+  percent: number;
+  text?: string;
+  color: string;
+  width: number;
+  /** Fixed width of the label column. Defaults to 20px (fits "HP"/"MP"/"SP"-style 2-3 char labels). */
+  labelWidth?: number;
+  dividers?: number[];
+}
+
+/** Reusable label-plus-StatBar row (char-info, party-char-info, inventory's Adena/WG row, ...). */
+export function LabeledBar({ label, percent, text, color, width, labelWidth = 20, dividers }: LabeledBarProps) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+      <span style={{ color: "#d2d2d2", fontSize: 11, width: labelWidth, flexShrink: 0, textShadow: LABELED_BAR_TEXT_SHADOW }}>
+        {label}
+      </span>
+      <StatBar percent={percent} color={color} text={text} width={width} height={13} dividers={dividers} />
+    </div>
+  );
+}

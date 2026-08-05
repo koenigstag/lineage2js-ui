@@ -183,7 +183,7 @@ export default class UserInfo extends GameClientPacket {
     const _atkHoly = this.readH();
     const _atkDark = this.readH();
 
-    const _agathionId = this.readD();
+    this.User.AgathionId = this.readD();
 
     this.User.Fame = this.readD();
 

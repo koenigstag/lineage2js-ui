@@ -1,6 +1,6 @@
 import { Fragment, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
-import { StatBar } from "../../core/stat-bar.component";
+import { LabeledBar } from "../../core/stat-bar.component";
 import { useGameStore } from "../../../stores/StoreContext";
 import { VITALITY_LEVEL_MARKERS } from "../../../stores/GameStore";
 import { CP_COLOR, HP_COLOR, MP_COLOR, SP_COLOR, VITALITY_COLOR, WG_COLOR, XP_COLOR } from "../../../config/stat-colors";
@@ -47,7 +47,6 @@ const statsFrameStyle: CSSProperties = {
 };
 
 const sectionTitleStyle: CSSProperties = { color: "#d2d2d2", fontSize: 12, textShadow: TEXT_SHADOW };
-const barLabelStyle: CSSProperties = { color: "#d2d2d2", fontSize: 11, width: 20, flexShrink: 0, textShadow: TEXT_SHADOW };
 const rowLabelStyle: CSSProperties = { color: "#a2a2a2", fontSize: 11, textShadow: TEXT_SHADOW };
 const rowValueStyle: CSSProperties = { color: "#9b876c", fontSize: 11, textShadow: TEXT_SHADOW };
 
@@ -97,30 +96,6 @@ function StatsSection({ title, columns }: { title: string; columns: StatRowTuple
           </Fragment>
         ))}
       </div>
-    </div>
-  );
-}
-
-function LabeledBar({
-  label,
-  percent,
-  text,
-  color,
-  width,
-  dividers,
-}: {
-  label: string;
-  percent: number;
-  text?: string;
-  color: string;
-  width: number;
-  /** Percentages (0-100) to draw a thin marker line at, e.g. vitality level boundaries. */
-  dividers?: number[];
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
-      <span style={barLabelStyle}>{label}</span>
-      <StatBar percent={percent} color={color} text={text} width={width} height={13} dividers={dividers} />
     </div>
   );
 }

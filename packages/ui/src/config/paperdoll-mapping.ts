@@ -37,38 +37,60 @@ export interface PaperdollSection {
   center?: boolean;
 }
 
+export interface PaperdollBlock {
+  /** One or more independently-sized grids stacked with the standard section gap. */
+  sections: PaperdollSection[];
+  /** Wraps the block's sections in a rounded, padded border instead of rendering them bare. */
+  bordered?: boolean;
+  /** Extra spacing added on top of the standard gap between this block and the one above it. */
+  extraGapBefore?: number;
+}
+
 const BASE_COLUMN_GAP = 10;
 const BODY_COLUMN_GAP = BASE_COLUMN_GAP * 2; // 20
 const ACCESSORY_COLUMN_GAP = BASE_COLUMN_GAP * 4; // 40 (hands + accessories)
 const DECOR_COLUMN_GAP = BASE_COLUMN_GAP; // 10, kept separate from BODY_COLUMN_GAP so it doesn't move if body's gap changes again
-const BRACELET_COLUMN_GAP = BASE_COLUMN_GAP * 3; // 30, between rbracelet and lbracelet (the agathion slot)
 
 const DECOR_SLOT_SIZE = 25.5; // 1.5x the previous half-size (17px) decor cell
 
-/** Visual layout for the inventory window's equip panel -- grouped into the same clusters (body / hands / accessories / decor / bracelets) as the retail paperdoll, each its own independently-sized grid stacked with a bigger gap between groups. */
-export const PAPERDOLL_SECTIONS: PaperdollSection[] = [
+/** Visual layout for the inventory window's equip panel -- grouped into the same clusters (body+hands+accessories / decor+agathion / bracelet) as the retail paperdoll, each block its own independently-sized grid(s) stacked with a bigger gap between blocks. */
+export const PAPERDOLL_BLOCKS: PaperdollBlock[] = [
   {
-    // body (hair/head share the same grid as the armor rows)
-    rows: [
-      ["hair1", "head", "hair2"],
-      ["gloves", "chest", "feet"],
-      ["cloak", "legs", "belt"],
+    // body + hands + accessories share one bordered block
+    sections: [
+      {
+        // body (hair/head share the same grid as the armor rows)
+        rows: [
+          ["hair1", "head", "hair2"],
+          ["gloves", "chest", "feet"],
+          ["cloak", "legs", "belt"],
+        ],
+        columnGap: BODY_COLUMN_GAP,
+        center: true,
+      },
+      { rows: [["rhand", "lhand"]], columnGap: ACCESSORY_COLUMN_GAP, center: true }, // hands
+      {
+        // accessories
+        rows: [
+          ["rear", "lear", "neklace"],
+          ["rfinger", "lfinger", "under"],
+        ],
+        columnGap: ACCESSORY_COLUMN_GAP,
+        center: true,
+      },
     ],
-    columnGap: BODY_COLUMN_GAP,
-    center: true,
+    bordered: true,
   },
-  { rows: [["rhand", "lhand"]], columnGap: ACCESSORY_COLUMN_GAP, center: true }, // hands
   {
-    // accessories
-    rows: [
-      ["rear", "lear", "neklace"],
-      ["rfinger", "lfinger", "under"],
+    // decor + lbracelet (the agathion slot) share one bordered block
+    sections: [
+      { rows: [["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"]], slotSize: DECOR_SLOT_SIZE, columnGap: DECOR_COLUMN_GAP },
+      { rows: [["lbracelet"]], center: true },
     ],
-    columnGap: ACCESSORY_COLUMN_GAP,
-    center: true,
+    bordered: true,
+    extraGapBefore: 5,
   },
-  { rows: [["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"]], slotSize: DECOR_SLOT_SIZE, columnGap: DECOR_COLUMN_GAP },
-  { rows: [["rbracelet", "lbracelet"]], columnGap: BRACELET_COLUMN_GAP },
+  { sections: [{ rows: [["rbracelet"]] }] },
 ];
 
 /**

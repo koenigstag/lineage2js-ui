@@ -163,6 +163,7 @@ export const LANG_EN_US: LangDictionary = {
       Quest: "Quest",
     },
     searchPlaceholder: "Search",
+    adenaLabel: "Adena",
   },
   settings: {
     language: "Language",

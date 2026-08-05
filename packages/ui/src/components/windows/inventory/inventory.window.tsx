@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { ShortcutType, type L2Item } from "@lineage2js/network";
+import { ShortcutType, ItemType2, type L2Item } from "@lineage2js/network";
 import { Slot, type IconBorder } from "../core/slot.component";
 import { ItemSlot } from "../core/item-slot.component";
 import { setHotbarDragPayload } from "../core/dnd";
 import { BaseInput } from "../../core/inputs/base.input";
+import { LabeledBar } from "../../core/stat-bar.component";
+import { Tooltip, useTooltipTarget } from "../../core/tooltip.component";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore } from "../../../stores/StoreContext";
+import { SP_COLOR, WG_COLOR } from "../../../config/stat-colors";
 import {
   EQUIPMENT_SLOT_TYPES,
   getItemSlotType,
@@ -38,17 +41,47 @@ function matchesTab(item: L2Item, tab: Tab): boolean {
 }
 
 const GRID_COLUMNS = 10;
-const GRID_ROWS = 10;
-const VISIBLE_ROWS = 8;
+const GRID_ROWS = 20;
+const VISIBLE_ROWS = 10;
 const SLOT_SIZE = 34;
 const SLOT_GAP = 2;
 
 // const INVENTORY_ICON_BORDER: IconBorder = { from: "#2a170c", to: "#2a170c" };
 
+const BAR_WIDTH = 300;
+const BAR_LABEL_WIDTH = 40;
+
+/** Weight bar with a hover tooltip showing the raw load/maxLoad -- the bar itself only has room for the percentage. */
+function WeightBar({ load, maxLoad }: { load: number; maxLoad: number }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { target, showTooltip, hideTooltip } = useTooltipTarget();
+  const percent = maxLoad > 0 ? (load / maxLoad) * 100 : 0;
+
+  return (
+    <div
+      ref={rootRef}
+      onMouseEnter={() => rootRef.current && showTooltip(rootRef.current, { kind: "simple", name: `${load}/${maxLoad}` })}
+      onMouseLeave={hideTooltip}
+    >
+      <LabeledBar
+        label={t("charInfo.wg")}
+        percent={percent}
+        text={`${percent.toFixed(2)}%`}
+        color={WG_COLOR}
+        width={BAR_WIDTH}
+        labelWidth={BAR_LABEL_WIDTH}
+      />
+      <Tooltip target={target} />
+    </div>
+  );
+}
+
 export const InventoryContent = observer(function InventoryContent() {
   const game = useGameStore();
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [search, setSearch] = useState("");
+
+  const adenaCount = game.inventoryItems.find((item) => item.Type2 === ItemType2.Adena)?.Count ?? 0;
 
   const query = search.trim().toLowerCase();
   const filteredItems = game.inventoryItems.filter(
@@ -88,6 +121,7 @@ export const InventoryContent = observer(function InventoryContent() {
             />
           </div>
         </div>
+        <div style={{ border: "1px solid #76654f", borderRadius: 6, padding: 5 }}>
         <div
           className="slot-grid"
           style={{
@@ -96,7 +130,7 @@ export const InventoryContent = observer(function InventoryContent() {
             gridAutoRows: SLOT_SIZE,
             gap: SLOT_GAP,
             maxHeight: SLOT_SIZE * VISIBLE_ROWS + SLOT_GAP * (VISIBLE_ROWS - 1),
-            overflowY: "auto",
+            overflowY: "scroll",
             overflowX: "hidden",
           }}
         >
@@ -123,6 +157,18 @@ export const InventoryContent = observer(function InventoryContent() {
               </div>
             );
           })}
+        </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+          <LabeledBar
+            label={t("inventory.adenaLabel")}
+            percent={100}
+            text={`[ ${adenaCount} ]`}
+            color={SP_COLOR}
+            width={BAR_WIDTH}
+            labelWidth={BAR_LABEL_WIDTH}
+          />
+          <WeightBar load={game.charInfo.load} maxLoad={game.charInfo.maxLoad} />
         </div>
       </div>
     </div>

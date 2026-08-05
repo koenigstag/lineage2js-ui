@@ -9,6 +9,12 @@ export default class L2Character extends L2Creature {
   private _allyId!: number;
   private _clanCrestId!: number;
   private _allyCrestId!: number;
+  // NPC id of the floating Agathion companion, set by equipping an Agathion
+  // Bracelet in the L.Bracelet paperdoll slot -- a separate field from
+  // Paperdoll (see L2Creature.ts), not derivable from it. 0/absent means no
+  // Agathion summoned. Sent by both CharInfo and UserInfo, hence living here
+  // rather than on the NPC-shared L2Creature.
+  private _agathionId!: number;
 
   public get ClanId(): number {
     return this._clanId;
@@ -33,6 +39,12 @@ export default class L2Character extends L2Creature {
   }
   public set AllyCrestId(value: number) {
     this._allyCrestId = value;
+  }
+  public get AgathionId(): number {
+    return this._agathionId;
+  }
+  public set AgathionId(value: number) {
+    this._agathionId = value;
   }
 
   public get Cp(): number {

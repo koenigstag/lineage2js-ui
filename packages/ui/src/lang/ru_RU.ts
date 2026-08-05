@@ -163,6 +163,7 @@ export const LANG_RU_RU: LangDictionary = {
       Quest: "Квест",
     },
     searchPlaceholder: "Поиск",
+    adenaLabel: "Адена",
   },
   settings: {
     language: "Язык",
