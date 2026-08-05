@@ -4,6 +4,7 @@ import type { SlotContent } from "../components/windows/core/slot.component";
 import type { TooltipDetail } from "../components/core/tooltip.component";
 import { getItemIconUrl } from "./icon-urls";
 import { t } from "../lang/lang";
+import { rootStore } from "../stores/RootStore";
 
 // Reactive read, not a stored field: UiStore.itemNames loads asynchronously
 // (see DatapackStore.loadItemNames()), so this must be called at render time inside
@@ -68,9 +69,17 @@ const GRADE_LABELS: Partial<Record<ItemGrade, string>> = {
   [ItemGrade.S84]: "S84",
 };
 
-/** No label for ItemGrade.None/unset -- nothing to show in the tooltip. */
+/**
+ * No label for ItemGrade.None/unset -- nothing to show in the tooltip.
+ * item.Grade itself is never populated from real wire data (no item packet
+ * sends grade/crystal_type, see DatapackStore.itemGrades' comment and
+ * TODO.md) -- it's only ever explicitly set by demo data (GameStore.
+ * createDemoInventory), which this still honors first so existing demo
+ * grades keep working; real items fall through to the datapack lookup.
+ */
 export function getItemGradeLabel(item: L2Item): string | undefined {
-  return GRADE_LABELS[item.Grade];
+  const grade = item.Grade || rootStore.datapack.itemGrades[item.Id];
+  return GRADE_LABELS[grade];
 }
 
 export interface ItemSlotParams {

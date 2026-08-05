@@ -1,4 +1,5 @@
 import { makeAutoObservable } from "mobx";
+import type { ItemGrade } from "@lineage2js/network";
 import type { LANG } from "../lang/lang";
 import type { BaseStats, BaseClass, RaceNames, SexNames } from "../config/character-races";
 
@@ -47,6 +48,17 @@ export class DatapackStore {
   /** npcId -> level, see config/npc-level-mapping.ts. Same datapack source/gap as npcRaces -- NpcInfo never sends a monster's level over the wire. */
   npcLevels: Record<string, number> = {};
   private npcLevelsRequested = false;
+  /**
+   * itemId -> grade, see config/item-mapping.ts's getItemGradeLabel(). Same
+   * datapack source/gap as npcRaces -- no item packet (ItemList/
+   * InventoryUpdate/TradeStart/...) ever sends grade/crystal_type over the
+   * wire (confirmed against lineage2ts's and L2J_Mobius's writeItem, see
+   * TODO.md). Source data (public/item-grades/data.json) is grouped by grade
+   * ({ [gradeIndex]: itemId[] }, far fewer grades than items) and inverted
+   * into this id->grade lookup once at load time.
+   */
+  itemGrades: Record<string, ItemGrade> = {};
+  private itemGradesRequested = false;
   /** skillId -> [magicClass, operateType, isDebuff], see config/skill-effect-mapping.ts and @lineage2js/network's EffectCategory.ts. Same datapack source/gap as npcRaces -- AbnormalStatusUpdate never sends a buff's category over the wire. */
   skillEffectFields: Record<string, [number, string, number]> = {};
   private skillEffectFieldsRequested = false;
@@ -256,6 +268,29 @@ export class DatapackStore {
       this.setNpcLevels(levels);
     } catch {
       this.npcLevelsRequested = false;
+    }
+  }
+
+  setItemGrades(grades: Record<string, ItemGrade>) {
+    this.itemGrades = grades;
+  }
+
+  /** Fetches public/item-grades/data.json once, same treatment as loadNpcRaces() -- inverts the grouped-by-grade source shape into an id->grade lookup. */
+  async loadItemGrades() {
+    if (this.itemGradesRequested) return;
+    this.itemGradesRequested = true;
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}item-grades/data.json`);
+      const byGrade: Record<string, number[]> = await response.json();
+      const grades: Record<string, ItemGrade> = {};
+      for (const [gradeIndex, itemIds] of Object.entries(byGrade)) {
+        for (const id of itemIds) {
+          grades[id] = Number(gradeIndex) as ItemGrade;
+        }
+      }
+      this.setItemGrades(grades);
+    } catch {
+      this.itemGradesRequested = false;
     }
   }
 
