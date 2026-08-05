@@ -56,7 +56,10 @@ const slotKeyStyle: CSSProperties = {
   lineHeight: 1,
   color: "#d4d6c6",
   textShadow: "0 1px 1px rgba(0, 0, 0, 0.9)",
-  zIndex: 2,
+  // Above per-type overlays a caller might layer on top of the icon (e.g.
+  // the hotbar's shot auto-use glass effect, zIndex 3) -- the key label
+  // should always stay legible.
+  zIndex: 4,
   pointerEvents: "none",
   userSelect: "none",
 };

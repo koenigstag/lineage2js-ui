@@ -26,6 +26,11 @@ const AUTO_SHOT_GLASS_STYLE: CSSProperties = {
   zIndex: 3,
   pointerEvents: "none",
   backgroundColor: "rgba(255, 255, 255, 0.2)",
+  // Inner ring 2px in from the edge -- outline (not border) so it doesn't
+  // affect layout, negative offset pulls it inward instead of drawing
+  // outside the box.
+  outline: "1px solid #9a9a9a",
+  outlineOffset: -2,
 };
 
 interface ShortcutSlotProps {
