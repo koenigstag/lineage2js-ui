@@ -11,6 +11,7 @@ import { Tooltip, useTooltipTarget } from "../../core/tooltip.component";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { Paperdoll } from "./paperdoll.component";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
+import { useClickOrDoubleClick } from "../../../lib/useClickOrDoubleClick";
 import { SP_COLOR, WG_COLOR } from "../../../config/stat-colors";
 import {
   EQUIPMENT_SLOT_TYPES,
@@ -85,6 +86,30 @@ function WeightBar({ load, maxLoad }: { load: number; maxLoad: number }) {
   );
 }
 
+/**
+ * A single draggable grid cell. Its own component (not just a hook call
+ * inline in the .map() below) because useClickOrDoubleClick needs one
+ * independent timer per cell -- clicking item A then item B must never
+ * combine into a "double click".
+ */
+function InventoryGridItem({ item, onEquipToggle }: { item: L2Item; onEquipToggle: (item: L2Item) => void }) {
+  const { onClick } = useClickOrDoubleClick(() => {}, () => onEquipToggle(item));
+
+  return (
+    <div draggable onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.ITEM, item.ObjectId)} onClick={onClick}>
+      <ItemSlot
+        id={item.Id}
+        slotType={getItemSlotType(item)}
+        count={item.Count}
+        grade={getItemGradeLabel(item)}
+        isEquipped={item.IsEquipped}
+        detail="full"
+        // iconBorder={INVENTORY_ICON_BORDER}
+      />
+    </div>
+  );
+}
+
 export const InventoryContent = observer(function InventoryContent() {
   const game = useGameStore();
   const session = useSessionStore();
@@ -104,13 +129,14 @@ export const InventoryContent = observer(function InventoryContent() {
     return game.inventoryItems.find((item) => item.ObjectId === payload.targetId);
   }
 
-  // Double-click toggles equip/unequip via UseItem (opcode 0x19, retail's
-  // own mechanism -- there's no separate RequestEquipItem, see
-  // ClientCommands.ts's useItem() comment). Server decides based on the
-  // item's current isEquipped(), so this same call works whether the item
-  // is worn or not -- only gated to equipable slot types here so
-  // double-clicking a potion in the grid doesn't accidentally consume it
-  // (that's a different, not-yet-built "use consumable" feature).
+  // Double-click (see InventoryGridItem's useClickOrDoubleClick) toggles
+  // equip/unequip via UseItem (opcode 0x19, retail's own mechanism -- there's
+  // no separate RequestEquipItem, see ClientCommands.ts's useItem() comment).
+  // Server decides based on the item's current isEquipped(), so this same
+  // call works whether the item is worn or not -- only gated to equipable
+  // slot types here so double-clicking a potion in the grid doesn't
+  // accidentally consume it (that's a different, not-yet-built "use
+  // consumable" feature).
   function handleItemDoubleClick(item: L2Item) {
     if (!EQUIPMENT_SLOT_TYPES.has(getItemSlotType(item))) return;
     session.client.useItem(item);
@@ -190,24 +216,7 @@ export const InventoryContent = observer(function InventoryContent() {
             if (!item) {
               return <Slot key={`empty-${index}`} type="inventory" />;
             }
-            return (
-              <div
-                key={`item-${item.ObjectId}`}
-                draggable
-                onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.ITEM, item.ObjectId)}
-                onDoubleClick={() => handleItemDoubleClick(item)}
-              >
-                <ItemSlot
-                  id={item.Id}
-                  slotType={getItemSlotType(item)}
-                  count={item.Count}
-                  grade={getItemGradeLabel(item)}
-                  isEquipped={item.IsEquipped}
-                  detail="full"
-                  // iconBorder={INVENTORY_ICON_BORDER}
-                />
-              </div>
-            );
+            return <InventoryGridItem key={`item-${item.ObjectId}`} item={item} onEquipToggle={handleItemDoubleClick} />;
           })}
         </div>
         </div>

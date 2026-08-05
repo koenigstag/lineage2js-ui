@@ -1,9 +1,11 @@
 import { observer } from "mobx-react-lite";
+import type { ReactNode } from "react";
 import type { L2Item } from "@lineage2js/network";
 import { Slot } from "../core/slot.component";
 import { ItemSlot } from "../core/item-slot.component";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { getItemSlotType, getItemGradeLabel } from "../../../config/item-mapping";
+import { useClickOrDoubleClick } from "../../../lib/useClickOrDoubleClick";
 import {
   PAPERDOLL_BLOCKS,
   getEquippedItemsBySlot,
@@ -48,6 +50,18 @@ function HennaSlots() {
       ))}
     </div>
   );
+}
+
+/**
+ * Wraps an equipped paperdoll slot's content with click-vs-double-click
+ * resolution -- its own component (not just a hook call inline in
+ * renderSection's .map()) because useClickOrDoubleClick needs one
+ * independent timer per cell; clicking slot A then slot B must never
+ * combine into a "double click".
+ */
+function PaperdollItemCell({ children, onUnequip }: { children: ReactNode; onUnequip: () => void }) {
+  const { onClick } = useClickOrDoubleClick(() => {}, onUnequip);
+  return <div onClick={onClick}>{children}</div>;
 }
 
 export const Paperdoll = observer(function Paperdoll() {
@@ -128,10 +142,16 @@ function renderSection(
             <Slot type="inventory" size={slotSize} />
           );
 
-          // Double-click, same trigger as the inventory grid's equip toggle
-          // (inventory.window.tsx) -- a single click would fire on every
-          // hover-to-inspect click, unequipping by accident.
-          const clickable = item ? <div onDoubleClick={() => onUnequip(slotKey, item)}>{content}</div> : content;
+          // Double-click to unequip, same trigger as the inventory grid's
+          // equip toggle -- a single click would fire on every hover-to-inspect
+          // click, unequipping by accident. Resolved via useClickOrDoubleClick
+          // (single click is a no-op for now -- no per-item click action exists
+          // yet) rather than the native onDoubleClick event.
+          const clickable = item ? (
+            <PaperdollItemCell onUnequip={() => onUnequip(slotKey, item)}>{content}</PaperdollItemCell>
+          ) : (
+            content
+          );
 
           if (slotKey === "hair1") {
             return (
