@@ -115,6 +115,14 @@ function renderSection(
             );
           }
 
+          // Hidden for now -- no real second-bracelet content to show yet,
+          // see PAPERDOLL_BLOCKS' comment (lbracelet already covers the
+          // agathion slot). display:none rather than dropping the block
+          // entirely so the layout/data plumbing stays in place to re-enable.
+          if (slotKey === "rbracelet") {
+            return <div key={slotKey} style={{ display: "none" }}>{content}</div>;
+          }
+
           return <div key={slotKey}>{content}</div>;
         })
       )}
