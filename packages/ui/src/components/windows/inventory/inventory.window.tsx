@@ -116,14 +116,15 @@ export const InventoryContent = observer(function InventoryContent() {
 
   // RequestDestroyItem (opcode 0x60) -- confirmed against lineage2ts as a
   // genuinely separate action/packet from dropItem (ground) and sellItem
-  // (needs an NPC shop session), see CommandDestroyItem.ts.
+  // (needs an NPC shop session), see CommandDestroyItem.ts. No IsConnected
+  // guard needed here -- every client.xxx() command (including this one)
+  // goes through ClientCommands' Proxy dispatcher, which already skips
+  // execute() entirely while disconnected (AbstractGameCommand.requiresGameConnection).
   async function handleDeleteDrop(payload: HotbarDragPayload) {
     const item = resolveDroppedItem(payload);
     if (!item) return;
     if (!(await confirm(t("inventory.deleteConfirm", { name: getItemName(item) })))) return;
-    if (session.client.GameClient.IsConnected) {
-      session.client.destroyItem(item.ObjectId, item.Count);
-    }
+    session.client.destroyItem(item.ObjectId, item.Count);
   }
 
   return (
