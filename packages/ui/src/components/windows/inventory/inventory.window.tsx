@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { ShortcutType, ItemType2, type L2Item } from "@lineage2js/network";
-import { Slot, type IconBorder } from "../core/slot.component";
+import { Slot } from "../core/slot.component";
 import { ItemSlot } from "../core/item-slot.component";
 import { DnDButton } from "../core/dnd-button.component";
 import { setHotbarDragPayload, type HotbarDragPayload } from "../core/dnd";
@@ -48,8 +48,6 @@ const GRID_ROWS = 20;
 const VISIBLE_ROWS = 10;
 const SLOT_SIZE = 34;
 const SLOT_GAP = 2;
-
-// const INVENTORY_ICON_BORDER: IconBorder = { from: "#2a170c", to: "#2a170c" };
 
 // Adena/Weight bars sit together in one 150px-wide block, wrapped together
 // with the delete slot into one flex item so the outer row's space-between
@@ -104,7 +102,6 @@ function InventoryGridItem({ item, onEquipToggle }: { item: L2Item; onEquipToggl
         grade={getItemGradeLabel(item)}
         isEquipped={item.IsEquipped}
         detail="full"
-        // iconBorder={INVENTORY_ICON_BORDER}
       />
     </div>
   );
