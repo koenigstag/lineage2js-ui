@@ -104,6 +104,18 @@ export const InventoryContent = observer(function InventoryContent() {
     return game.inventoryItems.find((item) => item.ObjectId === payload.targetId);
   }
 
+  // Double-click toggles equip/unequip via UseItem (opcode 0x19, retail's
+  // own mechanism -- there's no separate RequestEquipItem, see
+  // ClientCommands.ts's useItem() comment). Server decides based on the
+  // item's current isEquipped(), so this same call works whether the item
+  // is worn or not -- only gated to equipable slot types here so
+  // double-clicking a potion in the grid doesn't accidentally consume it
+  // (that's a different, not-yet-built "use consumable" feature).
+  function handleItemDoubleClick(item: L2Item) {
+    if (!EQUIPMENT_SLOT_TYPES.has(getItemSlotType(item))) return;
+    session.client.useItem(item);
+  }
+
   // No RequestSellItem is sent yet -- it needs a live NPC shop session
   // (listId) this client has no shop window/state for. Confirming just
   // closes the modal for now; wiring the real sell packet is future work
@@ -183,6 +195,7 @@ export const InventoryContent = observer(function InventoryContent() {
                 key={`item-${item.ObjectId}`}
                 draggable
                 onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.ITEM, item.ObjectId)}
+                onDoubleClick={() => handleItemDoubleClick(item)}
               >
                 <ItemSlot
                   id={item.Id}

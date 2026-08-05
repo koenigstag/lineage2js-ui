@@ -49,6 +49,7 @@ import CommandSelectServer from "./CommandSelectServer";
 import CommandShout from "./CommandShout";
 import CommandSitStand from "./CommandSitStand";
 import CommandTell from "./CommandTell";
+import CommandUnEquipItem from "./CommandUnEquipItem";
 import CommandUseItem from "./CommandUseItem";
 import CommandValidatePosition from "./CommandValidatePosition";
 
@@ -105,6 +106,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   shout: CommandShout.prototype,
   sitStand: CommandSitStand.prototype,
   tell: CommandTell.prototype,
+  unequipItem: CommandUnEquipItem.prototype,
   useItem: CommandUseItem.prototype,
   validatePosition: CommandValidatePosition.prototype,
 

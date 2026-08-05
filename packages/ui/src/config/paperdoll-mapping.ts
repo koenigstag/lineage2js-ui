@@ -152,6 +152,37 @@ function assignNextFree<T>(
  * in, so equipped ones are assigned to the next free cell in inventory order
  * until a real per-instance slot-index field is available.
  */
+// Single-side slot bits for unequipping specifically (RequestUnEquipItem's
+// wire field, an L2ItemSlots value) -- an equipped earring/ring's own
+// BodyPart is always the shared ambiguous SLOT_LR_EAR/SLOT_LR_FINGER value
+// (see getEquippedItemsBySlot's comment), but lineage2ts's server tracks
+// each physical one in its own specific InventorySlot.LeftEar/RightEar/...
+// (confirmed against its models/itemcontainer/Inventory.ts's setPaperdollItem
+// calls), so unequipping has to name the resolved side, matching whichever
+// cell it's actually rendered in here, or the server can't tell which one.
+const UNEQUIP_SLOT_OVERRIDES: Partial<Record<PaperdollSlotKey, number>> = {
+  rear: L2Item.SLOT_R_EAR,
+  lear: L2Item.SLOT_L_EAR,
+  rfinger: L2Item.SLOT_R_FINGER,
+  lfinger: L2Item.SLOT_L_FINGER,
+};
+
+/**
+ * Resolves the RequestUnEquipItem slot value for an equipped paperdoll cell.
+ * Returns undefined for the 6 decor/talisman cells specifically: they all
+ * share one BodyPart (SLOT_DECO) with no per-cell wire value at all (unlike
+ * ears/fingers, L2ItemSlots has no Decoration1..6), so RequestUnEquipItem
+ * can't unambiguously target just one of several equipped talismans --
+ * callers should fall back to useItem(item) instead, which targets an exact
+ * objectId regardless of slot ambiguity.
+ */
+export function getUnequipSlot(slotKey: PaperdollSlotKey, item: { BodyPart: number }): number | undefined {
+  if (slotKey.startsWith("decor")) {
+    return undefined;
+  }
+  return UNEQUIP_SLOT_OVERRIDES[slotKey] ?? item.BodyPart;
+}
+
 export function getEquippedItemsBySlot<T extends { IsEquipped: boolean; BodyPart: number }>(
   items: T[]
 ): Partial<Record<PaperdollSlotKey, T>> {

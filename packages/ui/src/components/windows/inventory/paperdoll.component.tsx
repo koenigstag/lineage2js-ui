@@ -2,9 +2,15 @@ import { observer } from "mobx-react-lite";
 import type { L2Item } from "@lineage2js/network";
 import { Slot } from "../core/slot.component";
 import { ItemSlot } from "../core/item-slot.component";
-import { useGameStore } from "../../../stores/StoreContext";
+import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { getItemSlotType, getItemGradeLabel } from "../../../config/item-mapping";
-import { PAPERDOLL_BLOCKS, getEquippedItemsBySlot, type PaperdollSection, type PaperdollSlotKey } from "../../../config/paperdoll-mapping";
+import {
+  PAPERDOLL_BLOCKS,
+  getEquippedItemsBySlot,
+  getUnequipSlot,
+  type PaperdollSection,
+  type PaperdollSlotKey,
+} from "../../../config/paperdoll-mapping";
 
 const SLOT_SIZE = 34;
 const COLUMN_GAP = 10;
@@ -46,7 +52,22 @@ function HennaSlots() {
 
 export const Paperdoll = observer(function Paperdoll() {
   const game = useGameStore();
+  const session = useSessionStore();
   const equippedBySlot = getEquippedItemsBySlot(game.inventoryItems);
+
+  // Click an equipped cell to take it off. Prefers the real RequestUnEquipItem
+  // packet (matches the retail client's paperdoll-click behavior), except for
+  // decor/talisman slots, which have no per-cell wire value to send (see
+  // getUnequipSlot's comment) -- those fall back to useItem's equip toggle,
+  // which targets the exact objectId instead of an ambiguous shared slot.
+  function handleUnequip(slotKey: PaperdollSlotKey, item: L2Item) {
+    const slot = getUnequipSlot(slotKey, item);
+    if (slot === undefined) {
+      session.client.useItem(item);
+    } else {
+      session.client.unequipItem(slot);
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: SECTION_GAP, flexShrink: 0, padding: PADDING }}>
@@ -63,7 +84,7 @@ export const Paperdoll = observer(function Paperdoll() {
             padding: bordered ? BLOCK_BORDER_PADDING : undefined,
           }}
         >
-          {sections.map((section, sectionIndex) => renderSection(section, sectionIndex, equippedBySlot))}
+          {sections.map((section, sectionIndex) => renderSection(section, sectionIndex, equippedBySlot, handleUnequip))}
         </div>
       ))}
     </div>
@@ -73,7 +94,8 @@ export const Paperdoll = observer(function Paperdoll() {
 function renderSection(
   { rows, slotSize = SLOT_SIZE, columnGap = COLUMN_GAP, center }: PaperdollSection,
   sectionIndex: number,
-  equippedBySlot: Partial<Record<PaperdollSlotKey, L2Item>>
+  equippedBySlot: Partial<Record<PaperdollSlotKey, L2Item>>,
+  onUnequip: (slotKey: PaperdollSlotKey, item: L2Item) => void
 ) {
   return (
     <div
@@ -106,10 +128,15 @@ function renderSection(
             <Slot type="inventory" size={slotSize} />
           );
 
+          // Double-click, same trigger as the inventory grid's equip toggle
+          // (inventory.window.tsx) -- a single click would fire on every
+          // hover-to-inspect click, unequipping by accident.
+          const clickable = item ? <div onDoubleClick={() => onUnequip(slotKey, item)}>{content}</div> : content;
+
           if (slotKey === "hair1") {
             return (
               <div key={slotKey} style={{ position: "relative" }}>
-                {content}
+                {clickable}
                 <HennaSlots />
               </div>
             );
@@ -120,10 +147,10 @@ function renderSection(
           // agathion slot). display:none rather than dropping the block
           // entirely so the layout/data plumbing stays in place to re-enable.
           if (slotKey === "rbracelet") {
-            return <div key={slotKey} style={{ display: "none" }}>{content}</div>;
+            return <div key={slotKey} style={{ display: "none" }}>{clickable}</div>;
           }
 
-          return <div key={slotKey}>{content}</div>;
+          return <div key={slotKey}>{clickable}</div>;
         })
       )}
     </div>

@@ -216,10 +216,24 @@ export default interface ClientCommands {
    */
   inventory(): void;
   /**
-   * Use an item. Accepts L2Item object or ObjectId
+   * Use an item (RequestUseItem, opcode 0x19). Also how equipping works --
+   * there's no separate equip packet (RequestEquipItem is a server-side
+   * no-op on lineage2ts); the server toggles equip state based on the
+   * item's current isEquipped(). Accepts L2Item object or ObjectId.
    * @param item
    */
   useItem(item: L2Item | number): void;
+  /**
+   * Unequip whatever's in the given paperdoll slot (RequestUnEquipItem,
+   * opcode 0x16) -- a genuinely separate packet from useItem's equip
+   * toggle. Takes a slot bitmask, not an item objectId (L2ItemSlots,
+   * numerically identical to L2Item.SLOT_*) -- for the ear/finger slots,
+   * that must be the resolved single-side bit (SLOT_R_EAR/SLOT_L_EAR/...),
+   * not the item's own ambiguous SLOT_LR_EAR/SLOT_LR_FINGER BodyPart, since
+   * the server tracks each physical earring/ring in its own specific slot.
+   * @param slot
+   */
+  unequipItem(slot: number): void;
   /**
    * Request player a duel. If no char is provided, the command tries to request the selected target
    * @param char
