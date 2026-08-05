@@ -12,7 +12,7 @@ import { getItemSlotType, getItemGradeLabel, isShotItem } from "../../../config/
 /**
  * "Glass" overlay for a shot slot with auto-use (RequestAutoSoulShot)
  * toggled on -- see GameStore.toggleAutoShot, hotbar's RMB handler. A flat
- * white layer at 20% opacity composited on top of the icon, not a CSS
+ * black layer at 10% opacity composited on top of the icon, not a CSS
  * filter: filter operates on the whole element (icon, count badge, border)
  * uniformly, whereas a separate absolutely-positioned layer composites
  * cleanly over everything already drawn and stays out of the slot's own
@@ -35,7 +35,7 @@ const AUTO_SHOT_GLASS_STYLE: CSSProperties = {
   zIndex: 3,
   pointerEvents: "none",
   boxSizing: "border-box",
-  backgroundColor: "rgba(255, 255, 255, 0.2)",
+  backgroundColor: "rgba(0, 0, 0, 0.1)",
   // Top/left and bottom/right each get a slightly different shade from its
   // pair partner (not just light-vs-dark) so the miter seam at each corner
   // reads as a visible cut instead of the two same-colored edges blending
