@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { GEO_REGION_SIZE, GEO_TILE_CELLS, GEO_TILE_SIZE, getGeodataRegionUrl } from "../../config/geodata";
+import {
+  GEO_REGION_SIZE,
+  GEO_REGION_ZERO_TILE_X,
+  GEO_REGION_ZERO_TILE_Y,
+  GEO_TILE_CELLS,
+  GEO_TILE_SIZE,
+  getGeodataRegionUrl,
+} from "../../config/geodata";
 import { parseL2jRegion } from "./l2j-region-parser";
 import { sliceGeoTile } from "./slice-geo-tile";
 import { tileKey, worldToTileCoords } from "./world-to-tile";
@@ -25,7 +32,10 @@ interface UseGeoTilesOptions {
 const TILES_PER_REGION_SIDE = GEO_REGION_SIZE / GEO_TILE_SIZE;
 
 function tileToRegionCoords(tileX: number, tileY: number): [regionX: number, regionY: number] {
-  return [Math.floor(tileX / TILES_PER_REGION_SIDE), Math.floor(tileY / TILES_PER_REGION_SIDE)];
+  return [
+    Math.floor(tileX / TILES_PER_REGION_SIDE) + GEO_REGION_ZERO_TILE_X,
+    Math.floor(tileY / TILES_PER_REGION_SIDE) + GEO_REGION_ZERO_TILE_Y,
+  ];
 }
 
 /**
@@ -54,6 +64,18 @@ export function useGeoTiles(worldX: number, worldY: number, options: UseGeoTiles
     const tileCache = tileCacheRef.current;
     const regionCache = regionCacheRef.current;
     const regionInFlight = regionInFlightRef.current;
+    // Keys *this* effect invocation added to regionInFlight (which itself
+    // lives in a ref and survives past this invocation's cleanup). Needed
+    // because React 18 StrictMode runs an effect, cleans it up, then runs it
+    // again immediately, before any fetch has had a chance to settle -- if
+    // the first invocation's still-pending fetch is left in regionInFlight,
+    // the second (real) invocation sees "already in flight" and skips
+    // re-fetching, while the first invocation's own result gets discarded
+    // by its own `cancelled` check once it does resolve. Net effect without
+    // this: geodata never loads at all in dev. Evicting this invocation's
+    // own entries on cleanup (only if still pending) lets the next
+    // invocation start a fresh fetch instead of waiting on a dead one.
+    const startedThisRun = new Set<string>();
 
     // Cuts out every currently-wanted tile that belongs to this region --
     // one region fetch typically satisfies several (often all) of the
@@ -74,8 +96,13 @@ export function useGeoTiles(worldX: number, worldY: number, options: UseGeoTiles
             continue;
           }
 
-          const cellOffsetX = (tileX - regionX * TILES_PER_REGION_SIDE) * GEO_TILE_CELLS;
-          const cellOffsetY = (tileY - regionY * TILES_PER_REGION_SIDE) * GEO_TILE_CELLS;
+          // regionX/regionY are raw L2J tile numbers (see tileToRegionCoords),
+          // but tileX/tileY are 0-centered on world origin -- convert the
+          // region back to that same frame before taking the local offset.
+          const regionTileBaseX = (regionX - GEO_REGION_ZERO_TILE_X) * TILES_PER_REGION_SIDE;
+          const regionTileBaseY = (regionY - GEO_REGION_ZERO_TILE_Y) * TILES_PER_REGION_SIDE;
+          const cellOffsetX = (tileX - regionTileBaseX) * GEO_TILE_CELLS;
+          const cellOffsetY = (tileY - regionTileBaseY) * GEO_TILE_CELLS;
           tileCache.set(key, sliceGeoTile(region, cellOffsetX, cellOffsetY));
           sliced = true;
         }
@@ -112,6 +139,7 @@ export function useGeoTiles(worldX: number, worldY: number, options: UseGeoTiles
         }
 
         regionInFlight.add(rKey);
+        startedThisRun.add(rKey);
         fetch(url)
           .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(`${res.status} ${url}`))))
           .then((buffer) => {
@@ -151,6 +179,9 @@ export function useGeoTiles(worldX: number, worldY: number, options: UseGeoTiles
 
     return () => {
       cancelled = true;
+      for (const key of startedThisRun) {
+        regionInFlight.delete(key);
+      }
     };
   }, [centerTileX, centerTileY, loadRadius, keepRadius, keepRegionRadius]);
 

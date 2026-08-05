@@ -28,6 +28,19 @@ export const GEO_REGION_CELLS = GEO_BLOCK_CELLS * GEO_REGION_BLOCKS;
 /** World units covered by one region side. */
 export const GEO_REGION_SIZE = GEO_CELL_SIZE * GEO_REGION_CELLS;
 
+/**
+ * Raw L2J map-tile numbers whose region covers world origin (0, 0) -- e.g.
+ * region "20_18.l2j" in a real geodata pack (https://bitbucket.org/l2jgeo/l2j_geodata)
+ * is the one at world (0, 0), not "0_0.l2j". Matches L2J Mobius's own
+ * World.TILE_ZERO_COORD_X/Y. Real geodata packs are always named with these
+ * raw tile numbers (11-26 on the retail map), so region coordinates
+ * throughout this client (world-to-region.ts, use-geo-tiles.ts) bake this
+ * offset in, keeping "regionX/regionY" consistently meaning the same thing
+ * a downloaded .l2j file is actually named.
+ */
+export const GEO_REGION_ZERO_TILE_X = 20;
+export const GEO_REGION_ZERO_TILE_Y = 18;
+
 const GEODATA_REGION_BASE_URL = import.meta.env.VITE_GEODATA_REGION_BASE_URL;
 
 /** URL for the raw .l2j region file at the given region coordinates (see worldToRegionCoords). */
