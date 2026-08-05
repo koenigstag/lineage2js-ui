@@ -10,7 +10,7 @@ import { LabeledBar } from "../../core/stat-bar.component";
 import { Tooltip, useTooltipTarget } from "../../core/tooltip.component";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { Paperdoll } from "./paperdoll.component";
-import { useGameStore } from "../../../stores/StoreContext";
+import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { SP_COLOR, WG_COLOR } from "../../../config/stat-colors";
 import {
   EQUIPMENT_SLOT_TYPES,
@@ -87,6 +87,7 @@ function WeightBar({ load, maxLoad }: { load: number; maxLoad: number }) {
 
 export const InventoryContent = observer(function InventoryContent() {
   const game = useGameStore();
+  const session = useSessionStore();
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [search, setSearch] = useState("");
   const { confirm, modal } = useConfirmation();
@@ -113,13 +114,16 @@ export const InventoryContent = observer(function InventoryContent() {
     await confirm(t("inventory.sellConfirm", { name: getItemName(item) }));
   }
 
-  // No destroy-item packet exists in the network layer yet (only
-  // RequestDropItem, which drops on the ground -- a different action).
-  // Confirming just closes the modal for now.
+  // RequestDestroyItem (opcode 0x60) -- confirmed against lineage2ts as a
+  // genuinely separate action/packet from dropItem (ground) and sellItem
+  // (needs an NPC shop session), see CommandDestroyItem.ts.
   async function handleDeleteDrop(payload: HotbarDragPayload) {
     const item = resolveDroppedItem(payload);
     if (!item) return;
-    await confirm(t("inventory.deleteConfirm", { name: getItemName(item) }));
+    if (!(await confirm(t("inventory.deleteConfirm", { name: getItemName(item) })))) return;
+    if (session.client.GameClient.IsConnected) {
+      session.client.destroyItem(item.ObjectId, item.Count);
+    }
   }
 
   return (

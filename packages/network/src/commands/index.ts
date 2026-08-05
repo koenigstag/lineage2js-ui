@@ -17,6 +17,7 @@ import CommandDeclineDuel from "./CommandDeclineDuel";
 import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
 import CommandDeclineResurrect from "./CommandDeclineResurrect";
 import CommandDeclineTradeRequest from "./CommandDeclineTradeRequest";
+import CommandDestroyItem from "./CommandDestroyItem";
 import CommandDismissPartyMember from "./CommandDismissPartyMember";
 import CommandDropItem from "./CommandDropItem";
 import CommandDwarvenCraftRecipes from "./CommandDwarvenCraftRecipes";
@@ -72,6 +73,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   declineJoinParty: CommandDeclineJoinParty.prototype,
   declineResurrect: CommandDeclineResurrect.prototype,
   declineTradeRequest: CommandDeclineTradeRequest.prototype,
+  destroyItem: CommandDestroyItem.prototype,
   dismissPartyMember: CommandDismissPartyMember.prototype,
   dropItem: CommandDropItem.prototype,
   dwarvenCraftRecipes: CommandDwarvenCraftRecipes.prototype,

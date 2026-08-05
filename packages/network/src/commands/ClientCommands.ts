@@ -117,6 +117,14 @@ export default interface ClientCommands {
    */
   dropItem(objectId: number, count: number, x?: number, y?: number, z?: number): void;
   /**
+   * Permanently destroy an item from inventory (RequestDestroyItem, opcode
+   * 0x60) -- a genuinely separate action/packet from dropItem (0x17, leaves
+   * it on the ground) and sellItem (0x37, needs an active NPC shop session).
+   * @param objectId
+   * @param count
+   */
+  destroyItem(objectId: number, count: number): void;
+  /**
    * Hit on target. Accepts L2Object object or ObjectId
    * @param object
    * @param shift
