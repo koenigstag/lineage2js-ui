@@ -20,7 +20,7 @@ const COLUMN_GAP = 10;
 const ROW_GAP = (20 * 2) / 3; // 1/3 smaller than the original 20px row gap
 const SECTION_GAP = 20; // between top-level blocks
 const INNER_SECTION_GAP = 20; // between body/hands/accessories within their shared block -- kept equal, tuned independently of SECTION_GAP
-const PADDING = 20;
+const PADDING = 0;
 const BLOCK_BORDER_PADDING = 10;
 
 const HENNA_SLOT_SIZE = SLOT_SIZE / 2;
@@ -172,14 +172,6 @@ function renderSection(
                 <HennaSlots />
               </div>
             );
-          }
-
-          // Hidden for now -- no real second-bracelet content to show yet,
-          // see PAPERDOLL_BLOCKS' comment (lbracelet already covers the
-          // agathion slot). display:none rather than dropping the block
-          // entirely so the layout/data plumbing stays in place to re-enable.
-          if (slotKey === "rbracelet") {
-            return <div key={slotKey} style={{ display: "none" }}>{clickable}</div>;
           }
 
           return <div key={slotKey}>{clickable}</div>;

@@ -82,15 +82,14 @@ export const PAPERDOLL_BLOCKS: PaperdollBlock[] = [
     bordered: true,
   },
   {
-    // decor + lbracelet (the agathion slot) share one bordered block
+    // decor + bracelets (lbracelet doubles as the agathion slot) share one bordered block
     sections: [
       { rows: [["decor1", "decor2", "decor3", "decor4", "decor5", "decor6"]], slotSize: DECOR_SLOT_SIZE, columnGap: DECOR_COLUMN_GAP },
-      { rows: [["lbracelet"]], center: true },
+      { rows: [["lbracelet", "rbracelet"]], columnGap: ACCESSORY_COLUMN_GAP, center: true },
     ],
     bordered: true,
     extraGapBefore: 5,
   },
-  { sections: [{ rows: [["rbracelet"]] }] },
 ];
 
 /**
