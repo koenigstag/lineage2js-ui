@@ -9,23 +9,33 @@ import { useGameStore } from "../../../stores/StoreContext";
 import { resolveShortcutItem, resolveShortcutSkill, getShortcutFallbackContent } from "../../../config/shortcut-mapping";
 import { getItemSlotType, getItemGradeLabel, isShotItem } from "../../../config/item-mapping";
 
-/** Border shown on a shot's icon while its auto-use (RequestAutoSoulShot) is toggled on -- see GameStore.toggleAutoShot, hotbar's RMB handler. */
-const AUTO_SHOT_ICON_BORDER: IconBorder = { from: "#9a9a9a", to: "#9a9a9a" };
-
 /**
- * "Glass" overlay for a shot slot with auto-use active -- a flat white
- * layer at 20% opacity composited on top of the icon, not a CSS filter:
- * filter operates on the whole element (icon, count badge, border)
+ * "Glass" overlay for a shot slot with auto-use (RequestAutoSoulShot)
+ * toggled on -- see GameStore.toggleAutoShot, hotbar's RMB handler. A flat
+ * white layer at 20% opacity composited on top of the icon, not a CSS
+ * filter: filter operates on the whole element (icon, count badge, border)
  * uniformly, whereas a separate absolutely-positioned layer composites
  * cleanly over everything already drawn and stays out of the slot's own
  * click/drag handlers via pointer-events: none.
+ *
+ * The outer border is a bevel (gray top/left, dark bottom/right, like a
+ * sunken lens) -- real per-side CSS border rather than the shared
+ * IconBorder gradient (IconFrame's borderFrom/borderTo is a single 90deg
+ * 2-stop gradient, it can't express 4 independent side colors), boxSizing
+ * border-box so it draws inward within the icon's own box instead of
+ * growing it.
  */
 const AUTO_SHOT_GLASS_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   zIndex: 3,
   pointerEvents: "none",
+  boxSizing: "border-box",
   backgroundColor: "rgba(255, 255, 255, 0.2)",
+  borderTop: "1px solid #b5b5b5",
+  borderLeft: "1px solid #b5b5b5",
+  borderBottom: "1px solid #3a3a3a",
+  borderRight: "1px solid #3a3a3a",
   // Inner ring 2px in from the edge -- outline (not border) so it doesn't
   // affect layout, negative offset pulls it inward instead of drawing
   // outside the box.
@@ -87,7 +97,7 @@ export const ShortcutSlot = observer(function ShortcutSlot({ slotKey, shortcut, 
           detail="short"
           slotKey={slotKey}
           pressed={pressed}
-          iconBorder={autoActive ? AUTO_SHOT_ICON_BORDER : iconBorder}
+          iconBorder={iconBorder}
         />
       );
       if (!autoActive) {
