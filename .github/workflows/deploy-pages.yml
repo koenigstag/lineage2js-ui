@@ -39,6 +39,15 @@ jobs:
           VITE_ITEM_ICON_BASE_URL: ${{ vars.VITE_ITEM_ICON_BASE_URL }}
           VITE_ACTION_ICON_BASE_URL: ${{ vars.VITE_ACTION_ICON_BASE_URL }}
           VITE_CLASS_ICON_BASE_URL: ${{ vars.VITE_CLASS_ICON_BASE_URL }}
+          VITE_LOGIN_SERVER_IP: ${{ vars.VITE_LOGIN_SERVER_IP }}
+          VITE_LOGIN_SERVER_PORT: ${{ vars.VITE_LOGIN_SERVER_PORT }}
+          VITE_LOGIN_SERVER_SECURE: ${{ vars.VITE_LOGIN_SERVER_SECURE }}
+          # Unused by main's code yet -- this repo still decodes raw .l2j
+          # regions client-side (VITE_GEODATA_REGION_BASE_URL) here; the
+          # pre-baked tile pipeline this var feeds is only on the
+          # claude/l2j-geodata-wireframe branch/PR. Passed through already so
+          # nothing else needs to change here once that merges.
+          VITE_GEODATA_TILE_BASE_URL: ${{ vars.VITE_GEODATA_TILE_BASE_URL }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
