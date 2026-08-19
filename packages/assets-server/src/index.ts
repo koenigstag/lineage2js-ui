@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.PORT ?? 4000);
+const HOST = process.env.HOST ?? "127.0.0.1";
 const ASSETS_DIR = process.env.ASSETS_DIR ?? path.join(__dirname, "../assets");
 // Browser trusts its cached copy for this long, then re-validates with a
 // conditional GET (If-None-Match) instead of blindly re-downloading or
@@ -59,6 +60,6 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Assets server listening on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Assets server listening on http://${HOST}:${PORT}`);
 });
