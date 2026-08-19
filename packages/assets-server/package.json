@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node --env-file-if-exists=.env dist/index.js",
     "generate:geodata": "tsx scripts/generate-geodata.ts",
     "lint": "eslint src/**",
     "clean": "rm -rf dist"
