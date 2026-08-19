@@ -6,6 +6,7 @@ import { useConfirmation } from "../../core/confirmation-modal";
 import { useAlert } from "../../core/alert-modal";
 import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { DEV_LOGIN_CREDENTIALS } from "../../../config/env";
 import { t } from "../../../lang/lang";
 
 export interface LoginMenuHandle {
@@ -19,8 +20,8 @@ export interface LoginMenuProps {
 export const LoginMenu = observer(
   forwardRef<LoginMenuHandle, LoginMenuProps>(function LoginMenu({ onLoginSuccess }, ref) {
     const session = useSessionStore();
-    const [account, setAccount] = useState("");
-    const [password, setPassword] = useState("");
+    const [account, setAccount] = useState(DEV_LOGIN_CREDENTIALS?.username ?? "");
+    const [password, setPassword] = useState(DEV_LOGIN_CREDENTIALS?.password ?? "");
     const { confirm, modal } = useConfirmation();
     const { alert, modal: alertModal } = useAlert();
 
