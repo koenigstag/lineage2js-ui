@@ -67,22 +67,6 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
           onSelect={(id) => game.selectCharacter(id)}
         />
 
-        {selectedCharacter && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: 84,
-              left: "50%",
-              transform: "translateX(-50%)",
-              color: "#e8dfc8",
-              fontSize: 18,
-              textShadow: "0 1px 4px #000000",
-            }}
-          >
-            {selectedCharacter.nickname}
-          </div>
-        )}
-
         <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)" }}>
           <BaseButton onClick={handleEnterWorld} disabled={!selectedCharacter || session.isConnecting}>
             <span style={{ fontSize: 20, padding: "4px 24px", display: "inline-block" }}>

@@ -14,10 +14,30 @@ interface ImportMetaEnv {
   readonly VITE_LOGIN_BACKGROUND_IMAGE_BASE_URL: string;
   /** e.g. "http://localhost:4000/legacy/videos/titlescreens/{id}.mp4" -- same "{id}" + "count" endpoint convention as the image variant. */
   readonly VITE_LOGIN_BACKGROUND_VIDEO_BASE_URL: string;
-  /** e.g. "http://localhost:4000/geodata/{regionX}_{regionY}.l2j" -- raw L2J geodata region file, "{regionX}"/"{regionY}" get replaced with the region's coordinates. Sliced into the smaller streaming tile unit in memory, see l2j-region-parser.ts. */
-  readonly VITE_GEODATA_REGION_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/geodata-tiles/{tileX}_{tileY}.bin" -- pre-baked geodata tile (see assets-server/scripts/convert-l2j-geodata.ts), "{tileX}"/"{tileY}" get replaced with the tile's coordinates. Deserialized directly, see geo-tile-parser.ts. */
+  readonly VITE_GEODATA_TILE_BASE_URL: string;
   /** @lineage2js/network Logger verbosity bitmask (NONE=0, INFO=1, WARNING=2, ERROR=4, DEBUG=8). Defaults to INFO. */
   readonly VITE_L2JSC_LOG_LEVEL: string;
+  /**
+   * "true" to seed GameStore with fake placeholder data (inventory, skills,
+   * party, char stats, hotbar, ...) so every window has something to show
+   * with no server connection -- useful for UI development/screenshots.
+   * Unset/anything else: GameStore starts empty/neutral, so real network
+   * testing never shows demo data mixed in with real server data. See
+   * config/env.ts's IS_DEMO_MODE.
+   */
+  readonly VITE_IS_DEMO_MODE: string;
+  /**
+   * Local dev convenience only -- prefills the login form (never
+   * auto-submits) so a test account doesn't need retyping on every reload.
+   * Only read in dev (import.meta.env.DEV) -- see config/env.ts's
+   * DEV_LOGIN_CREDENTIALS, stripped entirely from a production build. Never
+   * set a real password in a committed file; both .env and .env.local are
+   * gitignored, but keep this in .env.local specifically so it can't ever
+   * accidentally end up in a shared .env someone copies around.
+   */
+  readonly VITE_DEV_LOGIN_USERNAME: string;
+  readonly VITE_DEV_LOGIN_PASSWORD: string;
   /** L2 login server host, e.g. "127.0.0.1". Defaults to 127.0.0.1 if unset. */
   readonly VITE_LOGIN_SERVER_IP: string;
   /** L2 login server port, e.g. "2106". Defaults to 2106 if unset. */

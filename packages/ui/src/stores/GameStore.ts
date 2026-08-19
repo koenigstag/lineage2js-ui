@@ -19,6 +19,7 @@ import {
   PartyDistributionType,
   Actions,
   type Client,
+  type L2User,
   type ESystemMessage,
   type ECreatureSay,
   type EDie,
@@ -29,6 +30,7 @@ import {
   type ERequestedDuel,
   type EPairActionRequest,
 } from "@lineage2js/network";
+import { IS_DEMO_MODE } from "../config/env";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
@@ -66,11 +68,48 @@ export interface WorldCreatureSnapshot {
   // right visual via getPlayerVisualFromVariant, same as char-select/char-create.
   baseClass?: BaseClass;
   sex?: SexNames;
+  // Current move segment, for per-frame client-side interpolation (see
+  // GameCreaturesField) instead of snapping to wherever this snapshot's
+  // x/y/z happened to land on the last 150ms poll (see
+  // L2Creature.setMovingTo's own field comment for why -- this class's x/y/z
+  // already move in coarse ~100ms steps, too sparse to look smooth at
+  // 60fps). undefined fields below mean "not currently moving" -- render
+  // x/y/z as-is in that case, they're already the resting position.
+  isMoving: boolean;
+  moveFrom?: { x: number; y: number; z: number };
+  moveTo?: { x: number; y: number; z: number };
+  /** Date.now() epoch ms when the current move segment started. */
+  moveStartedAt?: number;
+  /** World units/second, for interpolating along moveFrom -> moveTo. */
+  speed?: number;
 }
 
 export const MAX_CHARACTERS = 7;
 
 const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + page*12 addressing
+
+// Rough melee-range constant -- no per-weapon attack-range stat is parsed
+// client-side yet (same gap as the rest of equipped-weapon data, see
+// TODO.md's "Equipped armor/weapon visuals"), so this stands in for real
+// melee reach (collision radii + a small buffer) until that exists. Ranged
+// weapons (bow/etc, real range ~500-900) aren't accounted for -- everything
+// queued via queueActionInRange uses this same distance for now.
+const MELEE_ATTACK_RANGE = 40;
+
+/**
+ * A single queued "walk into range, then do X" intent (see
+ * queueActionInRange) -- the client-side equivalent of what the real L2
+ * client does when you click Attack (or interact/pick up) on something out
+ * of reach: it doesn't reject the action, it walks you there first. Only
+ * one at a time; queuing a new one (or picking a new target -- see
+ * clearTarget/selectTarget/selectSelfAsTarget/selectCreatureAsTarget)
+ * replaces/cancels whatever was pending.
+ */
+interface PendingAction {
+  targetId: number;
+  range: number;
+  onArrive: () => void;
+}
 
 // ExDuelAskStart carries no expiry field on the wire -- the real client
 // still shows a countdown on the duel-request popup (unlike party/trade
@@ -221,6 +260,60 @@ function createDemoCharInfo(): CharInfoSnapshot {
     hennaInt: 0,
     hennaWit: 0,
     hennaMen: 1,
+  };
+}
+
+// Neutral starting point outside demo mode (see IS_DEMO_MODE) -- zeroed
+// rather than createDemoCharInfo()'s fake numbers, so a real session's
+// UserInfo/StatusUpdate fills every field in from a clean slate instead of
+// papering over a fake one. mAccuracy/mEvasion/mCritical are left unset,
+// same as a real sync (see this interface's own field comment).
+function createEmptyCharInfo(): CharInfoSnapshot {
+  return {
+    name: "",
+    level: 1,
+    cp: 0,
+    maxCp: 0,
+    hp: 0,
+    maxHp: 0,
+    mp: 0,
+    maxMp: 0,
+    vitalityPercent: 0,
+    sp: 0,
+    recommLeft: 0,
+    title: "",
+    className: "",
+    clanId: 0,
+    expPercent: 0,
+    load: 0,
+    maxLoad: 0,
+    recommHave: 0,
+    fame: 0,
+    karma: 0,
+    pvpKills: 0,
+    pkKills: 0,
+    pAtk: 0,
+    pDef: 0,
+    accuracy: 0,
+    evasion: 0,
+    critical: 0,
+    atkSpd: 0,
+    speed: 0,
+    mAtk: 0,
+    mDef: 0,
+    castingSpd: 0,
+    str: 0,
+    dex: 0,
+    con: 0,
+    int: 0,
+    wit: 0,
+    men: 0,
+    hennaStr: 0,
+    hennaDex: 0,
+    hennaCon: 0,
+    hennaInt: 0,
+    hennaWit: 0,
+    hennaMen: 0,
   };
 }
 
@@ -546,6 +639,8 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
         ? "summon"
         : "npc";
 
+  const isMoving = creature.IsMoving && creature.MoveStartedAt !== undefined;
+
   return {
     objectId: creature.ObjectId,
     name: creature instanceof L2Character ? creature.Name : creature.Name || getNpcName(creature.Id, isAttackable),
@@ -558,6 +653,11 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
     race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,
+    isMoving,
+    moveFrom: isMoving ? { x: creature.MoveFromX!, y: creature.MoveFromY!, z: creature.MoveFromZ! } : undefined,
+    moveTo: isMoving ? { x: creature.Dx, y: creature.Dy, z: creature.Dz } : undefined,
+    moveStartedAt: isMoving ? creature.MoveStartedAt : undefined,
+    speed: isMoving ? creature.CurrentSpeed : undefined,
   };
 }
 
@@ -707,20 +807,27 @@ export class GameStore {
   me: number | undefined = undefined;
   /** ObjectId of the character highlighted on the char-select screen. */
   selectedCharacterId: number | undefined = undefined;
-  inventoryItems: L2Item[] = createDemoInventory();
-  hotbarSlots: (L2Shortcut | undefined)[] = createDemoHotbarShortcuts(this.inventoryItems);
-  skills: L2Skill[] = createDemoSkills();
-  buffs: L2Buff[] = createDemoBuffs();
+  inventoryItems: L2Item[] = IS_DEMO_MODE ? createDemoInventory() : [];
+  hotbarSlots: (L2Shortcut | undefined)[] = IS_DEMO_MODE
+    ? createDemoHotbarShortcuts(this.inventoryItems)
+    : new Array(HOTBAR_SLOT_COUNT).fill(undefined);
+  skills: L2Skill[] = IS_DEMO_MODE ? createDemoSkills() : [];
+  buffs: L2Buff[] = IS_DEMO_MODE ? createDemoBuffs() : [];
   /** Healing-potion reuse-cooldown icon, see ShortBuffStatusUpdate.ts -- a single value, not part of buffs (own row in effects.window.tsx). No demo data: no verified real skill id to fake it with. */
   shortBuff: L2Buff | undefined = undefined;
   /** Action ids the server currently allows (ExBasicActionList) -- undefined until the first one arrives, which isBasicActionAllowed() treats as "no restriction known" rather than "nothing allowed" (keeps the Actions window fully enabled offline/in demo mode). */
   basicActionIds: Set<number> | undefined = undefined;
   /** Item ids currently toggled into auto-use (RequestAutoSoulShot) -- see toggleAutoShot, hotbar's RMB handler for shot slots. Purely local UI state, mirroring what the real client tracks for the same feature (the server has no "list my auto shots" query). */
   autoShotItemIds = new Set<number>();
-  charInfo: CharInfoSnapshot = createDemoCharInfo();
-  party: L2PartyMember[] = createDemoParty();
+  charInfo: CharInfoSnapshot = IS_DEMO_MODE ? createDemoCharInfo() : createEmptyCharInfo();
+  party: L2PartyMember[] = IS_DEMO_MODE ? createDemoParty() : [];
   /** Currently selected attack/spell/buff target, if any -- see target-select window. */
   target: TargetSnapshot | undefined = undefined;
+  /** Queued "walk into range, then do X" intent, see PendingAction/queueActionInRange. */
+  pendingAction: PendingAction | undefined = undefined;
+  /** setupMoveHeartbeat's own bookkeeping, not observable/UI state -- see that method. */
+  moveHeartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  moveHeartbeatChar: L2User | undefined = undefined;
   /** True while the local player is dead, see the Die/Revive event handlers in bindToClient -- drives the death modal. */
   isPlayerDead: boolean = false;
   /** True once the game connection has dropped (graceful ServerClose or an abrupt socket loss), see bindToClient -- drives the disconnect modal. Cleared on the next successful world-enter. */
@@ -736,13 +843,13 @@ export class GameStore {
   /** Pending pair (couple) social-action request (ExAskCoupleAction -> "PairActionRequest", e.g. High Five/Exchange Bows/Couple Dance) -- drives the "pair-action-request" window. Cleared on accept/decline or the next world-enter. */
   pairActionRequest: { requesterName: string; actionId: number } | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
-  pledgeCache: Map<number, PledgeSnapshot> = createDemoPledgeCache();
+  pledgeCache: Map<number, PledgeSnapshot> = IS_DEMO_MODE ? createDemoPledgeCache() : new Map();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
   systemMessages: SystemMessageEntry[] = [];
   /** Chat log feed, see chat window and recordChatMessage/sendChatMessage. Starts empty -- populated from real CreatureSay packets, no demo placeholder. */
   chatMessages: ChatMessage[] = [];
   /** Skills-list "Learn" tab data, see LearnableSkillSnapshot. */
-  learnableSkills: LearnableSkillSnapshot[] = createDemoLearnableSkills();
+  learnableSkills: LearnableSkillSnapshot[] = IS_DEMO_MODE ? createDemoLearnableSkills() : [];
   /** Currently open in the "skill" detail window, if any. */
   selectedLearnableSkill: LearnableSkillSnapshot | undefined = undefined;
   /** Set once by bindToClient -- used by selectTarget/clearTarget to dispatch outgoing packets. */
@@ -761,7 +868,7 @@ export class GameStore {
   private static readonly HOTBAR_DELETE_GRACE_MS = 8000;
 
   constructor() {
-    makeAutoObservable(this, { client: false, pendingHotbarDeletes: false });
+    makeAutoObservable(this, { client: false, pendingHotbarDeletes: false, moveHeartbeatInterval: false, moveHeartbeatChar: false });
   }
 
   selectCharacter(id: number | undefined) {
@@ -851,11 +958,13 @@ export class GameStore {
     // to call while disconnected, see AbstractGameCommand.requiresGameConnection.
     this.client?.hit(member);
     this.target = targetSnapshotFromCreature(member, this.pledgeCache);
+    this.pendingAction = undefined;
   }
 
   clearTarget() {
     this.client?.cancelTarget();
     this.target = undefined;
+    this.pendingAction = undefined;
   }
 
   /**
@@ -871,6 +980,40 @@ export class GameStore {
     }
     this.client?.hit(me);
     this.target = targetSnapshotFromCreature(me, this.pledgeCache);
+    this.pendingAction = undefined;
+  }
+
+  /**
+   * Selects any nearby creature (NPC/mob/other player) as the current
+   * target by objectId -- same Action/hit packet mechanism as
+   * selectTarget/selectSelfAsTarget, just looked up from CreaturesList since
+   * the 3D scene's click handler (see CreatureModel's onSelect,
+   * GameCreaturesField) only has a WorldCreatureSnapshot -- a plain data
+   * snapshot -- rather than the live L2Creature reference those other two
+   * already have on hand.
+   */
+  selectCreatureAsTarget(objectId: number) {
+    const creature = this.client?.CreaturesList.getEntryByObjectId(objectId);
+    if (!creature) {
+      return;
+    }
+    this.client?.hit(objectId);
+    this.target = targetSnapshotFromCreature(creature, this.pledgeCache);
+    this.pendingAction = undefined;
+  }
+
+  /**
+   * Sends a click-to-move request toward the given L2 world coordinates
+   * (RequestMoveTo -- see CommandMoveTo/MoveBackwardToLocation). No local
+   * prediction here: the server broadcasts movement back via MoveToLocation
+   * for every nearby creature it knows about, including ourselves (same
+   * mechanism GameCreaturesField already renders everyone else's movement
+   * through, see GameStore.bindToClient's syncCreatures + interpolatedCreaturePosition),
+   * so our own entry in `creatures` picks this up the same way once the
+   * server's reply arrives -- no special-casing needed here.
+   */
+  moveTo(x: number, y: number, z: number) {
+    this.client?.moveTo(x, y, z);
   }
 
   /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
@@ -957,13 +1100,103 @@ export class GameStore {
     this.target = { ...target, recommHave: (target.recommHave ?? 0) + 1 };
   }
 
-  /** Attacks the current target (AttackRequest). */
+  /**
+   * Queues `onArrive` to run once we're within `range` world units of the
+   * given creature -- if we already are, immediately; otherwise sends a
+   * real move-to request and re-evaluates the next time we stop moving
+   * (see advancePendingAction), same as the real client walking into range
+   * before actually attacking/interacting instead of rejecting the action.
+   */
+  private queueActionInRange(targetId: number, range: number, onArrive: () => void) {
+    this.pendingAction = { targetId, range, onArrive };
+    this.advancePendingAction();
+  }
+
+  /**
+   * Drives the queued pending action (if any) one step: arrived -> run
+   * onArrive; not yet in range -> send a move order toward the target's
+   * *current* position (it may have moved since this was queued) and wait.
+   *
+   * Event-driven, not polled: L2Creature.IsMoving fires a "StopMoving"
+   * event on the creature itself the moment a move segment finishes --
+   * whether that's our own client-side prediction completing (see
+   * CommandMoveTo) or a server-echoed MoveToLocation -- and the reference
+   * server broadcasts StopMove back to the mover too, not just onlookers
+   * (see lineage2ts's L2Character.abortMoving ->
+   * BroadcastHelper.dataToSelfBasedOnVisibility). So there's always a
+   * concrete moment to re-check from, no need to poll on a timer or on
+   * every unrelated syncCreatures tick.
+   */
+  private advancePendingAction() {
+    const pending = this.pendingAction;
+    if (!pending) {
+      return;
+    }
+
+    const target = this.client?.CreaturesList.getEntryByObjectId(pending.targetId);
+    const me = this.client?.Me;
+    if (!target || !me || target.IsDead) {
+      this.pendingAction = undefined;
+      return;
+    }
+
+    if (Math.hypot(target.X - me.X, target.Y - me.Y) <= pending.range) {
+      this.pendingAction = undefined;
+      pending.onArrive();
+      return;
+    }
+
+    this.client?.moveTo(target.X, target.Y, target.Z);
+    me.once("StopMoving", () => this.advancePendingAction());
+  }
+
+  /**
+   * While the local player is moving, reports our own position back to the
+   * server (RequestValidatePosition) about once a second -- matching the
+   * real client's cadence (inferred from L2J_Mobius's ValidatePosition.java
+   * out-of-sync check, `calculateDistance3D(...) > getMoveSpeed()`: moveSpeed
+   * is a *per-second* rate, so that comparison only makes sense if the
+   * client reports roughly that often -- corroborated by the reference
+   * server's own rate limit on this packet, 2/sec, id est "about 1/sec plus
+   * slack"). Without this the server never hears from us mid-walk at all
+   * (see GameStore.moveTo's own docs), only at the start of each move
+   * order. One heartbeat per real ActiveChar instance -- see
+   * moveHeartbeatChar's guard against re-attaching on every UserInfo.
+   */
+  private setupMoveHeartbeat(me: L2User) {
+    if (this.moveHeartbeatChar === me) {
+      return;
+    }
+    this.moveHeartbeatChar = me;
+
+    me.on("StartMoving", () => {
+      if (this.moveHeartbeatInterval) {
+        clearInterval(this.moveHeartbeatInterval);
+      }
+      this.moveHeartbeatInterval = setInterval(() => this.client?.validatePosition(), 1000);
+    });
+
+    me.on("StopMoving", () => {
+      if (this.moveHeartbeatInterval) {
+        clearInterval(this.moveHeartbeatInterval);
+        this.moveHeartbeatInterval = null;
+      }
+    });
+  }
+
+  /**
+   * Attacks the current target (AttackRequest) -- walks into melee range
+   * first if it's currently out of reach (see queueActionInRange), same as
+   * the real client does instead of just rejecting a distant Attack click.
+   */
   attack() {
     const target = this.target;
     if (!target) {
       return;
     }
-    this.client?.attack(target.objectId);
+    this.queueActionInRange(target.objectId, MELEE_ATTACK_RANGE, () => {
+      this.client?.attack(target.objectId);
+    });
   }
 
   /**
@@ -1415,6 +1648,12 @@ export class GameStore {
       this.duelRequest = undefined;
       this.pairActionRequest = undefined;
     }));
+    // UserInfo is also the first point client.Me is guaranteed to be this
+    // session's real, long-lived ActiveChar instance (CharSelectedMutator
+    // assigns a fresh object at char-select; UserInfoMutator only mutates
+    // it in place afterward, see that mutator's own comment) -- safe to
+    // attach the StartMoving/StopMoving listeners here.
+    client.on("PacketReceived", "UserInfo", () => this.setupMoveHeartbeat(client.Me));
     // Henna stat bonuses arrive via their own packet, sent right after
     // world-enter (see EnterWorld.java in the H5 reference server) --
     // re-snapshot once it lands instead of waiting for the next UserInfo.

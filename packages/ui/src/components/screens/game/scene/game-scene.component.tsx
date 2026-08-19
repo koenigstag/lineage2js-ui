@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type { Camera } from "three";
+import { observer } from "mobx-react-lite";
 import { CharacterModel } from "../../../core/scene/character-model.component";
-import { l2ToThree, threeToL2 } from "../../../../utils/coords";
+import { l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
 import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
+import { interpolatedCreaturePosition } from "../../../../utils/creature-movement";
+import { useGameStore } from "../../../../stores/StoreContext";
+import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
 
@@ -41,18 +45,37 @@ interface OrbitState {
 }
 
 interface CameraFollowProps {
-  worldX: number;
-  worldY: number;
-  groundHeightM: number;
+  /** Present once a live session exists -- see GameScene's own realPlayer. */
+  realPlayer: WorldCreatureSnapshot | undefined;
+  /** Only used while realPlayer is absent (local WASD/click test rig). */
+  fallbackWorldX: number;
+  fallbackWorldY: number;
+  fallbackGroundHeightM: number;
   orbitRef: MutableRefObject<OrbitState>;
 }
 
-/** Orbits the camera around the test character every frame, at the drag-controlled azimuth/pitch. */
-function CameraFollow({ worldX, worldY, groundHeightM, orbitRef }: CameraFollowProps) {
+/**
+ * Orbits the camera around the followed character every frame, at the
+ * drag-controlled azimuth/pitch. Recomputes realPlayer's interpolated
+ * position every frame (see interpolatedCreaturePosition) rather than once
+ * per GameScene render, so the camera doesn't lag/step along with
+ * gameStore.creatures' own ~150ms poll cadence while the same interpolation
+ * already makes the rendered body (GameCreaturesField) move smoothly.
+ */
+function CameraFollow({ realPlayer, fallbackWorldX, fallbackWorldY, fallbackGroundHeightM, orbitRef }: CameraFollowProps) {
   useFrame(({ camera }: { camera: Camera }) => {
-    const target = l2ToThree(worldX, worldY, 0);
-    const { azimuth, pitch } = orbitRef.current;
+    let target;
+    let groundHeightM;
+    if (realPlayer) {
+      const l2Pos = interpolatedCreaturePosition(realPlayer);
+      target = l2ToThree(l2Pos.x, l2Pos.y, l2Pos.z);
+      groundHeightM = target.y;
+    } else {
+      target = l2ToThree(fallbackWorldX, fallbackWorldY, 0);
+      groundHeightM = fallbackGroundHeightM;
+    }
 
+    const { azimuth, pitch } = orbitRef.current;
     const horizontalDistance = CAMERA_DISTANCE_M * Math.cos(pitch);
     camera.position.set(
       target.x + horizontalDistance * Math.sin(azimuth),
@@ -69,18 +92,40 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Dev-only harness: WASD or left-click-to-move drives a test character
- * (streaming geodata tiles around it); holding the right mouse button and
- * dragging orbits the camera around it, like the retail L2 client. Stands a
- * placeholder CharacterModel on the loaded terrain, snapped to its height.
+ * The main game scene: camera, geodata terrain, and every nearby creature
+ * (see GameCreaturesField, which already renders the local player with
+ * real race/class colors via PlayerModel, and mobs/NPCs tinted by NpcRace).
+ *
+ * Once a live session has put us in gameStore.creatures (via gameStore.me),
+ * the camera and geodata streaming follow the server-reported player
+ * position -- world coordinates are absolute, with raw L2J region 20_18.l2j
+ * covering world origin. Before that (no session yet -- e.g. testing this
+ * scene standalone), it falls back to a local WASD/click-to-move test
+ * character starting at world origin, same as before. Either way, holding
+ * the right mouse button and dragging orbits the camera, like the retail L2
+ * client.
+ *
+ * Left-click on the ground sends a real move-to request to the server (see
+ * GameStore.moveTo) once a live session exists; the server's own
+ * MoveToLocation reply is what actually animates us, same as any other
+ * creature. WASD still only drives the local fallback test character (not
+ * wired to the server -- see TODO.md) and is inert once a real player is
+ * present.
  */
-export function GeoTerrainDebugScene() {
+export const GameScene = observer(function GameScene() {
+  const gameStore = useGameStore();
   const [character, setCharacter] = useState<TestCharacterState>({ x: 0, y: 0, yaw: 0 });
-  const tiles = useGeoTiles(character.x, character.y);
   // Refs, not state: only read inside the rAF/useFrame loops below, so
   // updating them shouldn't itself trigger a render.
   const moveTargetRef = useRef<MoveTarget | null>(null);
   const orbitRef = useRef<OrbitState>({ azimuth: DEFAULT_AZIMUTH, pitch: DEFAULT_PITCH });
+
+  const realPlayer = gameStore.me !== undefined ? gameStore.creatures.get(gameStore.me) : undefined;
+  const worldX = realPlayer?.x ?? character.x;
+  const worldY = realPlayer?.y ?? character.y;
+  const yaw = realPlayer ? l2HeadingToThreeYaw(realPlayer.heading) : character.yaw;
+
+  const tiles = useGeoTiles(worldX, worldY);
 
   useEffect(() => {
     const keys = new Set<string>();
@@ -166,7 +211,12 @@ export function GeoTerrainDebugScene() {
 
   function handleGroundClick(event: ThreeEvent<MouseEvent>) {
     const target = threeToL2(event.point);
-    moveTargetRef.current = { x: target.x, y: target.y };
+    console.log("[click-debug] three point", event.point.toArray(), "-> L2 target", target, "player L2 now", realPlayer && { x: realPlayer.x, y: realPlayer.y, z: realPlayer.z });
+    if (realPlayer) {
+      gameStore.moveTo(target.x, target.y, target.z);
+    } else {
+      moveTargetRef.current = { x: target.x, y: target.y };
+    }
   }
 
   /** Right-button drag rotates the camera around the character; released anywhere, even off-canvas. */
@@ -185,7 +235,10 @@ export function GeoTerrainDebugScene() {
       lastY = moveEvent.clientY;
       orbitRef.current = {
         azimuth: orbitRef.current.azimuth - dx * ORBIT_SENSITIVITY,
-        pitch: clamp(orbitRef.current.pitch - dy * ORBIT_SENSITIVITY, MIN_PITCH, MAX_PITCH),
+        // Inverted vs. dx on purpose -- matches the retail L2 client's
+        // vertical camera-drag convention (drag down to look from above,
+        // drag up to look from below), the opposite of a naive 1:1 mapping.
+        pitch: clamp(orbitRef.current.pitch + dy * ORBIT_SENSITIVITY, MIN_PITCH, MAX_PITCH),
       };
     }
 
@@ -198,8 +251,8 @@ export function GeoTerrainDebugScene() {
     window.addEventListener("pointerup", onUp);
   }
 
-  const groundHeight = heightAtWorld(tiles, character.x, character.y) ?? 0;
-  const characterPos = l2ToThree(character.x, character.y, groundHeight);
+  const groundHeight = heightAtWorld(tiles, worldX, worldY) ?? 0;
+  const characterPos = l2ToThree(worldX, worldY, realPlayer ? realPlayer.z : groundHeight);
 
   return (
     <div
@@ -207,10 +260,19 @@ export function GeoTerrainDebugScene() {
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={handleOrbitPointerDown}
     >
-      <Canvas camera={{ position: [0, CAMERA_DISTANCE_M, CAMERA_DISTANCE_M], fov: 60, near: 0.1, far: 2000 }}>
+      <Canvas
+        camera={{ position: [0, CAMERA_DISTANCE_M, CAMERA_DISTANCE_M], fov: 60, near: 0.1, far: 2000 }}
+        onPointerMissed={() => console.log("[click-debug] pointer missed everything")}
+      >
         <ambientLight intensity={0.8} />
         <directionalLight position={[5, 10, 5]} intensity={0.6} />
-        <CameraFollow worldX={character.x} worldY={character.y} groundHeightM={characterPos.y} orbitRef={orbitRef} />
+        <CameraFollow
+          realPlayer={realPlayer}
+          fallbackWorldX={worldX}
+          fallbackWorldY={worldY}
+          fallbackGroundHeightM={characterPos.y}
+          orbitRef={orbitRef}
+        />
 
         {/* Reference ground plane -- gives the wireframe terrain a visible
             "down" and fills the gap while neighboring tiles are still loading.
@@ -220,11 +282,18 @@ export function GeoTerrainDebugScene() {
 
         <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} />
 
-        <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={character.yaw} color="#5b8fd6" />
+        {/* Local placeholder avatar -- only shown before a real player entry
+            exists (no live session yet). Once gameStore.creatures has us,
+            GameCreaturesField already renders this exact objectId via
+            PlayerModel with our real race/class colors -- rendering both
+            would double up. */}
+        {!realPlayer && (
+          <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={yaw} color="#5b8fd6" />
+        )}
 
         {/* Real NPCs/mobs/other players from the live session, if connected -- see GameCreaturesField. */}
         <GameCreaturesField />
       </Canvas>
     </div>
   );
-}
+});

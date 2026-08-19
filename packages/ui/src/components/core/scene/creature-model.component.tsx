@@ -10,6 +10,8 @@ interface CreatureModelProps {
   y?: number;
   z: number;
   angleToCenter: number;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
 // Flat fallback per kind, used whenever a more specific color can't be
