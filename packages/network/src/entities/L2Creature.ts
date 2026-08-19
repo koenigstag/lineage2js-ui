@@ -72,6 +72,17 @@ export default abstract class L2Creature extends L2Object {
   private _race!: Race;
   private _isMoving = false;
   private _movingDistance: number = 0;
+  // Snapshot of where the current move segment started, plus when (epoch
+  // ms) -- so a renderer can compute an exact analytic position for "now"
+  // (moveFrom + direction * CurrentSpeed * elapsed) instead of only seeing
+  // this class's own coarse 100ms setMovingTo() steps (see below), which
+  // are precise enough for gameplay logic (distance checks, etc.) but too
+  // sparse to look smooth at 60fps. Undefined until this creature's first
+  // setMovingTo() call.
+  private _moveFromX?: number;
+  private _moveFromY?: number;
+  private _moveFromZ?: number;
+  private _moveStartedAt?: number;
   private _isReady = true;
   private _karma!: number;
   private _hairStyle!: HairStyle;
@@ -549,6 +560,23 @@ export default abstract class L2Creature extends L2Object {
     this._movingDistance = value;
   }
 
+  public get MoveFromX(): number | undefined {
+    return this._moveFromX;
+  }
+
+  public get MoveFromY(): number | undefined {
+    return this._moveFromY;
+  }
+
+  public get MoveFromZ(): number | undefined {
+    return this._moveFromZ;
+  }
+
+  /** Date.now() when the current move segment started -- see this class's field comment. */
+  public get MoveStartedAt(): number | undefined {
+    return this._moveStartedAt;
+  }
+
   public get CurrentSpeed(): number {
     return this.IsRunning
       ? this.RunSpeed * (this.SpeedMultiplier > 0 ? this.SpeedMultiplier : 1)
@@ -575,6 +603,11 @@ export default abstract class L2Creature extends L2Object {
     this.Y = y;
     this.Z = z;
 
+    this._moveFromX = x;
+    this._moveFromY = y;
+    this._moveFromZ = z;
+    this._moveStartedAt = Date.now();
+
     if (!heading) {
       let angleTarget = Math.atan2(dy - y, dx - x) * (180 / Math.PI);
       if (angleTarget < 0) angleTarget = 360 + angleTarget;
@@ -591,6 +624,19 @@ export default abstract class L2Creature extends L2Object {
     let ticks = Math.ceil(this._movingDistance / (this.CurrentSpeed / 10));
     movingVector.normalize();
 
+    // Z was never stepped here at all (X/Y were, every 100ms, but Z stayed
+    // frozen at this move's origin height for its entire duration) --
+    // harmless for a single short hop, but on sloped terrain or several
+    // moves in a row it drifts our tracked Z away from the server's own,
+    // and the reference server (see lineage2ts's MoveToLocation.ts) rejects
+    // *any* further move whose reported origin Z is more than 1000 units
+    // off from what it thinks our Z actually is (responds ActionFailed +
+    // a corrective ValidateLocation) -- so once that drift crossed the
+    // threshold, movement silently stopped working entirely. Interpolating
+    // Z the same way X/Y already are (and snapping it to Dz on arrival,
+    // same as X/Y snap to Dx/Dy) keeps it from drifting in the first place.
+    const zStep = ticks > 0 ? (dz - z) / ticks : 0;
+
     // TODO: Improve this as it will drift for larger movements
     this._moveInterval = setInterval(() => {
       // Check if movement was not cancelled by the server
@@ -606,11 +652,13 @@ export default abstract class L2Creature extends L2Object {
       this._movingDistance -= Math.sqrt(dx * dx + dy * dy);
       this.X += dx;
       this.Y += dy;
+      this.Z += zStep;
 
       ticks--;
       if (ticks <= 0) {
         this.X = this.Dx;
         this.Y = this.Dy;
+        this.Z = this.Dz;
         this._movingDistance = 0;
 
         this.IsMoving = false;
