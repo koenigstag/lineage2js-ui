@@ -1,18 +1,11 @@
 import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Object3D } from "three";
-import { CharacterMarker } from "../../../core/scene/character-marker.component";
+import { PlayerModel } from "../../../core/scene/player-model.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
-import {
-  RACES,
-  getSkinColor,
-  getBodyScale,
-  type Race,
-  type BaseClass,
-  type Sex,
-} from "../../../../config/character-races";
-import { RACE_GALLERY, colorForVariant, type GalleryVariant } from "./race-gallery.utils";
+import { RACES, type RaceNames, type BaseClass, type SexNames } from "../../../../config/character-races";
+import { RACE_GALLERY, type GalleryVariant } from "./race-gallery.utils";
 import { CameraRig } from "./camera-rig.component";
 
 const SKY_SIZE: [number, number] = [300, 100];
@@ -24,7 +17,7 @@ const CLASS_GAP_EXTRA = 0.9;
 // neighboring group (see CameraRig).
 const GROUP_SPACING = 10;
 
-function groupXForRace(race: Race): number {
+function groupXForRace(race: RaceNames): number {
   return RACES.indexOf(race) * GROUP_SPACING;
 }
 
@@ -62,10 +55,10 @@ function MoonLight({ groupX }: MoonLightProps) {
 }
 
 export interface CharCreateSceneProps {
-  race: Race;
+  race: RaceNames;
   baseClass: BaseClass;
-  sex: Sex;
-  onSelectVariant: (race: Race, baseClass: BaseClass, sex: Sex) => void;
+  sex: SexNames;
+  onSelectVariant: (race: RaceNames, baseClass: BaseClass, sex: SexNames) => void;
 }
 
 /** Character-creation backdrop: camera focuses on the selected race's group of class/sex placeholders. */
@@ -98,19 +91,14 @@ export function CharCreateScene({ race, baseClass, sex, onSelectVariant }: CharC
             <group key={group.race}>
               {group.variants.map((variant, variantIndex) => {
                 const x = groupX + offsets[variantIndex];
-                const bodyScale = getBodyScale(variant.race, variant.baseClass, variant.sex);
 
                 return (
-                  <CharacterMarker
+                  <PlayerModel
                     key={`${variant.race}-${variant.baseClass}-${variant.sex}`}
                     x={x}
                     z={0}
                     angleToCenter={0}
-                    color={colorForVariant(variant)}
-                    skinColor={getSkinColor(variant.race)}
-                    heightScale={bodyScale.height}
-                    widthScale={bodyScale.width}
-                    hasCape={variant.race === "kamael"}
+                    variant={variant}
                     selected={variant.race === race && variant.baseClass === baseClass && variant.sex === sex}
                     onSelect={() => onSelectVariant(variant.race, variant.baseClass, variant.sex)}
                   />

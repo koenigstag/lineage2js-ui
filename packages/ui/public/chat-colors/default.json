@@ -1,0 +1,32 @@
+{
+  "CHAT_NORMAL": "rgb(220, 220, 220)",
+  "CHAT_PARTY_ROOM_CHAT": "rgb(220, 220, 220)",
+  "CHAT_USER_PET": "rgb(220, 220, 220)",
+
+  "CHAT_SHOUT": "rgb(255, 114, 0)",
+  "CHAT_CUSTOM": "rgb(255, 114, 0)",
+
+  "CHAT_TELL": "rgb(255, 0, 255)",
+
+  "CHAT_PARTY": "rgb(0, 255, 0)",
+
+  "CHAT_CLAN": "rgb(125, 119, 255)",
+
+  "CHAT_SYSTEM": "rgb(176, 155, 121)",
+
+  "CHAT_GM_PET": "rgb(128, 255, 255)",
+  "CHAT_ANNOUNCE": "rgb(128, 255, 255)",
+
+  "CHAT_MARKET": "rgb(234, 165, 245)",
+
+  "CHAT_ALLIANCE": "rgb(119, 255, 153)",
+
+  "CHAT_COMMANDER_CHAT": "rgb(255, 150, 149)",
+  "CHAT_SCREEN_ANNOUNCE": "rgb(255, 150, 149)",
+
+  "CHAT_INTER_PARTYMASTER_CHAT": "rgb(255, 248, 178)",
+
+  "CHAT_CRITICAL_ANNOUNCE": "rgb(0, 255, 255)",
+
+  "CHAT_HERO": "rgb(64, 140, 255)"
+}

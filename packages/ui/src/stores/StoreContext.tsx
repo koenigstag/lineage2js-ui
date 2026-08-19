@@ -15,6 +15,10 @@ export function useUiStore() {
   return useContext(StoreContext).ui;
 }
 
+export function useDatapackStore() {
+  return useContext(StoreContext).datapack;
+}
+
 export function useSessionStore() {
   return useContext(StoreContext).session;
 }

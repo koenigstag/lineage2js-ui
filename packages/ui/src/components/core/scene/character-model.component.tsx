@@ -1,8 +1,10 @@
 import { DoubleSide } from "three";
 import { NicknameLabel } from "./nickname-label.component";
 
-interface CharacterMarkerProps {
+interface CharacterModelProps {
   x: number;
+  /** World-up (three.js Y) foot position. Defaults to 0 (flat-floor scenes). */
+  y?: number;
   z: number;
   angleToCenter: number;
   color: string;
@@ -18,9 +20,14 @@ interface CharacterMarkerProps {
   onSelect?: () => void;
 }
 
-/** Simple procedural humanoid placeholder -- no character art exists yet. */
-export function CharacterMarker({
+/**
+ * Simple procedural humanoid placeholder -- no character art exists yet.
+ * Purely presentational: geometry/pose/label/click, decides nothing about
+ * what color/scale to use -- that's PlayerModel/CreatureModel's job.
+ */
+export function CharacterModel({
   x,
+  y = 0,
   z,
   angleToCenter,
   color,
@@ -31,9 +38,9 @@ export function CharacterMarker({
   nickname,
   selected = false,
   onSelect,
-}: CharacterMarkerProps) {
+}: CharacterModelProps) {
   return (
-    <group position={[x, 0, z]} rotation={[0, angleToCenter, 0]}>
+    <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
       {nickname && <NicknameLabel text={nickname} position={[0, 1.95 * heightScale, 0]} />}
 
       <group scale={[widthScale, heightScale, widthScale]}>
@@ -55,6 +62,14 @@ export function CharacterMarker({
         <mesh position={[0, 1.52, 0]} scale={[1 / widthScale, 1 / heightScale, 1 / widthScale]}>
           <sphereGeometry args={[0.21, 16, 16]} />
           <meshStandardMaterial color={skinColor} roughness={0.8} />
+          {/* "Nose" -- the capsule+sphere body is otherwise rotationally
+              symmetric, so this is the only visual cue for which way
+              angleToCenter (local +Z, after the group's yaw rotation) actually
+              points. Sits just outside the head sphere's 0.21 radius. */}
+          <mesh position={[0, 0, 0.2]}>
+            <sphereGeometry args={[0.05, 8, 8]} />
+            <meshBasicMaterial color="#1a1a1a" />
+          </mesh>
         </mesh>
 
         {hasCape && (

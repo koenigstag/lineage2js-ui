@@ -1,10 +1,9 @@
 import { Canvas } from "@react-three/fiber";
 import { Campfire } from "./campfire.component";
-import { CharacterMarker } from "../../../core/scene/character-marker.component";
+import { PlayerModel } from "../../../core/scene/player-model.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
-import { getSkinColor, getBodyScale, type Race, type BaseClass, type Sex } from "../../../../config/character-races";
-import { colorForVariant } from "../../create-char/scene/race-gallery.utils";
+import type { RaceNames, BaseClass, SexNames } from "../../../../config/character-races";
 
 const SKY_SIZE: [number, number] = [70, 45];
 const SKY_Z = -25;
@@ -13,9 +12,9 @@ const CIRCLE_RADIUS = 2.6;
 const ARC_SPREAD = Math.PI * 0.85;
 
 export interface CharSelectSceneProps {
-  characters: Array<{ id: string; nickname: string; race: string; baseClass: string; sex: string }>;
-  selectedCharacterId?: string;
-  onSelect: (id: string) => void;
+  characters: Array<{ id: number; nickname: string; race: string; baseClass: string; sex: string }>;
+  selectedCharacterId?: number;
+  onSelect: (id: number) => void;
 }
 
 /** Diablo-style character select backdrop: a campfire with characters standing in a circle around it. */
@@ -55,22 +54,17 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
           const x = Math.cos(angle) * CIRCLE_RADIUS;
           const z = Math.sin(angle) * CIRCLE_RADIUS;
 
-          const race = character.race as Race;
+          const race = character.race as RaceNames;
           const baseClass = character.baseClass as BaseClass;
-          const sex = character.sex as Sex;
-          const bodyScale = getBodyScale(race, baseClass, sex);
+          const sex = character.sex as SexNames;
 
           return (
-            <CharacterMarker
+            <PlayerModel
               key={character.id}
               x={x}
               z={z}
               angleToCenter={angle + Math.PI / 2}
-              color={colorForVariant({ race, baseClass, sex })}
-              skinColor={getSkinColor(race)}
-              heightScale={bodyScale.height}
-              widthScale={bodyScale.width}
-              hasCape={race === "kamael"}
+              variant={{ race, baseClass, sex }}
               nickname={character.nickname}
               selected={character.id === selectedCharacterId}
               onSelect={() => onSelect(character.id)}

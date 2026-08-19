@@ -1,51 +1,167 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { Slot, type IconBorder } from "../core/slot.component";
+import { ShortcutType, ItemType2, type L2Item } from "@lineage2js/network";
+import { Slot } from "../core/slot.component";
+import { ItemSlot } from "../core/item-slot.component";
+import { DnDButton } from "../core/dnd-button.component";
+import { setHotbarDragPayload, type HotbarDragPayload } from "../core/dnd";
 import { BaseInput } from "../../core/inputs/base.input";
+import { LabeledBar } from "../../core/stat-bar.component";
+import { Tooltip, useTooltipTarget } from "../../core/tooltip.component";
+import { useItemCountPrompt } from "../../core/item-count-modal";
 import { Paperdoll } from "./paperdoll.component";
-import { useGameStore } from "../../../stores/StoreContext";
-import type { InventoryItem } from "../../../stores/GameStore";
-import { getItemIconUrl } from "../../../config/icon-urls";
+import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
+import { useClickOrDoubleClick } from "../../../lib/useClickOrDoubleClick";
+import { SP_COLOR, WG_COLOR } from "../../../config/stat-colors";
+import {
+  EQUIPMENT_SLOT_TYPES,
+  getItemSlotType,
+  getItemGradeLabel,
+  getItemName,
+  getMiscItemCategory,
+} from "../../../config/item-mapping";
+import { t } from "../../../lang/lang";
 
 const TABS = ["All", "Equip", "Consume", "Craft", "Etc", "Quest"] as const;
 type Tab = (typeof TABS)[number];
 
-const EQUIP_TYPES = new Set(["item-weapon", "item-shield", "item-armor", "item-jewelry"]);
-
-function matchesTab(item: InventoryItem, tab: Tab): boolean {
+function matchesTab(item: L2Item, tab: Tab): boolean {
+  const slotType = getItemSlotType(item);
   switch (tab) {
     case "All":
       return true;
     case "Equip":
-      return EQUIP_TYPES.has(item.type);
+      return EQUIPMENT_SLOT_TYPES.has(slotType);
     case "Consume":
-      return item.type === "item-misc" && item.consume === true;
+      return getMiscItemCategory(item) === "consume";
     case "Craft":
-      return item.type === "item-misc" && item.ingredient === true;
+      return getMiscItemCategory(item) === "ingredient";
     case "Etc":
-      return item.type === "item-misc" && !item.consume && !item.ingredient && !item.quest;
+      return slotType === "item-misc" && !item.IsQuest && getMiscItemCategory(item) === undefined;
     case "Quest":
-      return item.quest === true;
+      return item.IsQuest === true;
   }
 }
 
 const GRID_COLUMNS = 10;
-const GRID_ROWS = 10;
-const VISIBLE_ROWS = 8;
+const GRID_ROWS = 20;
+const VISIBLE_ROWS = 10;
 const SLOT_SIZE = 34;
 const SLOT_GAP = 2;
 
-// const INVENTORY_ICON_BORDER: IconBorder = { from: "#2a170c", to: "#2a170c" };
+// Adena/Weight bars sit together in one 150px-wide block, wrapped together
+// with the delete slot into one flex item so the outer row's space-between
+// only spreads two things apart: the sell block and this bars+delete group.
+const BARS_BLOCK_WIDTH = 150;
+const BARS_BLOCK_LABEL_WIDTH = 20; // LabeledBar's own default, spelled out here so the bar-width math below is self-explanatory
+const BARS_BLOCK_GAP = 8; // LabeledBar's own fixed label/bar gap
+const BARS_BLOCK_BAR_WIDTH = BARS_BLOCK_WIDTH - BARS_BLOCK_LABEL_WIDTH - BARS_BLOCK_GAP;
+const BUTTON_SIZE = 32;
+const SELL_COLOR = "#3a4a2e";
+const DELETE_COLOR = "#4a2e2e";
+
+/** Weight bar with a hover tooltip showing the raw load/maxLoad -- the bar itself only has room for the percentage. */
+function WeightBar({ load, maxLoad }: { load: number; maxLoad: number }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { target, showTooltip, hideTooltip } = useTooltipTarget();
+  const percent = maxLoad > 0 ? (load / maxLoad) * 100 : 0;
+
+  return (
+    <div
+      ref={rootRef}
+      onMouseEnter={() => rootRef.current && showTooltip(rootRef.current, { kind: "simple", name: `${load}/${maxLoad}` })}
+      onMouseLeave={hideTooltip}
+    >
+      <LabeledBar
+        label={t("charInfo.wg")}
+        percent={percent}
+        text={`${percent.toFixed(0)}%`}
+        color={WG_COLOR}
+        width={BARS_BLOCK_BAR_WIDTH}
+      />
+      <Tooltip target={target} />
+    </div>
+  );
+}
+
+/**
+ * A single draggable grid cell. Its own component (not just a hook call
+ * inline in the .map() below) because useClickOrDoubleClick needs one
+ * independent timer per cell -- clicking item A then item B must never
+ * combine into a "double click".
+ */
+function InventoryGridItem({ item, onEquipToggle }: { item: L2Item; onEquipToggle: (item: L2Item) => void }) {
+  const { onClick } = useClickOrDoubleClick(() => {}, () => onEquipToggle(item));
+
+  return (
+    <div draggable onDragStart={(e) => setHotbarDragPayload(e, ShortcutType.ITEM, item.ObjectId)} onClick={onClick}>
+      <ItemSlot
+        id={item.Id}
+        slotType={getItemSlotType(item)}
+        count={item.Count}
+        grade={getItemGradeLabel(item)}
+        isEquipped={item.IsEquipped}
+        detail="full"
+      />
+    </div>
+  );
+}
 
 export const InventoryContent = observer(function InventoryContent() {
   const game = useGameStore();
+  const session = useSessionStore();
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [search, setSearch] = useState("");
+  const { promptCount, modal } = useItemCountPrompt();
+
+  const adenaCount = game.inventoryItems.find((item) => item.Type2 === ItemType2.Adena)?.Count ?? 0;
 
   const query = search.trim().toLowerCase();
   const filteredItems = game.inventoryItems.filter(
-    (item) => matchesTab(item, activeTab) && (query === "" || item.name.toLowerCase().includes(query))
+    (item) => matchesTab(item, activeTab) && (query === "" || getItemName(item).toLowerCase().includes(query))
   );
+
+  function resolveDroppedItem(payload: HotbarDragPayload): L2Item | undefined {
+    if (payload.shortcutType !== ShortcutType.ITEM) return undefined;
+    return game.inventoryItems.find((item) => item.ObjectId === payload.targetId);
+  }
+
+  // Double-click (see InventoryGridItem's useClickOrDoubleClick) toggles
+  // equip/unequip via UseItem (opcode 0x19, retail's own mechanism -- there's
+  // no separate RequestEquipItem, see ClientCommands.ts's useItem() comment).
+  // Server decides based on the item's current isEquipped(), so this same
+  // call works whether the item is worn or not -- only gated to equipable
+  // slot types here so double-clicking a potion in the grid doesn't
+  // accidentally consume it (that's a different, not-yet-built "use
+  // consumable" feature).
+  function handleItemDoubleClick(item: L2Item) {
+    if (!EQUIPMENT_SLOT_TYPES.has(getItemSlotType(item))) return;
+    session.client.useItem(item);
+  }
+
+  // No RequestSellItem is sent yet -- it needs a live NPC shop session
+  // (listId) this client has no shop window/state for. Prompting for a
+  // count just closes the modal for now; wiring the real sell packet is
+  // future work once a shop UI exists.
+  async function handleSellDrop(payload: HotbarDragPayload) {
+    const item = resolveDroppedItem(payload);
+    if (!item) return;
+    await promptCount(getItemName(item), t("inventory.sellAction"), item.Count);
+  }
+
+  // RequestDestroyItem (opcode 0x60) -- confirmed against lineage2ts as a
+  // genuinely separate action/packet from dropItem (ground) and sellItem
+  // (needs an NPC shop session), see CommandDestroyItem.ts. No IsConnected
+  // guard needed here -- every client.xxx() command (including this one)
+  // goes through ClientCommands' Proxy dispatcher, which already skips
+  // execute() entirely while disconnected (AbstractGameCommand.requiresGameConnection).
+  async function handleDeleteDrop(payload: HotbarDragPayload) {
+    const item = resolveDroppedItem(payload);
+    if (!item) return;
+    const count = await promptCount(getItemName(item), t("inventory.deleteAction"), item.Count);
+    if (count === undefined) return;
+    session.client.destroyItem(item.ObjectId, count);
+  }
 
   return (
     <div style={{ display: "flex", gap: 8 }}>
@@ -68,13 +184,19 @@ export const InventoryContent = observer(function InventoryContent() {
                 cursor: "pointer",
               }}
             >
-              {tab}
+              {t(`inventory.tabs.${tab}`)}
             </button>
           ))}
           <div style={{ width: 90 }}>
-            <BaseInput value={search} placeholder="Search" onChange={setSearch} style={{ padding: "2px 8px" }} />
+            <BaseInput
+              value={search}
+              placeholder={t("inventory.searchPlaceholder")}
+              onChange={setSearch}
+              style={{ padding: "2px 8px" }}
+            />
           </div>
         </div>
+        <div style={{ border: "1px solid #76654f", borderRadius: 6, padding: 5 }}>
         <div
           className="slot-grid"
           style={{
@@ -83,33 +205,47 @@ export const InventoryContent = observer(function InventoryContent() {
             gridAutoRows: SLOT_SIZE,
             gap: SLOT_GAP,
             maxHeight: SLOT_SIZE * VISIBLE_ROWS + SLOT_GAP * (VISIBLE_ROWS - 1),
-            overflowY: "auto",
+            overflowY: "scroll",
             overflowX: "hidden",
           }}
         >
           {Array.from({ length: GRID_COLUMNS * GRID_ROWS }).map((_, index) => {
             const item = filteredItems[index];
-            return (
-              <Slot
-                key={item ? `item-${item.id}` : `empty-${index}`}
-                type="inventory"
-                content={
-                  item
-                    ? {
-                        type: item.type,
-                        data: item,
-                        count: item.count,
-                        iconUrl: getItemIconUrl(item.id),
-                        tooltip: { kind: "item", name: item.name, type: item.type, id: item.id, count: item.count },
-                      }
-                    : undefined
-                }
-                // iconBorder={INVENTORY_ICON_BORDER}
-              />
-            );
+            if (!item) {
+              return <Slot key={`empty-${index}`} type="inventory" />;
+            }
+            return <InventoryGridItem key={`item-${item.ObjectId}`} item={item} onEquipToggle={handleItemDoubleClick} />;
           })}
         </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+          <div style={{ display: "flex", gap: 5 }}>
+            <DnDButton
+              icon="$"
+              color={SELL_COLOR}
+              size={BUTTON_SIZE}
+              title={t("inventory.sellButtonTitle")}
+              onDropItem={handleSellDrop}
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, width: BARS_BLOCK_WIDTH }}>
+              <LabeledBar label={t("inventory.adenaLabel")} percent={100} text={`${adenaCount}`} color={SP_COLOR} width={BARS_BLOCK_BAR_WIDTH} />
+              <WeightBar load={game.charInfo.load} maxLoad={game.charInfo.maxLoad} />
+            </div>
+            <div style={{ display: "flex", gap: 5 }}>
+              <DnDButton
+                icon="X"
+                color={DELETE_COLOR}
+                size={BUTTON_SIZE}
+                title={t("inventory.deleteButtonTitle")}
+                onDropItem={handleDeleteDrop}
+              />
+            </div>
+          </div>
+        </div>
       </div>
+      {modal}
     </div>
   );
 });

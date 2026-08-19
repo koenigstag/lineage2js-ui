@@ -106,6 +106,13 @@ export function IconFrame({
         <img
           src={iconUrl}
           alt=""
+          // Browsers make <img> natively draggable by default -- left unset,
+          // a real (successfully loaded) icon image hijacks the drag gesture
+          // for its own "drag this image out" behavior instead of the
+          // slot's own onDragStart (see Slot/hotbar/inventory's draggable
+          // wrapper divs), silently breaking hotbar drag-and-drop for
+          // whichever items/skills/actions happen to have a working icon.
+          draggable={false}
           onError={() => setImageFailed(true)}
           style={{
             position: "absolute",
@@ -182,7 +189,10 @@ const TYPE_BACKGROUNDS = {
   skill: "#010100",
   "pet-action": "linear-gradient(180deg, #07130c 0%, #406d47 100%)",
   action: "linear-gradient(180deg, #020503 0%, #42627d 100%)",
-  macro: "linear-gradient(180deg, #030502 0%, #316d5a 100%)",
+  // Flat black -- no macro editor/window exists yet, so there's no real icon
+  // to place here. Unlike the other placeholder types this isn't meant to
+  // look like a texture, just an inert filler until that feature lands.
+  macro: "#010100",
   "pair-action": "linear-gradient(180deg, #050000 0%, #952959 100%)",
   "item-misc": "linear-gradient(45deg, #180e03 0%, #8a573d 100%)",
   "item-weapon": "linear-gradient(45deg, #0a0503 0%, #3d1712 40%, #6b3324 100%)",
@@ -197,7 +207,6 @@ export type IconSlotType = keyof typeof TYPE_BACKGROUNDS;
 const TYPE_NOISE: Partial<Record<IconSlotType, boolean>> = {
   "pet-action": true,
   action: true,
-  macro: true,
   "pair-action": true,
 };
 

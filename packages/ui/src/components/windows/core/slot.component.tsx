@@ -11,6 +11,8 @@ export interface SlotContent {
   iconUrl?: string;
   /** Hover tooltip content. No tooltip is shown when unset. */
   tooltip?: TooltipInfo;
+  /** Live "about to expire" seconds count, overlaid centered on the icon -- see SkillSlot's countdownWarning prop. */
+  countdownSeconds?: number;
 }
 
 export interface IconBorder {
@@ -25,17 +27,25 @@ export interface SlotProps {
   slotKey?: string;
   /** Icon frame border colors. Not set by IconFrame itself -- each caller opts in. */
   iconBorder?: IconBorder;
+  /** Square size in px. Defaults to the standard 34px slot (hotbar/inventory); smaller for e.g. buff icons. */
+  size?: number;
+  /** Brief highlight, e.g. while its bound hotbar key is held down. */
+  pressed?: boolean;
 }
 
 const SLOT_SIZE = 34;
 
-const emptySlotStyle: CSSProperties = {
-  width: SLOT_SIZE,
-  height: SLOT_SIZE,
-  border: "1px solid #393839",
-  backgroundColor: "#101010",
-  boxShadow: "inset 0 0 6px 1px #080808",
-};
+// Inventory-type empty slots (main grid + paperdoll equip cells) render
+// borderless -- only hotbar keeps the bordered placeholder look.
+function getEmptySlotStyle(size: number, type: SlotProps["type"]): CSSProperties {
+  return {
+    width: size,
+    height: size,
+    border: type === "inventory" ? undefined : "1px solid #393839",
+    backgroundColor: "#101010",
+    boxShadow: "inset 0 0 6px 1px #080808",
+  };
+}
 
 const slotKeyStyle: CSSProperties = {
   position: "absolute",
@@ -46,7 +56,10 @@ const slotKeyStyle: CSSProperties = {
   lineHeight: 1,
   color: "#d4d6c6",
   textShadow: "0 1px 1px rgba(0, 0, 0, 0.9)",
-  zIndex: 2,
+  // Above per-type overlays a caller might layer on top of the icon (e.g.
+  // the hotbar's shot auto-use glass effect, zIndex 3) -- the key label
+  // should always stay legible.
+  zIndex: 4,
   pointerEvents: "none",
   userSelect: "none",
 };
@@ -70,7 +83,24 @@ function formatCount(count: number): string {
   return count > 99 ? "99+" : String(count);
 }
 
-export function Slot({ content, slotKey, iconBorder }: SlotProps) {
+const countdownStyle: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontFamily: "'Courier Prime', monospace",
+  fontSize: 10,
+  fontWeight: "bold",
+  lineHeight: 1,
+  color: "#ffffff",
+  textShadow: "0 1px 1px rgba(0, 0, 0, 0.9)",
+  zIndex: 2,
+  pointerEvents: "none",
+  userSelect: "none",
+};
+
+export function Slot({ type, content, slotKey, iconBorder, size = SLOT_SIZE, pressed }: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { target, showTooltip, hideTooltip } = useTooltipTarget();
   const tooltip = content?.tooltip;
@@ -78,7 +108,12 @@ export function Slot({ content, slotKey, iconBorder }: SlotProps) {
   return (
     <div
       ref={rootRef}
-      style={{ position: "relative", width: SLOT_SIZE, height: SLOT_SIZE }}
+      style={{
+        position: "relative",
+        width: size,
+        height: size,
+        filter: pressed ? "brightness(1.6)" : undefined,
+      }}
       onMouseEnter={() => {
         if (tooltip && rootRef.current) {
           showTooltip(rootRef.current, tooltip);
@@ -90,16 +125,17 @@ export function Slot({ content, slotKey, iconBorder }: SlotProps) {
         <IconSlot
           type={content.type}
           iconUrl={content.iconUrl}
-          width={SLOT_SIZE}
-          height={SLOT_SIZE}
+          width={size}
+          height={size}
           borderFrom={iconBorder?.from}
           borderTo={iconBorder?.to}
         />
       ) : (
-        <div style={emptySlotStyle} />
+        <div style={getEmptySlotStyle(size, type)} />
       )}
       {slotKey && <div style={slotKeyStyle}>{slotKey}</div>}
-      {content?.count !== undefined && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
+      {content?.count !== undefined && content.count > 1 && <div style={slotCountStyle}>{formatCount(content.count)}</div>}
+      {content?.countdownSeconds !== undefined && <div style={countdownStyle}>{content.countdownSeconds}</div>}
       {tooltip && <Tooltip target={target} />}
     </div>
   );

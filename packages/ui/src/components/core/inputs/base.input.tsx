@@ -1,22 +1,35 @@
-import type { ChangeEvent, CSSProperties } from "react";
+import type { ChangeEvent, CSSProperties, KeyboardEvent } from "react";
 
 export interface BaseInputProps {
   value: string;
   placeholder?: string;
   onChange: (value: string) => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   disabled?: boolean;
-  type?: "text" | "password";
+  maxLength?: number;
+  type?: "text" | "password" | "number";
   style?: CSSProperties;
 }
 
-export function BaseInput({ value, placeholder, onChange, disabled, type = "text", style }: BaseInputProps) {
+export function BaseInput({
+  value,
+  placeholder,
+  onChange,
+  onKeyDown,
+  disabled,
+  maxLength,
+  type = "text",
+  style,
+}: BaseInputProps) {
   return (
     <input
       type={type}
       value={value}
       placeholder={placeholder}
       disabled={disabled}
+      maxLength={maxLength}
       onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
+      onKeyDown={onKeyDown}
       style={{
         width: "100%",
         boxSizing: "border-box",

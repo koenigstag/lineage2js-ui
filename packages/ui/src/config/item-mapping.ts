@@ -1,0 +1,125 @@
+import { L2Item, ItemType2, ItemGrade, ShotsType } from "@lineage2js/network";
+import type { IconSlotType } from "../components/core/icon-frame.component";
+import type { SlotContent } from "../components/windows/core/slot.component";
+import type { TooltipDetail } from "../components/core/tooltip.component";
+import { getItemIconUrl } from "./icon-urls";
+import { t } from "../lang/lang";
+import { rootStore } from "../stores/RootStore";
+
+// Reactive read, not a stored field: UiStore.itemNames loads asynchronously
+// (see DatapackStore.loadItemNames()), so this must be called at render time inside
+// an observer -- baking it into L2Item.Name at construction time would freeze
+// the fallback key forever for any item parsed before the table finishes loading.
+// Structural `{ Id }` rather than L2Item: a hotbar ITEM shortcut only carries
+// a TargetId, not a full L2Item (see config/shortcut-mapping.ts).
+export function getItemName(item: { Id: number }): string {
+  return t(`item.name.${item.Id}`);
+}
+
+/** Derives the icon-slot/tab category straight from the wire's Type2 + BodyPart, no separate UI type needed. */
+export function getItemSlotType(item: L2Item): IconSlotType {
+  switch (item.Type2) {
+    case ItemType2.Weapon:
+      return "item-weapon";
+    case ItemType2.ShieldArmor:
+      return item.BodyPart === L2Item.SLOT_L_HAND ? "item-shield" : "item-armor";
+    case ItemType2.RingEarringNecklace:
+      return "item-jewelry";
+    default:
+      return "item-misc";
+  }
+}
+
+export const EQUIPMENT_SLOT_TYPES = new Set<IconSlotType>([
+  "item-weapon",
+  "item-shield",
+  "item-armor",
+  "item-jewelry",
+]);
+
+/** True for soulshot/spiritshot item templates (RequestAutoSoulShot's `ShotsType` reverse-lookup guard, same check the wire packet itself enforces). */
+export function isShotItem(item: { Id: number }): boolean {
+  return ShotsType[item.Id] !== undefined;
+}
+
+// The wire protocol has no notion of "this misc item is a usable potion" vs
+// "this is a raw crafting material" -- both are just Type2.Item. Real clients
+// resolve that (plus names/icons) from a static item-template table this
+// project doesn't have yet. Until then, the inventory's Consume/Craft tabs
+// fall back to this small id-keyed placeholder, covering only the store's
+// own demo inventory (see GameStore.createDemoInventory).
+const DEMO_MISC_CATEGORY_BY_ITEM_ID: Partial<Record<number, "consume" | "ingredient">> = {
+  727: "consume", // Healing Potion
+  728: "consume", // Mana Potion
+  1869: "ingredient", // Iron Ore
+  702: "ingredient", // Wolf Pelt
+};
+
+export function getMiscItemCategory(item: L2Item): "consume" | "ingredient" | undefined {
+  return DEMO_MISC_CATEGORY_BY_ITEM_ID[item.Id];
+}
+
+const GRADE_LABELS: Partial<Record<ItemGrade, string>> = {
+  [ItemGrade.D]: "D",
+  [ItemGrade.C]: "C",
+  [ItemGrade.B]: "B",
+  [ItemGrade.A]: "A",
+  [ItemGrade.S]: "S",
+  [ItemGrade.S80]: "S80",
+  [ItemGrade.S84]: "S84",
+};
+
+// Retail shows no grade tag at all for ItemGrade.None (confirmed against
+// lineage2ts's/L2J_Mobius's source -- no UI-facing "NG" string exists
+// anywhere server-side, it's purely an internal code identifier). This
+// project deliberately shows "NG" instead, but only for the item kinds a
+// grade is actually meaningful for -- equipment (weapon/shield/armor/
+// jewelry) and shots -- not the thousands of ungraded quest items/
+// materials/consumables that would otherwise get a noisy "NG" too.
+const NG_LABEL = "NG";
+
+/**
+ * item.Grade itself is never populated from real wire data (no item packet
+ * sends grade/crystal_type, see DatapackStore.itemGrades' comment and
+ * TODO.md) -- it's only ever explicitly set by demo data (GameStore.
+ * createDemoInventory), which this still honors first so existing demo
+ * grades keep working; real items fall through to the datapack lookup.
+ */
+export function getItemGradeLabel(item: L2Item): string | undefined {
+  const grade = item.Grade || rootStore.datapack.itemGrades[item.Id];
+  if (grade) {
+    return GRADE_LABELS[grade];
+  }
+  return EQUIPMENT_SLOT_TYPES.has(getItemSlotType(item)) || isShotItem(item) ? NG_LABEL : undefined;
+}
+
+export interface ItemSlotParams {
+  id: number;
+  /** Icon-slot category -- callers with a full L2Item pass getItemSlotType(item); placeholder items (e.g. a skill's required-item) that don't carry Type2/BodyPart pass "item-misc" directly. */
+  slotType: IconSlotType;
+  count?: number;
+  grade?: string;
+  isEquipped?: boolean;
+  /** "full" is reserved for the inventory window (the item's own domain). Defaults to "short" -- see TooltipDetail. */
+  detail?: TooltipDetail;
+}
+
+/** Builds the Slot component's content for an item icon -- the one place assembling the "item" tooltip shape (see inventory.window.tsx and skill.window.tsx's required-item slot). */
+export function getItemSlotContent({ id, slotType, count, grade, isEquipped, detail = "short" }: ItemSlotParams): SlotContent {
+  return {
+    type: slotType,
+    data: { id, count },
+    count,
+    iconUrl: getItemIconUrl(id),
+    tooltip: {
+      kind: "item",
+      name: getItemName({ Id: id }),
+      type: slotType,
+      id,
+      count,
+      grade,
+      isEquipped,
+      detail,
+    },
+  };
+}

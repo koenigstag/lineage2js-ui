@@ -1,25 +1,33 @@
 import { useState } from "react";
+import { observer } from "mobx-react-lite";
 import { Screen } from "../../core/screen.component";
 import { LegalFooter } from "../../core/legal-footer.component";
 import { CharCreateMenu } from "../../menus/char-create/char-create.menu";
 import { CharTemplateInfoMenu } from "../../menus/char-create/char-template-info.menu";
 import { CharCreateScene } from "./scene/char-create-scene.component";
-import { RACES, getAvailableBaseClasses, type Race, type BaseClass, type Sex } from "../../../config/character-races";
+import { useSessionStore } from "../../../stores/StoreContext";
+import { getAvailableRacesFromTemplates, getAvailableBaseClassesFromTemplates } from "../../../config/network-mapping";
+import { type RaceNames, type BaseClass, type SexNames } from "../../../config/character-races";
 
-export function CreateCharScreen() {
-  const [race, setRace] = useState<Race>(RACES[0]);
-  const [baseClass, setBaseClass] = useState<BaseClass>(getAvailableBaseClasses(RACES[0])[0]);
-  const [sex, setSex] = useState<Sex>("male");
+export const CreateCharScreen = observer(function CreateCharScreen() {
+  const session = useSessionStore();
+  const availableRaces = getAvailableRacesFromTemplates(session.characterTemplates);
 
-  function handleRaceChange(nextRace: Race) {
+  const [race, setRace] = useState<RaceNames>(availableRaces[0]);
+  const [baseClass, setBaseClass] = useState<BaseClass>(
+    getAvailableBaseClassesFromTemplates(session.characterTemplates, availableRaces[0])[0]
+  );
+  const [sex, setSex] = useState<SexNames>("MALE");
+
+  function handleRaceChange(nextRace: RaceNames) {
     setRace(nextRace);
-    const available = getAvailableBaseClasses(nextRace);
+    const available = getAvailableBaseClassesFromTemplates(session.characterTemplates, nextRace);
     if (!available.includes(baseClass)) {
       setBaseClass(available[0]);
     }
   }
 
-  function handleSelectVariant(nextRace: Race, nextBaseClass: BaseClass, nextSex: Sex) {
+  function handleSelectVariant(nextRace: RaceNames, nextBaseClass: BaseClass, nextSex: SexNames) {
     setRace(nextRace);
     setBaseClass(nextBaseClass);
     setSex(nextSex);
@@ -37,9 +45,9 @@ export function CreateCharScreen() {
           onBaseClassChange={setBaseClass}
           onSexChange={setSex}
         />
-        <CharTemplateInfoMenu race={race} />
+        <CharTemplateInfoMenu race={race} baseClass={baseClass} sex={sex} />
       </div>
       <LegalFooter />
     </Screen>
   );
-}
+});

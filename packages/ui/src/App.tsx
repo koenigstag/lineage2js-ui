@@ -1,14 +1,16 @@
 import { useEffect } from "react";
 import { observer } from "mobx-react-lite";
-import { useUiStore, useWindowManagerStore } from "./stores/StoreContext";
+import { useUiStore, useDatapackStore, useWindowManagerStore } from "./stores/StoreContext";
 import { useResetShortcut } from "./lib/useResetShortcut";
 import { LoginScreen } from "./components/screens/login/login.screen";
 import { CharSelectScreen } from "./components/screens/character-select/char-select.screen";
 import { CreateCharScreen } from "./components/screens/create-char/create-char.screen";
 import { GameScreen } from "./components/screens/game/game.screen";
+import { loadIconMaps } from "./config/icon-urls";
 
 export const App = observer(function App() {
   const ui = useUiStore();
+  const datapack = useDatapackStore();
   const windowManager = useWindowManagerStore();
 
   useEffect(() => {
@@ -17,6 +19,21 @@ export const App = observer(function App() {
       window.history.pushState(null, "", hash);
     }
   }, [ui.screen]);
+
+  // Language-independent tables -- fetched once, never re-fetched on lang change.
+  useEffect(() => {
+    loadIconMaps();
+    datapack.loadNpcRaces();
+    datapack.loadNpcLevels();
+    datapack.loadSkillEffectFields();
+    datapack.loadCharacterBaseStats();
+    datapack.loadItemGrades();
+  }, [datapack]);
+
+  // Per-language tables -- re-fetched (or served from cache) whenever ui.lang changes.
+  useEffect(() => {
+    datapack.loadForLang(ui.lang);
+  }, [datapack, ui.lang]);
 
   useResetShortcut(() => windowManager.resetPositions());
 

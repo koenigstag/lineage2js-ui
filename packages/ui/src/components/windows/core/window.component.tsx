@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useWindowManagerStore } from "../../../stores/StoreContext";
+import { t } from "../../../lang/lang";
 import type {
   WindowOrigin,
   WindowPosition,
@@ -132,6 +133,10 @@ function isBottomOrigin(origin: WindowOrigin) {
   return origin === "bottom-left" || origin === "bottom-right";
 }
 
+function isCenterOrigin(origin: WindowOrigin) {
+  return origin === "top-center";
+}
+
 /** Absolute screen-space (left, top) -> distance from the window's origin corner, for persisting. */
 function toOriginRelative(
   origin: WindowOrigin,
@@ -141,7 +146,11 @@ function toOriginRelative(
   height: number
 ): WindowPosition {
   return {
-    x: isRightOrigin(origin) ? window.innerWidth - left - width : left,
+    x: isCenterOrigin(origin)
+      ? left + width / 2 - window.innerWidth / 2
+      : isRightOrigin(origin)
+      ? window.innerWidth - left - width
+      : left,
     y: isBottomOrigin(origin) ? window.innerHeight - top - height : top,
   };
 }
@@ -152,6 +161,11 @@ function getOriginStyle(
   x: number,
   y: number
 ): CSSProperties {
+  if (isCenterOrigin(origin)) {
+    // x is the window's horizontal offset from screen-center; centering via
+    // left:50%+translateX keeps it centered across viewport resizes.
+    return { left: `calc(50% + ${x}px)`, top: y, transform: "translateX(-50%)" };
+  }
   return {
     [isRightOrigin(origin) ? "right" : "left"]: x,
     [isBottomOrigin(origin) ? "bottom" : "top"]: y,
@@ -172,6 +186,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
   const contentStyle: CSSProperties = {
     padding: config.contentPadding ?? 8,
     backgroundColor: config.contentBackground,
+    userSelect: "none",
   };
 
   function handleFocus() {
@@ -224,7 +239,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
       ? { backgroundColor: "transparent", minWidth: undefined, overflow: "visible" }
       : {}),
     ...getOriginStyle(origin, state.x, state.y),
-    zIndex: state.zIndex,
+    zIndex: config.zIndex ?? state.zIndex,
   };
 
   if (config.type === "titlebar") {
@@ -272,7 +287,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
               ...config.windowStyle?.title,
             }}
           >
-            {config.title}
+            {config.title && t(config.title)}
           </span>
           {config.closable && (
             <button
@@ -353,6 +368,14 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
       }}
       onPointerDown={(event) => {
         handleFocus();
+        // only-body has no separate drag-handle strip (unlike titlebar/
+        // sidebar), so it drags from anywhere in the content -- except
+        // interactive controls, where handleDragStart's preventDefault()
+        // would otherwise swallow the pointerdown that focuses them (e.g.
+        // chat's message input, which needed this window type draggable).
+        if ((event.target as HTMLElement).closest("input, select, textarea, button")) {
+          return;
+        }
         handleDragStart(event);
       }}
     >

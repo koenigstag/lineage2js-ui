@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:ui"],
+      "port": 5173
+    },
+    {
+      "name": "assets-server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:assets-server"],
+      "port": 4000
+    },
+    {
+      "name": "ui-verify",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@lineage2js/ui", "dev", "--", "--port", "5174"],
+      "port": 5174
+    }
+  ]
+}

@@ -32,3 +32,17 @@ body {
   background: #5d4f48;
   border-radius: 4px;
 }
+
+/* system-messages.window.tsx and chat.window.tsx both draw their own
+   always-visible track+thumb instead -- modern Chromium/GTK increasingly
+   default to overlay scrollbars that reserve no layout space and don't
+   honor ::-webkit-scrollbar width, which silently defeats the .slot-grid
+   approach above. Hide the native one here so it can't double up with the
+   custom one. */
+.hide-native-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-native-scrollbar::-webkit-scrollbar {
+  display: none;
+}
