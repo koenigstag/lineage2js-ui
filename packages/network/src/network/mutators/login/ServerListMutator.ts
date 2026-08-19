@@ -15,7 +15,7 @@ export default class ServerListMutator extends IMMOClientMutator<
         this.Client.Servers[0];
 
       this.Client.Session.server = {
-        host: server.Ipv4(),
+        host: server.resolveHost(this.Client.Config.Secure, this.Client.Config.Ip),
         port: server.Port
       };
     }

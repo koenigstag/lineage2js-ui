@@ -24,7 +24,10 @@ export default class CommandSelectServer extends AbstractGameCommand {
 
       // ServerListMutator eagerly guesses a server for Session.server -- override
       // it with whatever the caller actually picked.
-      this.LoginClient.Session.server = { host: server.Ipv4(), port: server.Port };
+      this.LoginClient.Session.server = {
+        host: server.resolveHost(this.LoginClient.Config.Secure, this.LoginClient.Config.Ip),
+        port: server.Port,
+      };
 
       this.LoginClient.once("PacketReceived:PlayFail", (e: EPacketReceived) => {
         reject((e.data.packet as PlayFail).FailReason);

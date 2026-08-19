@@ -191,4 +191,17 @@ export default class L2Server {
 
     return `${p1}.${p2}.${p3}.${p4}`;
   }
+
+  /**
+   * Host to actually open the wss/ws connection to. The ServerList packet
+   * only ever carries a raw IPv4 address (see ServerList.readImpl's
+   * readD()) -- there's no hostname field in the wire protocol. A TLS cert
+   * can't cover a bare IP, so under Secure that address would always fail
+   * certificate validation; fall back to the same hostname already used for
+   * the login connection instead, since the game server a login server
+   * hands off to lives behind the same TLS-terminating proxy/domain here.
+   */
+  public resolveHost(secure: boolean, loginHost: string): string {
+    return secure ? loginHost : this.Ipv4();
+  }
 }
