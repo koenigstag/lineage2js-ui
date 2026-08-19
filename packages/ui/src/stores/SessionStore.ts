@@ -87,6 +87,7 @@ export class SessionStore {
         Password: password,
         Ip: import.meta.env.VITE_LOGIN_SERVER_IP || "127.0.0.1",
         Port: Number(import.meta.env.VITE_LOGIN_SERVER_PORT) || 2106,
+        Secure: import.meta.env.VITE_LOGIN_SERVER_SECURE === "true",
         Stream: "websocket",
       });
       addKnownAccount(username);

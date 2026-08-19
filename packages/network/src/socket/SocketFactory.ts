@@ -12,7 +12,7 @@ export default class SocketFactory {
     switch (stream) {
       case "auto":
       case "websocket":
-        return new WebSocketAdapter(`ws://${config.Ip}:${config.Port}`);
+        return new WebSocketAdapter(`${config.Secure ? "wss" : "ws"}://${config.Ip}:${config.Port}`);
     }
 
     throw new Error("Cannot find appropriate socket adapter");

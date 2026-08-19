@@ -22,6 +22,8 @@ interface ImportMetaEnv {
   readonly VITE_LOGIN_SERVER_IP: string;
   /** L2 login server port, e.g. "2106". Defaults to 2106 if unset. */
   readonly VITE_LOGIN_SERVER_PORT: string;
+  /** "true" connects via wss:// instead of ws://. Required when this app itself is served over https (e.g. GitHub Pages) -- browsers block a plain ws:// connection from an https page as mixed content. The login server (and whatever game server it hands off to, see MMOConfig.Secure) must actually terminate TLS for this to work, e.g. via a reverse proxy in front of it. */
+  readonly VITE_LOGIN_SERVER_SECURE: string;
 }
 
 interface ImportMeta {
