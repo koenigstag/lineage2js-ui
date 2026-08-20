@@ -1,6 +1,14 @@
 import { rootStore } from "../stores/RootStore";
 import { getItemName } from "./item-mapping";
 import { getSkillName } from "./skill-mapping";
+import { getNpcName } from "./npc-name-mapping";
+
+// The wire value for a TYPE_NPC_NAME param is the npc's TEMPLATE id offset
+// by +1000000 (confirmed against both lineage2ts's and L2J_Mobius's
+// SystemMessage.addNpcName -- `1000000 + id`), not a display id or object
+// id -- the client is expected to subtract this back out before resolving
+// the name.
+const NPC_NAME_PARAM_OFFSET = 1_000_000;
 
 // Wire type tags from AbstractMessagePacket.ts (network package) -- kept in
 // sync manually since the network package doesn't export them as a value.
@@ -48,7 +56,10 @@ function formatParam(value: unknown, type: number | undefined): string {
       return `(${x}, ${y}, ${z})`;
     }
     case TYPE_NPC_NAME:
-      return `NPC #${value}`;
+      // isAttackable isn't derivable from the message itself -- defaults to
+      // the "NPC #<id>" fallback style (not "Mob #<id>") when the id isn't
+      // in the name table either, same as npc-name-mapping.ts's own default.
+      return getNpcName((value as number) - NPC_NAME_PARAM_OFFSET, false);
     case TYPE_CASTLE_NAME:
       return `Castle #${value}`;
     case TYPE_INSTANCE_NAME:
