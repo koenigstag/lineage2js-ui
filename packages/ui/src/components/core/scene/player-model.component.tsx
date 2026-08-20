@@ -10,10 +10,11 @@ interface PlayerModelProps {
   nickname?: string;
   selected?: boolean;
   onSelect?: () => void;
+  isDead?: boolean;
 }
 
 /** Player variant (race/baseClass/sex) -> visual, rendered via CharacterModel. Used by char-select/char-create directly, and by CreatureModel's player branch. */
-export function PlayerModel({ variant, nickname, selected, onSelect, ...position }: PlayerModelProps) {
+export function PlayerModel({ variant, nickname, selected, onSelect, isDead, ...position }: PlayerModelProps) {
   const visual = getPlayerVisualFromVariant(variant);
-  return <CharacterModel {...position} {...visual} nickname={nickname} selected={selected} onSelect={onSelect} />;
+  return <CharacterModel {...position} {...visual} nickname={nickname} selected={selected} onSelect={onSelect} isDead={isDead} />;
 }

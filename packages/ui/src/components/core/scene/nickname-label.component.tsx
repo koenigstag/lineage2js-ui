@@ -33,12 +33,12 @@ function createNicknameTexture(text: string): { texture: CanvasTexture; aspect: 
 interface NicknameLabelProps {
   text: string;
   position: [number, number, number];
-  /** Label height in world units. Defaults to 0.32. */
+  /** Label height in world units. Defaults to 0.16. */
   height?: number;
 }
 
 /** Camera-facing nickname label rendered above a character marker, drawn onto a canvas texture. */
-export function NicknameLabel({ text, position, height = 0.32 }: NicknameLabelProps) {
+export function NicknameLabel({ text, position, height = 0.16 }: NicknameLabelProps) {
   const { texture, aspect } = useMemo(() => createNicknameTexture(text), [text]);
 
   useEffect(() => {

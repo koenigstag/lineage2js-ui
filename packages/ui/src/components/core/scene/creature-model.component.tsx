@@ -53,11 +53,21 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
         // non-players, TS just can't see the kind-based guarantee.
         variant={{ race: creature.race as RaceNames, baseClass: creature.baseClass, sex: creature.sex }}
         nickname={creature.name}
+        isDead={creature.isDead}
       />
     );
   }
 
   const color = getNpcRaceColor(creature.race) ?? KIND_FALLBACK_COLOR[creature.kind];
   const cursor = selected ? KIND_CURSOR[creature.kind] : undefined;
-  return <CharacterModel {...position} selected={selected} color={color} nickname={creature.name} cursor={cursor} />;
+  return (
+    <CharacterModel
+      {...position}
+      selected={selected}
+      color={color}
+      nickname={creature.name}
+      cursor={cursor}
+      isDead={creature.isDead}
+    />
+  );
 }
