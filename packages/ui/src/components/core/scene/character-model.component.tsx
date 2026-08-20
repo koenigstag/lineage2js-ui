@@ -18,6 +18,8 @@ interface CharacterModelProps {
   nickname?: string;
   selected?: boolean;
   onSelect?: () => void;
+  /** CSS cursor shown while hovering the model, e.g. "crosshair" for an attackable mob. Unset leaves the browser default. */
+  cursor?: string;
 }
 
 /**
@@ -38,6 +40,7 @@ export function CharacterModel({
   nickname,
   selected = false,
   onSelect,
+  cursor,
 }: CharacterModelProps) {
   return (
     <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
@@ -53,6 +56,15 @@ export function CharacterModel({
               onSelect();
             })
           }
+          onPointerOver={
+            cursor
+              ? (event) => {
+                  event.stopPropagation();
+                  document.body.style.cursor = cursor;
+                }
+              : undefined
+          }
+          onPointerOut={cursor ? () => (document.body.style.cursor = "auto") : undefined}
         >
           <capsuleGeometry args={[0.24, 0.85, 4, 8]} />
           <meshStandardMaterial color={color} roughness={0.7} />

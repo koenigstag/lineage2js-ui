@@ -6,12 +6,12 @@ import { useGameStore } from "../../../../stores/StoreContext";
 import { CreatureModel } from "../../../core/scene/creature-model.component";
 import { l2HeadingToThreeYaw, l2ToThree } from "../../../../utils/coords";
 import { interpolatedCreaturePosition } from "../../../../utils/creature-movement";
+import { useClickOrDoubleClick } from "../../../../lib/useClickOrDoubleClick";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 
 interface AnimatedCreatureProps {
   creature: WorldCreatureSnapshot;
   selected: boolean;
-  onSelect: () => void;
 }
 
 /**
@@ -25,14 +25,44 @@ interface AnimatedCreatureProps {
  * position+rotation on an inner group as normal (given x=y=z=0 here), so
  * this wrapper's translation and that inner rotation simply add up.
  */
-function AnimatedCreature({ creature, selected, onSelect }: AnimatedCreatureProps) {
+function AnimatedCreature({ creature, selected }: AnimatedCreatureProps) {
   const groupRef = useRef<Group>(null);
+  const gameStore = useGameStore();
 
   useFrame(() => {
     const l2Pos = interpolatedCreaturePosition(creature);
     const pos = l2ToThree(l2Pos.x, l2Pos.y, l2Pos.z);
     groupRef.current?.position.set(pos.x, pos.y, pos.z);
   });
+
+  // Mob -> attack(), npc -> talkToNpc() -- both walk into range first if
+  // needed (GameStore.queueActionInRange). talkToNpc has nothing to
+  // actually trigger on arrival yet (no NPC dialog system, see its own
+  // comment), only the walk-over. Player/summon have no act step at all.
+  function act() {
+    if (creature.kind === "mob") {
+      gameStore.attack();
+    } else if (creature.kind === "npc") {
+      gameStore.talkToNpc();
+    }
+  }
+
+  // Click #1 on a not-yet-targeted creature just selects it (same click
+  // this creature's cursor is still the plain default for, see
+  // creature-model.component.tsx's KIND_CURSOR comment) -- click #1 on the
+  // creature that's *already* the target acts on it instead (the cursor by
+  // then has switched to the attack/talk one, signaling that). Double-click
+  // is just the fast path that collapses both steps into one gesture,
+  // regardless of prior selection -- always (re)selects (a double-click on
+  // a creature that wasn't already the target must still act on the right
+  // one) and acts immediately.
+  const { onClick } = useClickOrDoubleClick(
+    () => (selected ? act() : gameStore.selectCreatureAsTarget(creature.objectId)),
+    () => {
+      gameStore.selectCreatureAsTarget(creature.objectId);
+      act();
+    }
+  );
 
   return (
     <group ref={groupRef}>
@@ -43,7 +73,7 @@ function AnimatedCreature({ creature, selected, onSelect }: AnimatedCreatureProp
         z={0}
         angleToCenter={l2HeadingToThreeYaw(creature.heading)}
         selected={selected}
-        onSelect={onSelect}
+        onSelect={onClick}
       />
     </group>
   );
@@ -69,7 +99,6 @@ export const GameCreaturesField = observer(function GameCreaturesField() {
           key={creature.objectId}
           creature={creature}
           selected={gameStore.target?.objectId === creature.objectId}
-          onSelect={() => gameStore.selectCreatureAsTarget(creature.objectId)}
         />
       ))}
     </>

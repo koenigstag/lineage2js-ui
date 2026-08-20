@@ -92,9 +92,11 @@ const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + 
 // client-side yet (same gap as the rest of equipped-weapon data, see
 // TODO.md's "Equipped armor/weapon visuals"), so this stands in for real
 // melee reach (collision radii + a small buffer) until that exists. Ranged
-// weapons (bow/etc, real range ~500-900) aren't accounted for -- everything
-// queued via queueActionInRange uses this same distance for now.
+// weapons (bow/etc, real range ~500-900) aren't accounted for.
 const MELEE_ATTACK_RANGE = 40;
+// Typical retail NPC talk radius -- no per-npc interactionDistance stat is
+// parsed client-side either, same gap as MELEE_ATTACK_RANGE above.
+const NPC_INTERACT_RANGE = 150;
 
 /**
  * A single queued "walk into range, then do X" intent (see
@@ -1201,6 +1203,22 @@ export class GameStore {
     this.queueActionInRange(target.objectId, MELEE_ATTACK_RANGE, () => {
       this.client?.attack(target.objectId);
     });
+  }
+
+  /**
+   * Talks to the current target -- same shape as attack() (walk into range
+   * first via queueActionInRange, same "walk there first" feel the real
+   * client has for a distant double-click). The talk itself isn't wired up
+   * on arrival: there's no NPC dialog/bypass system in this client yet (see
+   * TODO.md's "Add NPC dialog system" entry), so this only gets the player
+   * there for now.
+   */
+  talkToNpc() {
+    const target = this.target;
+    if (!target) {
+      return;
+    }
+    this.queueActionInRange(target.objectId, NPC_INTERACT_RANGE, () => {});
   }
 
   /**
