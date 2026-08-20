@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { observer } from "mobx-react-lite";
-import type { ReactNode } from "react";
-import type { L2Item } from "@lineage2js/network";
+import type { DragEvent, ReactNode } from "react";
+import { ShortcutType, type L2Item } from "@lineage2js/network";
 import { Slot } from "../core/slot.component";
 import { ItemSlot } from "../core/item-slot.component";
+import { hasHotbarDragPayload, readHotbarDragPayload, type HotbarDragPayload } from "../core/dnd";
 import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
-import { getItemSlotType, getItemGradeLabel } from "../../../config/item-mapping";
+import { getItemSlotType, getItemGradeLabel, EQUIPMENT_SLOT_TYPES } from "../../../config/item-mapping";
 import { useClickOrDoubleClick } from "../../../lib/useClickOrDoubleClick";
 import {
   PAPERDOLL_BLOCKS,
@@ -69,6 +71,7 @@ export const Paperdoll = observer(function Paperdoll() {
   const game = useGameStore();
   const session = useSessionStore();
   const equippedBySlot = getEquippedItemsBySlot(game.inventoryItems);
+  const [dragOverSlot, setDragOverSlot] = useState<PaperdollSlotKey | undefined>(undefined);
 
   // Click an equipped cell to take it off. Prefers the real RequestUnEquipItem
   // packet (matches the retail client's paperdoll-click behavior), except for
@@ -82,6 +85,23 @@ export const Paperdoll = observer(function Paperdoll() {
     } else {
       session.client.unequipItem(slot);
     }
+  }
+
+  function resolveDroppedItem(payload: HotbarDragPayload): L2Item | undefined {
+    if (payload.shortcutType !== ShortcutType.ITEM) return undefined;
+    return game.inventoryItems.find((item) => item.ObjectId === payload.targetId);
+  }
+
+  // Dropping an item on ANY paperdoll cell equips it via UseItem, same as
+  // double-clicking it in the inventory grid -- the server resolves the
+  // real slot itself, so which specific cell the drop landed on doesn't
+  // matter (matches retail: dragging gear anywhere onto the paperdoll
+  // equips it). Gated to equipable slot types for the same reason the
+  // grid's double-click is -- dropping a potion here shouldn't "use" it.
+  function handleItemDrop(payload: HotbarDragPayload) {
+    const item = resolveDroppedItem(payload);
+    if (!item || !EQUIPMENT_SLOT_TYPES.has(getItemSlotType(item))) return;
+    session.client.useItem(item);
   }
 
   return (
@@ -99,7 +119,9 @@ export const Paperdoll = observer(function Paperdoll() {
             padding: bordered ? BLOCK_BORDER_PADDING : undefined,
           }}
         >
-          {sections.map((section, sectionIndex) => renderSection(section, sectionIndex, equippedBySlot, handleUnequip))}
+          {sections.map((section, sectionIndex) =>
+            renderSection(section, sectionIndex, equippedBySlot, handleUnequip, dragOverSlot, setDragOverSlot, handleItemDrop)
+          )}
         </div>
       ))}
     </div>
@@ -110,7 +132,10 @@ function renderSection(
   { rows, slotSize = SLOT_SIZE, columnGap = COLUMN_GAP, center }: PaperdollSection,
   sectionIndex: number,
   equippedBySlot: Partial<Record<PaperdollSlotKey, L2Item>>,
-  onUnequip: (slotKey: PaperdollSlotKey, item: L2Item) => void
+  onUnequip: (slotKey: PaperdollSlotKey, item: L2Item) => void,
+  dragOverSlot: PaperdollSlotKey | undefined,
+  setDragOverSlot: (slotKey: PaperdollSlotKey | undefined) => void,
+  onDrop: (payload: HotbarDragPayload) => void
 ) {
   return (
     <div
@@ -165,16 +190,44 @@ function renderSection(
             <PaperdollItemCell onUnequip={() => onUnequip(slotKey, item)}>{content}</PaperdollItemCell>
           );
 
+          // Drag a grid item onto any cell to equip it -- see Paperdoll's
+          // handleItemDrop comment for why the target cell doesn't matter.
+          const isDragOver = dragOverSlot === slotKey;
+          const dragOverStyle = {
+            outline: isDragOver ? "2px solid #d4af6a" : undefined,
+            outlineOffset: isDragOver ? -2 : undefined,
+          };
+          const dragHandlers = {
+            onDragOver: (e: DragEvent<HTMLDivElement>) => {
+              if (!hasHotbarDragPayload(e)) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+              setDragOverSlot(slotKey);
+            },
+            onDragLeave: () => setDragOverSlot(undefined),
+            onDrop: (e: DragEvent<HTMLDivElement>) => {
+              setDragOverSlot(undefined);
+              const payload = readHotbarDragPayload(e);
+              if (!payload) return;
+              e.preventDefault();
+              onDrop(payload);
+            },
+          };
+
           if (slotKey === "hair1") {
             return (
-              <div key={slotKey} style={{ position: "relative" }}>
+              <div key={slotKey} style={{ position: "relative", ...dragOverStyle }} {...dragHandlers}>
                 {clickable}
                 <HennaSlots />
               </div>
             );
           }
 
-          return <div key={slotKey}>{clickable}</div>;
+          return (
+            <div key={slotKey} style={dragOverStyle} {...dragHandlers}>
+              {clickable}
+            </div>
+          );
         })
       )}
     </div>
