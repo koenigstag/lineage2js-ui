@@ -29,7 +29,7 @@ export default class UserInfo extends GameClientPacket {
     this.User.BaseClassId = (ClassId as any)[this.readD()];
     this.User.Level = this.readD();
     this.User.Exp = this.readQ();
-    const _percentFromCurrentLevel = this.readF();
+    this.User.ExpPercent = this.readF();
 
     this.User.STR = this.readD();
     this.User.DEX = this.readD();
