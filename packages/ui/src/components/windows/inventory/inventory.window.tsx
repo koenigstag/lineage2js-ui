@@ -75,7 +75,7 @@ function WeightBar({ load, maxLoad }: { load: number; maxLoad: number }) {
       <LabeledBar
         label={t("charInfo.wg")}
         percent={percent}
-        text={`${percent.toFixed(0)}%`}
+        text={`${percent.toFixed(2)}%`}
         color={WG_COLOR}
         width={BARS_BLOCK_BAR_WIDTH}
       />
