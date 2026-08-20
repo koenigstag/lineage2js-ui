@@ -34,7 +34,7 @@ import { IS_DEMO_MODE } from "../config/env";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
-import { getNpcName } from "../config/npc-name-mapping";
+import { getNpcName, tryGetNpcName } from "../config/npc-name-mapping";
 import { formatSystemMessage, isNoisySystemMessage } from "../config/system-message-mapping";
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
 import type { BaseClass, SexNames } from "../config/character-races";
@@ -628,7 +628,7 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
   };
 }
 
-/** Same name-resolution rule as targetSnapshotFromCreature, but for the world scene's WorldCreatureSnapshot (position, not stats). */
+/** Similar to targetSnapshotFromCreature, but for the world scene's WorldCreatureSnapshot (position, not stats) -- name resolution differs, see the `name` field's own comment below. */
 function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureSnapshot {
   const isAttackable = creature instanceof L2Mob;
   const kind: WorldCreatureSnapshot["kind"] = creature instanceof L2Character
@@ -643,7 +643,11 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
 
   return {
     objectId: creature.ObjectId,
-    name: creature instanceof L2Character ? creature.Name : creature.Name || getNpcName(creature.Id, isAttackable),
+    // No "Mob #<id>"/"NPC #<id>" placeholder here (unlike targetSnapshotFromCreature)
+    // -- an unnamed npc just gets no floating nameplate in the world scene at
+    // all, rather than a raw id (see tryGetNpcName's comment). It still shows
+    // that placeholder in the target-select window once actually targeted.
+    name: creature instanceof L2Character ? creature.Name : creature.Name || tryGetNpcName(creature.Id) || "",
     x: creature.X,
     y: creature.Y,
     z: creature.Z,

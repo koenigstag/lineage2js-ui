@@ -13,3 +13,16 @@ import { rootStore } from "../stores/RootStore";
 export function getNpcName(npcId: number, isAttackable: boolean): string {
   return rootStore.datapack.npcNames[npcId] || `${isAttackable ? "Mob" : "NPC"} #${npcId}`;
 }
+
+/**
+ * Real resolved name only, no "Mob #<id>"/"NPC #<id>" placeholder fallback
+ * -- for display surfaces that should show nothing rather than a raw id
+ * when the name is genuinely unknown (e.g. the world scene's floating
+ * nameplate, see GameStore.worldCreatureSnapshotFromCreature). The
+ * placeholder itself is still the right call for the target-select window
+ * (getNpcName above), which always needs *something* to show once a
+ * creature is actually targeted.
+ */
+export function tryGetNpcName(npcId: number): string | undefined {
+  return rootStore.datapack.npcNames[npcId];
+}
