@@ -145,6 +145,7 @@ export const LANG_EN_US: LangDictionary = {
       quests: "Quests",
       clan: "Clan",
       map: "Map",
+      chat: "Chat",
     },
     returnToSelectConfirm: "Return to character selection?",
     menuButtonTitle: "Menu",

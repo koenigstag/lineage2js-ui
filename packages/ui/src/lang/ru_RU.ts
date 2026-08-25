@@ -145,6 +145,7 @@ export const LANG_RU_RU: LangDictionary = {
       quests: "Квесты",
       clan: "Клан",
       map: "Карта",
+      chat: "Чат",
     },
     returnToSelectConfirm: "Вернуться на экран выбора персонажа?",
     menuButtonTitle: "Меню",

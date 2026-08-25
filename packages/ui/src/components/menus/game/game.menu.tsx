@@ -20,6 +20,7 @@ const GRID_ITEMS: { id: string; icon?: string; image?: string; titleKey: string 
   { id: "quests", icon: "🗞️", titleKey: "game.grid.quests" },
   { id: "clan", image: clanIcon, titleKey: "game.grid.clan" },
   { id: "map", image: mapIcon, titleKey: "game.grid.map" },
+  { id: "chat", icon: "💬", titleKey: "game.grid.chat" },
 ];
 
 const iconButtonStyle: CSSProperties = {

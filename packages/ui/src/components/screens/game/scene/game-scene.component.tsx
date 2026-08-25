@@ -27,6 +27,10 @@ const MIN_PITCH = 0.15;
 const MAX_PITCH = 1.45; // just under looking straight down
 const ORBIT_SENSITIVITY = 0.005; // radians per pixel dragged
 const GROUND_GRID_SIZE_M = 120;
+// Below this, a touch drag is still treated as a potential tap (move/select)
+// rather than committing to a camera-orbit drag -- avoids hijacking taps on
+// finger jitter, matching how a native "click" tolerates tiny movement.
+const TOUCH_ORBIT_THRESHOLD_PX = 8;
 
 interface TestCharacterState {
   x: number;
@@ -119,6 +123,10 @@ export const GameScene = observer(function GameScene() {
   // updating them shouldn't itself trigger a render.
   const moveTargetRef = useRef<MoveTarget | null>(null);
   const orbitRef = useRef<OrbitState>({ azimuth: DEFAULT_AZIMUTH, pitch: DEFAULT_PITCH });
+  // Set true once an in-progress single-finger touch drag crosses the orbit
+  // threshold -- GeoTerrainTile's ground-click defers its move/select action
+  // on touch until pointerup, then checks this to tell a tap from a drag.
+  const orbitDragActiveRef = useRef(false);
 
   const realPlayer = gameStore.me !== undefined ? gameStore.creatures.get(gameStore.me) : undefined;
   const worldX = realPlayer?.x ?? character.x;
@@ -219,20 +227,47 @@ export const GameScene = observer(function GameScene() {
     }
   }
 
-  /** Right-button drag rotates the camera around the character; released anywhere, even off-canvas. */
+  /**
+   * Right-button drag rotates the camera around the character; released
+   * anywhere, even off-canvas. Also handles a single-finger touch drag the
+   * same way -- but since touch has no separate button for "orbit" vs "tap
+   * to move/select", a drag only actually starts rotating (and marks
+   * orbitDragActiveRef, which GeoTerrainTile's ground-click checks) once
+   * total movement crosses TOUCH_ORBIT_THRESHOLD_PX. A tap that never
+   * crosses it falls through untouched to the normal tap handling.
+   */
   function handleOrbitPointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.button !== 2) {
+    const isTouch = event.pointerType === "touch";
+    if (event.button !== 2 && !isTouch) {
       return;
     }
-    event.preventDefault();
+    // Only for the mouse/right-click case -- calling preventDefault() on a
+    // touch pointerdown suppresses the browser's synthesized click for that
+    // touch entirely (per the Pointer Events spec), which would break
+    // tap-to-select/act on creatures (CharacterModel's onClick relies on
+    // that native click). Touch scrolling/panning is disabled instead via
+    // this wrapper's touchAction: "none" CSS below.
+    if (!isTouch) {
+      event.preventDefault();
+    }
     let lastX = event.clientX;
     let lastY = event.clientY;
+    let totalMoved = 0;
 
     function onMove(moveEvent: PointerEvent) {
       const dx = moveEvent.clientX - lastX;
       const dy = moveEvent.clientY - lastY;
       lastX = moveEvent.clientX;
       lastY = moveEvent.clientY;
+
+      if (isTouch) {
+        totalMoved += Math.hypot(dx, dy);
+        if (totalMoved < TOUCH_ORBIT_THRESHOLD_PX) {
+          return;
+        }
+        orbitDragActiveRef.current = true;
+      }
+
       orbitRef.current = {
         azimuth: orbitRef.current.azimuth - dx * ORBIT_SENSITIVITY,
         // Inverted vs. dx on purpose -- matches the retail L2 client's
@@ -245,6 +280,14 @@ export const GameScene = observer(function GameScene() {
     function onUp() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      if (isTouch) {
+        // Deferred a tick so GeoTerrainTile's own pointerup listener (which
+        // reads this same ref to resolve its deferred tap) still sees this
+        // gesture's value before it's cleared for the next one.
+        setTimeout(() => {
+          orbitDragActiveRef.current = false;
+        }, 0);
+      }
     }
 
     window.addEventListener("pointermove", onMove);
@@ -256,7 +299,10 @@ export const GameScene = observer(function GameScene() {
 
   return (
     <div
-      style={{ position: "absolute", inset: 0 }}
+      // Disables native scroll/pan/pinch-zoom for touch gestures on this
+      // element -- the orbit drag and tap-to-move/select handling above
+      // take over that whole gesture space instead.
+      style={{ position: "absolute", inset: 0, touchAction: "none" }}
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={handleOrbitPointerDown}
     >
@@ -280,7 +326,7 @@ export const GameScene = observer(function GameScene() {
             steal ground-click hits meant for the terrain mesh underneath it. */}
         <gridHelper args={[GROUND_GRID_SIZE_M, 40, "#3a4a3f", "#25302a"]} raycast={() => null} />
 
-        <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} />
+        <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} orbitDragActiveRef={orbitDragActiveRef} />
 
         {/* Local placeholder avatar -- only shown before a real player entry
             exists (no live session yet). Once gameStore.creatures has us,

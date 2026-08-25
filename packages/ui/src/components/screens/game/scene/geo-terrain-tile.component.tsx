@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type MutableRefObject } from "react";
 import * as THREE from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { GEO_CELL_SIZE, GEO_TILE_SIZE } from "../../../../config/geodata";
@@ -11,6 +11,15 @@ interface GeoTerrainTileProps {
   tile: GeoTile;
   /** Left-click on the terrain surface -- fired with the raycast hit point (three.js space). */
   onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
+  /**
+   * Set by game-scene.component.tsx's handleOrbitPointerDown while a
+   * single-finger touch drag is rotating the camera. Touch has no separate
+   * "orbit" button the way right-click does, so a ground tap can't tell
+   * itself apart from the start of an orbit drag at pointerdown time --
+   * unlike mouse, its action is deferred to pointerup and only committed if
+   * this stayed false for the whole gesture.
+   */
+  orbitDragActiveRef?: MutableRefObject<boolean>;
 }
 
 const NSWE_EAST = 1;
@@ -130,7 +139,7 @@ function buildSheets(tile: GeoTile): DisjointSet {
  * bridge deck and the ground underneath never get connected by a stray
  * triangle just because they happen to share (x, y).
  */
-export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick }: GeoTerrainTileProps) {
+export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick, orbitDragActiveRef }: GeoTerrainTileProps) {
   const geometries = useMemo(() => {
     const { cellsX, cellsY, layerOffsets, layerHeights } = tile;
     const cellCount = cellsX * cellsY;
@@ -212,11 +221,28 @@ export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick }: GeoTerrain
     // Native "click" only fires after a matching pointerdown+pointerup
     // pair with no drag in between -- pointerdown is more direct and
     // can't be swallowed by that. Left button only (button 0); the
-    // right button is reserved for the orbit-camera drag.
+    // right button is reserved for the orbit-camera drag. Touch also
+    // reports button 0 here, so it passes this same check.
     if (event.nativeEvent.button !== 0) {
       return;
     }
     event.stopPropagation();
+
+    if (event.nativeEvent.pointerType === "touch") {
+      // Unlike mouse, a touch tap can't tell itself apart from the start of
+      // a camera-orbit drag yet (see orbitDragActiveRef's doc comment) --
+      // defer the actual move/select action to pointerup, and only commit
+      // if the gesture never crossed the orbit-drag threshold.
+      const handleUp = () => {
+        window.removeEventListener("pointerup", handleUp);
+        if (!orbitDragActiveRef?.current) {
+          onGroundClick?.(event);
+        }
+      };
+      window.addEventListener("pointerup", handleUp);
+      return;
+    }
+
     onGroundClick?.(event);
   }
 

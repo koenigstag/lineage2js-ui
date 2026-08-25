@@ -1,5 +1,11 @@
 import { makeAutoObservable } from "mobx";
 import { WINDOW_REGISTRY, type WindowConfig, type WindowPosition } from "../config/windows.registry";
+import { isMobileViewport } from "../lib/useIsMobile";
+
+// Windows that start closed on a mobile-width viewport regardless of their
+// registry defaultOpen -- chat's fixed-width log eats a big chunk of a phone
+// screen; toggle it back on via the game menu's chat button.
+const MOBILE_DEFAULT_CLOSED = new Set(["chat"]);
 
 interface WindowRuntimeState {
   open: boolean;
@@ -30,11 +36,13 @@ export class WindowManagerStore {
 
   constructor() {
     const persisted = loadPersistedPositions();
+    const mobile = isMobileViewport();
 
     for (const id of Object.keys(WINDOW_REGISTRY)) {
       const config = WINDOW_REGISTRY[id];
       const position = persisted[id] ?? this.getDefaultPosition(config);
-      this.windows.set(id, { open: config.defaultOpen ?? false, x: position.x, y: position.y, zIndex: this.topZIndex });
+      const defaultOpen = mobile && MOBILE_DEFAULT_CLOSED.has(id) ? false : config.defaultOpen ?? false;
+      this.windows.set(id, { open: defaultOpen, x: position.x, y: position.y, zIndex: this.topZIndex });
     }
 
     makeAutoObservable(this);
