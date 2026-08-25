@@ -2,6 +2,7 @@ import L2Object from "./L2Object";
 import { Sex } from "../enums/Sex";
 import { Race } from "../enums/Race";
 import Vector from "../mmocore/Vector";
+import { headingBetween } from "./l2-heading";
 import L2ObjectCollection from "./L2ObjectCollection";
 import L2Buff from "./L2Buff";
 import { ClassId } from "../enums/ClassId";
@@ -623,9 +624,7 @@ export default abstract class L2Creature extends L2Object {
     this._moveStartedAt = Date.now();
 
     if (!heading) {
-      let angleTarget = Math.atan2(dy - y, dx - x) * (180 / Math.PI);
-      if (angleTarget < 0) angleTarget = 360 + angleTarget;
-      this.Heading = Math.floor(angleTarget * 182.044444444);
+      this.Heading = headingBetween(x, y, dx, dy);
     } else {
       this.Heading = heading;
     }
