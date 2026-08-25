@@ -16,6 +16,19 @@ export const GEO_TILE_CELLS = 64;
 /** World units covered by one tile side. */
 export const GEO_TILE_SIZE = GEO_CELL_SIZE * GEO_TILE_CELLS;
 
+/** Geo-cells per raw L2J block side (an 8x8 cell polygon -- FLAT/COMPLEX/MULTI, see l2j-region-reader.ts on the assets-server side). */
+export const GEO_BLOCK_CELLS = 8;
+
+/** Geo-cells per raw L2J region ("sector") side. */
+export const GEO_REGION_CELLS = 2048;
+
+/** World units covered by one region side (matches lineage2ts's L2MapTile.Size). */
+export const GEO_REGION_SIZE = GEO_CELL_SIZE * GEO_REGION_CELLS;
+
+// Mirrors world-to-tile.ts's worldToRegionCoords offset (regionX = (x>>15)+20 etc.).
+export const GEO_REGION_ZERO_X = 20;
+export const GEO_REGION_ZERO_Y = 18;
+
 const GEODATA_TILE_BASE_URL = import.meta.env.VITE_GEODATA_TILE_BASE_URL;
 
 /** URL for the pre-baked tile file at the given tile coordinates (see worldToTileCoords). */
