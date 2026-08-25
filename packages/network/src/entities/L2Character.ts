@@ -7,6 +7,20 @@ export default class L2Character extends L2Creature {
   private _level!: number;
   private _clanId!: number;
   private _allyId!: number;
+  /**
+   * Server-computed clan-rank tier (0-10: Vagabond, Vassal, Heir, Knight,
+   * Elder, Baron, Viscount, Count, Marquis, Duke, Grand Duke -- see
+   * config/pledge-class-mapping.ts in the UI package). 0 for anyone with no
+   * clan, since the reference server's own calculatePledgeClass never runs
+   * for a clanless character (confirmed against lineage2ts's
+   * L2ClanMember.ts). The server already accounts for clan level/pledge
+   * type/Noblesse/Hero status to produce this number -- nothing in this
+   * protocol layer sends the human-readable rank name (a client-only string
+   * table, like item/skill/action names), so re-deriving the number
+   * ourselves from clan level would just be redundant guesswork the server
+   * has already resolved.
+   */
+  private _pledgeClass!: number;
   private _clanCrestId!: number;
   private _allyCrestId!: number;
   // NPC id of the floating Agathion companion, set by equipping an Agathion
@@ -27,6 +41,12 @@ export default class L2Character extends L2Creature {
   }
   public set AllyId(value: number) {
     this._allyId = value;
+  }
+  public get PledgeClass(): number {
+    return this._pledgeClass;
+  }
+  public set PledgeClass(value: number) {
+    this._pledgeClass = value;
   }
   public get ClanCrestId(): number {
     return this._clanCrestId;

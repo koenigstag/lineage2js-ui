@@ -153,7 +153,7 @@ export default class CharInfo extends GameClientPacket {
 
     this.Char.Heading = this.readD();
 
-    const _pledgeClass = this.readD();
+    this.Char.PledgeClass = this.readD();
     const _pledgeType = this.readD();
 
     const _titleColor = this.readD();

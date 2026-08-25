@@ -166,7 +166,7 @@ export default class UserInfo extends GameClientPacket {
 
     this.User.IsRunning = this.readC() === 1;
 
-    const _pledgeClass = this.readD();
+    this.User.PledgeClass = this.readD();
     const _pledgeType = this.readD();
 
     const _titleColor = this.readD();

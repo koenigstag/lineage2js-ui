@@ -5,6 +5,7 @@ import { useGameStore } from "../../../stores/StoreContext";
 import { VITALITY_LEVEL_MARKERS } from "../../../stores/GameStore";
 import { CP_COLOR, HP_COLOR, MP_COLOR, SP_COLOR, VITALITY_COLOR, WG_COLOR, XP_COLOR } from "../../../config/stat-colors";
 import { t } from "../../../lang/lang";
+import { getPledgeClassLabel } from "../../../config/pledge-class-mapping";
 
 // Content of the "character" window (see config/windows.registry.ts's
 // "character" entry) -- ported from the Figma "Content" frame
@@ -200,7 +201,7 @@ export const CharacterContent = observer(function CharacterContent() {
             <InfoRow label={t("charInfo.clan")} value={clanName ?? t("charInfo.noClan")} />
             <div style={{ display: "flex", gap: 10 }}>
               <InfoRow label={t("charInfo.level")} value={info.level} onClick={() => game.selectSelfAsTarget()} />
-              <InfoRow label={t("charInfo.status")} value={info.title || "-"} />
+              <InfoRow label={t("charInfo.status")} value={getPledgeClassLabel(info.pledgeClass)} />
             </div>
           </div>
         </div>

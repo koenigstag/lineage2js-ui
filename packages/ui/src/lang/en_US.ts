@@ -87,6 +87,22 @@ export const LANG_EN_US: LangDictionary = {
     noClan: "No Clan",
     level: "Lvl.",
     status: "Status",
+    // Clan-rank tier text for L2Character.PledgeClass (0-10), see
+    // config/pledge-class-mapping.ts -- distinct from the free-text custom
+    // Title a player can set, not shown in this window.
+    pledgeClass: {
+      "0": "Vagabond",
+      "1": "Vassal",
+      "2": "Heir",
+      "3": "Knight",
+      "4": "Elder",
+      "5": "Baron",
+      "6": "Viscount",
+      "7": "Count",
+      "8": "Marquis",
+      "9": "Duke",
+      "10": "Grand Duke",
+    },
     class: "Class",
     combatStats: "Combat Stats",
     basicStats: "Basic Stats",

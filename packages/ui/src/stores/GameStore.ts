@@ -156,6 +156,8 @@ export interface CharInfoSnapshot {
   // char-info/party-char-info sidebars only use the fields above.
   /** L2Character.Title, e.g. a clan/quest title -- empty string when none set. */
   title: string;
+  /** L2Character.PledgeClass -- the char window's "Status" row, see config/pledge-class-mapping.ts. Not the same thing as title. */
+  pledgeClass: number;
   className: string;
   /** 0 when clanless -- resolve the name via GameStore.pledgeCache, same as targetSnapshotFromCreature. */
   clanId: number;
@@ -226,6 +228,7 @@ function createDemoCharInfo(): CharInfoSnapshot {
     sp: 12500,
     recommLeft: 5,
     title: "the Novice",
+    pledgeClass: 3, // Knight -- flavor value for a mid-level clan member, see charInfo.pledgeClass
     className: "Duelist",
     clanId: 1001, // matches createDemoPledgeCache()'s "Aden Vanguards" entry below
     expPercent: 42.5,
@@ -285,6 +288,7 @@ function createEmptyCharInfo(): CharInfoSnapshot {
     sp: 0,
     recommLeft: 0,
     title: "",
+    pledgeClass: 0,
     className: "",
     clanId: 0,
     expPercent: 0,
@@ -1606,6 +1610,7 @@ export class GameStore {
         sp: me.Sp,
         recommLeft: me.RecommLeft,
         title: me.Title,
+        pledgeClass: me.PledgeClass,
         className: getClassLabel(me.ClassId),
         clanId: me.ClanId,
         expPercent: me.ExpPercent,
