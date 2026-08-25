@@ -1,10 +1,18 @@
 import * as THREE from "three";
 
 /**
- * L2 world space is Z-up, units are ~centimeters. three.js is Y-up; the
- * character pipeline (components/screens/character-select/scene) normalizes
- * models to ~1.7 units tall, so the world renders at 1 unit = 1m (L2 -> m:
- * x0.01).
+ * L2 world space is Z-up. L2's engine is a modified Unreal Engine 2, which
+ * uses 52.5 Unreal units per meter (not the 100-units-per-meter/1cm-per-unit
+ * guess this used to have) -- confirmed against shnok/l2-unity's
+ * VectorUtils.ConvertPosToUnity/ScaleToUnity, which use the exact same
+ * `1 / 52.5` factor to convert real L2 client assets into Unity. Getting
+ * this wrong doesn't just mis-scale distances: since the character pipeline
+ * (components/screens/character-select/scene) normalizes models to a fixed
+ * ~1.7 three.js units (~1.7m) independent of this constant, an
+ * underestimated scale here compresses the terrain/movement world relative
+ * to that fixed character size -- which is exactly what made characters look
+ * oversized and movement look too fast relative to landmarks before this was
+ * corrected. three.js is Y-up.
  *
  * Axis mapping: L2 (x, y) -> three (x, z) directly, with no sign flip on
  * either horizontal axis. An earlier version negated y (`-y * SCALE`) on the
@@ -20,7 +28,7 @@ import * as THREE from "three";
  * (0,0,1) to the L2 facing direction (cos t, sin t) mapped straight through
  * this same (x, y) -> (x, z) mapping.
  */
-export const L2_TO_THREE_SCALE = 0.01;
+export const L2_TO_THREE_SCALE = 1 / 52.5;
 
 export function l2ToThree(x: number, y: number, z: number, out: THREE.Vector3 = new THREE.Vector3()): THREE.Vector3 {
   return out.set(x * L2_TO_THREE_SCALE, z * L2_TO_THREE_SCALE, y * L2_TO_THREE_SCALE);
