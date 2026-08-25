@@ -1,12 +1,7 @@
 /**
  * Reads a raw L2J geodata region file (https://bitbucket.org/l2jgeo/l2j_geodata,
  * one file per world region) into the same CSR shape as the client's own
- * GeoTile (packages/ui/src/utils/geodata/geo-tile.types.ts). This is a
- * direct port of packages/ui/src/utils/geodata/l2j-region-parser.ts's
- * parseL2jRegion/countLayersPerCell -- same algorithm, already verified
- * against real production .l2j files -- duplicated here because
- * assets-server has no workspace dependency on packages/ui to import it
- * from. Keep both in sync if the block/cell decode ever changes.
+ * GeoTile (packages/ui/src/utils/geodata/geo-tile.types.ts).
  */
 
 /** Geo-cells per block side (a raw .l2j block is an 8x8 cell polygon). Mirrors packages/ui/src/config/geodata.ts's GEO_BLOCK_CELLS. */
@@ -25,6 +20,20 @@ const enum GeoBlockType {
 /** Raw .l2j cell value's sentinel for "no data" -- a hole in the geometry. */
 const LOWEST_HEIGHT = -32768;
 
+/**
+ * MultiHeight/MultiLayer cell values pack (height << 1) | nswe into one
+ * int16 -- height and NSWE share the value, so a per-direction blocking
+ * mask needs the low 4 bits carved out. FLAT blocks have no such mask (a
+ * FLAT block is one uniform, fully-open area, nothing to encode per
+ * direction) and store the plain height directly -- confirmed against a
+ * real .l2j file: block 117_97 (FLAT) in sector 21_19 stores raw int16
+ * -3704, and a neighboring in-game reading independently confirmed -3704
+ * is the correct height there. Running that same raw value through the
+ * MultiHeight/MultiLayer unpack (clear low 4 bits, then >>1) silently
+ * corrupts it to -1856 -- every FLAT block was affected, not just isolated
+ * ones (extractHeight/extractNswe below are for MultiHeight/MultiLayer
+ * only now; see extractFlatHeight/extractFlatNswe for FLAT).
+ */
 function extractHeight(value: number): number {
   if (value === LOWEST_HEIGHT) {
     return LOWEST_HEIGHT;
@@ -41,6 +50,16 @@ function extractNswe(value: number): number {
     return 0; // fully blocked -- nothing to stand on.
   }
   return value & 0xf;
+}
+
+/** FLAT block value is the plain height, no packed NSWE mask -- see extractHeight's comment. */
+function extractFlatHeight(value: number): number {
+  return value;
+}
+
+/** FLAT blocks encode no per-direction blocking -- fully open unless it's the "no data" hole sentinel. */
+function extractFlatNswe(value: number): number {
+  return value === LOWEST_HEIGHT ? 0 : 0xf;
 }
 
 export interface DecodedRegion {
@@ -139,10 +158,8 @@ export function readL2jRegion(buffer: Buffer): DecodedRegion {
   const layerHeights = new Int16Array(totalLayers);
   const layerNswe = new Uint8Array(totalLayers);
 
-  function writeSingleLayerCell(cellX: number, cellY: number, value: number): void {
+  function writeSingleLayerCell(cellX: number, cellY: number, height: number, nsweValue: number): void {
     const index = cellY * GEO_REGION_CELLS + cellX;
-    const height = extractHeight(value);
-    const nsweValue = extractNswe(value);
     heights[index] = height;
     nswe[index] = nsweValue;
     const start = layerOffsets[index];
@@ -162,9 +179,11 @@ export function readL2jRegion(buffer: Buffer): DecodedRegion {
       if (type === GeoBlockType.Flat) {
         const value = view.getInt16(offset, true);
         offset += 2;
+        const height = extractFlatHeight(value);
+        const nsweValue = extractFlatNswe(value);
         for (let localX = 0; localX < GEO_BLOCK_CELLS; localX++) {
           for (let localY = 0; localY < GEO_BLOCK_CELLS; localY++) {
-            writeSingleLayerCell(baseCellX + localX, baseCellY + localY, value);
+            writeSingleLayerCell(baseCellX + localX, baseCellY + localY, height, nsweValue);
           }
         }
         continue;
@@ -175,7 +194,7 @@ export function readL2jRegion(buffer: Buffer): DecodedRegion {
           for (let localY = 0; localY < GEO_BLOCK_CELLS; localY++) {
             const value = view.getInt16(offset, true);
             offset += 2;
-            writeSingleLayerCell(baseCellX + localX, baseCellY + localY, value);
+            writeSingleLayerCell(baseCellX + localX, baseCellY + localY, extractHeight(value), extractNswe(value));
           }
         }
         continue;
