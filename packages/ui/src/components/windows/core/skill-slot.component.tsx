@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
 import { Slot, type IconBorder } from "./slot.component";
 import { getSkillSlotContent, type SkillSlotParams } from "../../../config/skill-mapping";
 
@@ -14,8 +15,15 @@ export interface SkillSlotProps extends SkillSlotParams {
 
 const COUNTDOWN_WARNING_THRESHOLD_MS = 60_000;
 
-/** Slot for a skill/buff/learnable-skill icon -- shared by the skills-list window, the skill-learn panel, buff bars and the hotbar (see ShortcutSlot). */
-export function SkillSlot({ size, pressed, slotKey, iconBorder, onClick, countdownWarning, ...params }: SkillSlotProps) {
+/**
+ * Slot for a skill/buff/learnable-skill icon -- shared by the skills-list
+ * window, the skill-learn panel, buff bars and the hotbar (see
+ * ShortcutSlot). observer-wrapped for the same reason as ActionSlot (see
+ * its doc comment): getSkillSlotContent reads DatapackStore.skillNames,
+ * which loads asynchronously, and a non-observer component's own observable
+ * reads don't get tracked by an observer ancestor's reaction.
+ */
+export const SkillSlot = observer(function SkillSlot({ size, pressed, slotKey, iconBorder, onClick, countdownWarning, ...params }: SkillSlotProps) {
   const { expiresAt } = params;
   const [now, setNow] = useState(() => Date.now());
 
@@ -51,4 +59,4 @@ export function SkillSlot({ size, pressed, slotKey, iconBorder, onClick, countdo
   ) : (
     slot
   );
-}
+});
