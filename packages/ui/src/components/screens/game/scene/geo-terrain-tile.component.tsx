@@ -66,7 +66,13 @@ class DisjointSet {
  * has more than one layer does the connection get gated by NSWE (bit set =
  * passable, GeoTile's existing convention) and pick the neighbor's
  * closest-height layer -- that's the one place real ambiguity exists (which
- * layer this layer is actually touching).
+ * layer this layer is actually touching). That match is also required to be
+ * the closest layer for MY OWN cell, not just the neighbor's: a neighbor
+ * with fewer layers has fewer candidates (a single-layer neighbor has
+ * exactly one), so without this it'd trivially "win" the closest-height
+ * pick for every one of my layers regardless of actual height -- fusing a
+ * bridge deck into the ground sheet below wherever the deck's edge borders
+ * single-layer terrain.
  */
 function buildSheets(tile: GeoTile): DisjointSet {
   const { cellsX, cellsY, layerCounts, layerOffsets, layerHeights, layerNswe } = tile;
@@ -86,15 +92,17 @@ function buildSheets(tile: GeoTile): DisjointSet {
 
     const ci = cellIndex(x, y);
     const nci = cellIndex(nx, ny);
+    const myStart = layerOffsets[ci];
+    const myCount = layerCounts[ci];
     const neighborStart = layerOffsets[nci];
     const neighborCount = layerCounts[nci];
 
-    if (layerCounts[ci] === 1 && neighborCount === 1) {
-      sheets.union(layerOffsets[ci], neighborStart);
+    if (myCount === 1 && neighborCount === 1) {
+      sheets.union(myStart, neighborStart);
       return;
     }
 
-    const node = layerOffsets[ci] + layer;
+    const node = myStart + layer;
     if ((layerNswe[node] & direction) === 0) {
       return; // blocked that way -- this is what actually splits sheets apart.
     }
@@ -109,6 +117,29 @@ function buildSheets(tile: GeoTile): DisjointSet {
         bestNode = n;
       }
     }
+
+    // A neighbor with fewer layers than mine has fewer candidates to
+    // "closest-height" match against -- in the extreme (a single-layer
+    // neighbor), it has exactly one, so it trivially "wins" regardless of
+    // how far its height actually is from mine. Left unchecked, that pulls
+    // a bridge deck's layer into the same sheet as the ground layer below
+    // it wherever the deck's edge borders single-layer terrain, and since
+    // single-layer cells are one continuous sheet tile-wide, the entire
+    // bridge collapses into the ground sheet. Guard against it: only
+    // commit this union if none of THIS cell's own other layers are an
+    // even closer match to the chosen neighbor node -- when one is (e.g.
+    // the ground layer under the deck), that layer is the real match and
+    // this one should stay unconnected in this direction.
+    const targetHeight = layerHeights[bestNode];
+    for (let ownLayer = 0; ownLayer < myCount; ownLayer++) {
+      if (ownLayer === layer) {
+        continue;
+      }
+      if (Math.abs(layerHeights[myStart + ownLayer] - targetHeight) < bestDelta) {
+        return;
+      }
+    }
+
     sheets.union(node, bestNode);
   }
 
