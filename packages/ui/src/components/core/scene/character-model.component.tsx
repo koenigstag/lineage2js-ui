@@ -70,6 +70,23 @@ export function CharacterModel({
                 onSelect();
               })
             }
+            // Ground-click (geo-terrain-tile.component.tsx) acts on
+            // "pointerdown", not "click" -- and only stops its own
+            // propagation once ITS handler runs, so without a pointerdown
+            // handler here too, a pointerdown that hits this creature first
+            // still falls through untouched to whatever ground mesh sits
+            // behind/below it (nothing at this level "consumes" the ray for
+            // that event type), firing a move-to-point order instead of --
+            // or racing ahead of -- the click-based select just below.
+            // Stopping propagation here (no other action -- onClick still
+            // owns select/act) keeps a click on a creature from ever
+            // reaching the ground underneath it.
+            onPointerDown={
+              onSelect &&
+              ((event) => {
+                event.stopPropagation();
+              })
+            }
             onPointerOver={
               cursor
                 ? (event) => {

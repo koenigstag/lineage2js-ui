@@ -589,10 +589,24 @@ export default abstract class L2Creature extends L2Object {
     if (this._moveInterval) {
       clearInterval(this._moveInterval);
 
-      // Trigger event as we might changed direction
-      if (this.IsMoving) {
-        this.IsMoving = false;
-      }
+      // Deliberately NOT firing a "StopMoving" here for a redirect (a fresh
+      // setMovingTo while already moving, e.g. GameStore.advancePendingAction
+      // re-chasing a mob that's wandered further before the previous hop
+      // finished) -- IsMoving is about to go back to true a few lines down
+      // regardless, so a listener would see a same-tick Stop+Start pair for
+      // a move that never actually stopped. That used to matter: fire()
+      // (EventEmitter.ts) calls handlers synchronously, and
+      // advancePendingAction's `me.once("StopMoving", ...)` re-registers
+      // itself on every hop -- so a redirect's synchronous Stop could
+      // re-enter advancePendingAction -> moveTo -> setMovingTo *while this
+      // very call is still running*, before it's written its own new
+      // moveFrom/moveStartedAt/interval below. The outer call then finishes
+      // and overwrites all of that with its own now-stale values, leaving
+      // the interpolation (utils/creature-movement.ts) reading a
+      // moveFrom/moveStartedAt pair that doesn't match where the character
+      // actually was -- the visible symptom was a teleport/snap whenever a
+      // chase (attack()/talkToNpc()) redirected mid-hop, e.g. from clicking
+      // an already-targeted mob again before it finished walking into range.
     }
 
     this.Dx = dx;
