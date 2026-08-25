@@ -7,8 +7,10 @@ import { useGameStore, useSessionStore, useUiStore, useWindowManagerStore } from
 import { useIsMobile } from "../../../lib/useIsMobile";
 import characterIcon from "../../../assets/menus/game/character@64.png";
 import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
+import actionsIcon from "../../../assets/menus/game/actions@64.png";
 import clanIcon from "../../../assets/menus/game/clan@64.png";
 import skillsIcon from "../../../assets/menus/game/skills@64.png";
+import questsIcon from "../../../assets/menus/game/quests@64.png";
 import mapIcon from "../../../assets/menus/game/map@64.png";
 import menuIcon from "../../../assets/menus/game/menu@64.png";
 import { t } from "../../../lang/lang";
@@ -25,9 +27,9 @@ interface GridItem {
 const GRID_ITEMS: GridItem[] = [
   { id: "character", image: characterIcon, titleKey: "game.grid.character" },
   { id: "inventory", image: inventoryIcon, titleKey: "game.grid.inventory" },
-  { id: "actions", icon: "🤜", titleKey: "game.grid.actions" },
+  { id: "actions", image: actionsIcon, titleKey: "game.grid.actions" },
   { id: "skills-list", image: skillsIcon, titleKey: "game.grid.skills" },
-  { id: "quests", icon: "🗞️", titleKey: "game.grid.quests" },
+  { id: "quests", image: questsIcon, titleKey: "game.grid.quests" },
   { id: "clan", image: clanIcon, titleKey: "game.grid.clan" },
   { id: "map", image: mapIcon, titleKey: "game.grid.map" },
   { id: "chat", icon: "💬", titleKey: "game.grid.chat", mobileOnly: true },
