@@ -7,6 +7,20 @@
 export const IS_DEMO_MODE = import.meta.env.VITE_IS_DEMO_MODE === "true";
 
 /**
+ * "true" to stitch geodata tiles into a continuous mesh across cell/layer
+ * boundaries (buildSheets, see geo-terrain-tile.component.tsx) instead of
+ * the default -- one independent flat quad per (cell, layer), no shared
+ * vertices between cells at all, matching how the real G3D geodata editor
+ * renders it (confirmed by decompiling G3DEditor.jar: every cell renders as
+ * its own small self-contained platform, with zero connectivity/merging
+ * logic between neighbors). Smoothing is opt-in rather than default because
+ * "closest available match" mesh-stitching has no ground-truth reference to
+ * validate against -- unlike the independent-quads mode, which is simply
+ * what the authoritative tool does.
+ */
+export const IS_GEODATA_TERRAIN_SMOOTH = import.meta.env.VITE_GEODATA_TERRAIN_SMOOTH === "true";
+
+/**
  * Prefills the login form's account/password from VITE_DEV_LOGIN_USERNAME/
  * VITE_DEV_LOGIN_PASSWORD, so a real test account doesn't need retyping on
  * every reload -- never auto-submits, see login.menu.tsx. Gated on

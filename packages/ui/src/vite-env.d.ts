@@ -28,6 +28,13 @@ interface ImportMetaEnv {
    */
   readonly VITE_IS_DEMO_MODE: string;
   /**
+   * "true" to stitch geodata tiles into a continuous mesh across cell/layer
+   * boundaries instead of independent per-cell flat quads (the default --
+   * matches how the real G3D geodata editor renders it, see config/env.ts's
+   * IS_GEODATA_TERRAIN_SMOOTH).
+   */
+  readonly VITE_GEODATA_TERRAIN_SMOOTH: string;
+  /**
    * Local dev convenience only -- prefills the login form (never
    * auto-submits) so a test account doesn't need retyping on every reload.
    * Only read in dev (import.meta.env.DEV) -- see config/env.ts's

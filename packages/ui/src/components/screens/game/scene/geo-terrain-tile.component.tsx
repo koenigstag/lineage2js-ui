@@ -2,6 +2,7 @@ import { useMemo, type MutableRefObject } from "react";
 import * as THREE from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { GEO_CELL_SIZE, GEO_TILE_SIZE } from "../../../../config/geodata";
+import { IS_GEODATA_TERRAIN_SMOOTH } from "../../../../config/env";
 import { l2ToThree } from "../../../../utils/coords";
 import type { GeoTile } from "../../../../utils/geodata/geo-tile.types";
 
@@ -211,17 +212,81 @@ function buildSheets(tile: GeoTile): DisjointSet {
 }
 
 /**
+ * Default terrain geometry: one independent flat quad per (cell, layer),
+ * no vertices shared with neighboring cells at all -- matches how the real
+ * G3D geodata editor renders it (confirmed by decompiling G3DEditor.jar:
+ * every cell is its own small self-contained platform, positioned and
+ * drawn with zero connectivity/merging logic between neighbors; see
+ * config/env.ts's IS_GEODATA_TERRAIN_SMOOTH). Unlike buildSheets, this
+ * needs no per-cell height/NSWE matching at all -- each cell's own layers
+ * simply don't touch anything outside themselves, so there's nothing to
+ * get wrong.
+ */
+function buildFlatCellQuads(tileX: number, tileY: number, tile: GeoTile): THREE.BufferGeometry {
+  const { cellsX, cellsY, layerOffsets, layerHeights } = tile;
+  const totalNodes = layerOffsets[cellsX * cellsY];
+
+  const positions = new Float32Array(totalNodes * 4 * 3);
+  const indices: number[] = [];
+  const v = new THREE.Vector3();
+  let vertexIndex = 0;
+
+  function writeVertex(l2X: number, l2Y: number, height: number): number {
+    l2ToThree(l2X, l2Y, height, v);
+    const i = vertexIndex++;
+    positions[i * 3] = v.x;
+    positions[i * 3 + 1] = v.y;
+    positions[i * 3 + 2] = v.z;
+    return i;
+  }
+
+  for (let y = 0; y < cellsY; y++) {
+    for (let x = 0; x < cellsX; x++) {
+      const ci = y * cellsX + x;
+      const l2X0 = tileX * GEO_TILE_SIZE + x * GEO_CELL_SIZE;
+      const l2Y0 = tileY * GEO_TILE_SIZE + y * GEO_CELL_SIZE;
+      const l2X1 = l2X0 + GEO_CELL_SIZE;
+      const l2Y1 = l2Y0 + GEO_CELL_SIZE;
+
+      for (let node = layerOffsets[ci]; node < layerOffsets[ci + 1]; node++) {
+        const height = layerHeights[node];
+        // Same corner layout/winding as buildSheets' quads (A/B/C/D =
+        // (x,y)/(x+1,y)/(x,y+1)/(x+1,y+1), triangles A-C-B and B-C-D).
+        const a = writeVertex(l2X0, l2Y0, height);
+        const b = writeVertex(l2X1, l2Y0, height);
+        const c = writeVertex(l2X0, l2Y1, height);
+        const d = writeVertex(l2X1, l2Y1, height);
+        indices.push(a, c, b, b, c, d);
+      }
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
  * Wireframe mesh(es) for one geodata tile, converted from L2 world space to
- * three.js via utils/coords. Where every cell is single-layer (the common
- * case) this degenerates to one continuous grid, identical to before
- * multilayer support existed. Where a cell has multiple layers (a bridge or
- * tunnel stacked over open ground), buildSheets splits the tile's (cell,
- * layer) nodes into disjoint components -- each becomes its own mesh, so a
- * bridge deck and the ground underneath never get connected by a stray
- * triangle just because they happen to share (x, y).
+ * three.js via utils/coords. Defaults to buildFlatCellQuads (independent
+ * per-cell/layer quads, see its own doc comment) unless
+ * IS_GEODATA_TERRAIN_SMOOTH opts into buildSheets' stitched mesh: where
+ * every cell is single-layer (the common case) that degenerates to one
+ * continuous grid, identical to before multilayer support existed; where a
+ * cell has multiple layers (a bridge or tunnel stacked over open ground),
+ * buildSheets splits the tile's (cell, layer) nodes into disjoint
+ * components -- each becomes its own mesh, so a bridge deck and the ground
+ * underneath never get connected by a stray triangle just because they
+ * happen to share (x, y).
  */
 export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick, orbitDragActiveRef }: GeoTerrainTileProps) {
   const geometries = useMemo(() => {
+    if (!IS_GEODATA_TERRAIN_SMOOTH) {
+      return [buildFlatCellQuads(tileX, tileY, tile)];
+    }
+
     const { cellsX, cellsY, layerOffsets, layerHeights } = tile;
     const cellCount = cellsX * cellsY;
     const totalNodes = layerOffsets[cellCount];
