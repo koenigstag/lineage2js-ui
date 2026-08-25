@@ -4,6 +4,7 @@ import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { useAlert } from "../../core/alert-modal";
 import { useGameStore, useSessionStore, useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
+import { useIsMobile } from "../../../lib/useIsMobile";
 import characterIcon from "../../../assets/menus/game/character@64.png";
 import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
 import clanIcon from "../../../assets/menus/game/clan@64.png";
@@ -12,7 +13,16 @@ import mapIcon from "../../../assets/menus/game/map@64.png";
 import menuIcon from "../../../assets/menus/game/menu@64.png";
 import { t } from "../../../lang/lang";
 
-const GRID_ITEMS: { id: string; icon?: string; image?: string; titleKey: string }[] = [
+interface GridItem {
+  id: string;
+  icon?: string;
+  image?: string;
+  titleKey: string;
+  /** Only shown on a mobile-width viewport -- panel-visibility toggles that are pointless on desktop, where those windows are always just visible/draggable already. */
+  mobileOnly?: boolean;
+}
+
+const GRID_ITEMS: GridItem[] = [
   { id: "character", image: characterIcon, titleKey: "game.grid.character" },
   { id: "inventory", image: inventoryIcon, titleKey: "game.grid.inventory" },
   { id: "actions", icon: "🤜", titleKey: "game.grid.actions" },
@@ -20,12 +30,12 @@ const GRID_ITEMS: { id: string; icon?: string; image?: string; titleKey: string 
   { id: "quests", icon: "🗞️", titleKey: "game.grid.quests" },
   { id: "clan", image: clanIcon, titleKey: "game.grid.clan" },
   { id: "map", image: mapIcon, titleKey: "game.grid.map" },
-  { id: "chat", icon: "💬", titleKey: "game.grid.chat" },
-  { id: "system-messages", icon: "📜", titleKey: "game.grid.battleLog" },
-  { id: "party-char-info", icon: "👥", titleKey: "game.grid.party" },
-  { id: "hotbar", icon: "⌨️", titleKey: "game.grid.hotbar" },
-  { id: "effects", icon: "✨", titleKey: "game.grid.effects" },
-  { id: "radar", icon: "🧭", titleKey: "game.grid.radar" },
+  { id: "chat", icon: "💬", titleKey: "game.grid.chat", mobileOnly: true },
+  { id: "system-messages", icon: "📜", titleKey: "game.grid.battleLog", mobileOnly: true },
+  { id: "party-char-info", icon: "👥", titleKey: "game.grid.party", mobileOnly: true },
+  { id: "hotbar", icon: "⌨️", titleKey: "game.grid.hotbar", mobileOnly: true },
+  { id: "effects", icon: "✨", titleKey: "game.grid.effects", mobileOnly: true },
+  { id: "radar", icon: "🧭", titleKey: "game.grid.radar", mobileOnly: true },
 ];
 
 const iconButtonStyle: CSSProperties = {
@@ -86,6 +96,8 @@ export const GameMenu = observer(function GameMenu() {
   const session = useSessionStore();
   const ui = useUiStore();
   const windowManager = useWindowManagerStore();
+  const isMobile = useIsMobile();
+  const visibleGridItems = GRID_ITEMS.filter((item) => !item.mobileOnly || isMobile);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { confirm, modal } = useConfirmation();
   const { alert, modal: alertModal } = useAlert();
@@ -133,7 +145,7 @@ export const GameMenu = observer(function GameMenu() {
       }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 40px)", gridAutoRows: "40px", gap: 4 }}>
-        {GRID_ITEMS.map(({ id, icon, image, titleKey }) => {
+        {visibleGridItems.map(({ id, icon, image, titleKey }) => {
           // party-char-info collapses to nothing (windows-root.tsx) whenever
           // there's no party -- disable the button rather than let a tap
           // silently do nothing.
