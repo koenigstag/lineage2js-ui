@@ -55,24 +55,50 @@ class DisjointSet {
   }
 }
 
+interface CandidateEdge {
+  a: number;
+  b: number;
+  delta: number;
+}
+
 /**
  * Splits a tile's (cell, layer) nodes into disjoint "sheets" so a bridge/
- * tunnel doesn't get meshed together with the ground underneath it.
+ * tunnel doesn't get meshed together with the ground underneath it (or,
+ * more generally, so any two unrelated stacked surfaces -- a cave floor
+ * under a room, a multi-story tower's separate rings -- never get meshed
+ * together just because a "closest available" height match happened to
+ * exist somewhere along their shared edge).
  *
  * A pair of cells that are both single-layer is always connected --
  * matches the pre-multilayer behavior of one continuous grid, and NSWE was
  * never a mesh-connectivity signal there (most cells stay single-layer even
- * on maps that have bridges somewhere). Only once either side of an edge
- * has more than one layer does the connection get gated by NSWE (bit set =
- * passable, GeoTile's existing convention) and pick the neighbor's
- * closest-height layer -- that's the one place real ambiguity exists (which
- * layer this layer is actually touching). That match is also required to be
- * the closest layer for MY OWN cell, not just the neighbor's: a neighbor
- * with fewer layers has fewer candidates (a single-layer neighbor has
- * exactly one), so without this it'd trivially "win" the closest-height
- * pick for every one of my layers regardless of actual height -- fusing a
- * bridge deck into the ground sheet below wherever the deck's edge borders
- * single-layer terrain.
+ * on maps that have bridges somewhere).
+ *
+ * Once either side of an edge has more than one layer, this used to just
+ * greedily connect each layer to its single closest-height NSWE-open
+ * neighbor candidate. That has no way to reject a match that's merely the
+ * *least bad* option -- verified against real multi-layer tiles (a 3-ring
+ * tower structure) that a "closest available" match can still be over a
+ * thousand L2 units off when nothing better exists on either side, and
+ * that neither an absolute distance cutoff (no clean gap between genuine
+ * and spurious deltas in real data -- values are smeared continuously) nor
+ * a two-sided "mutual nearest" check (both sides can genuinely agree a bad
+ * match is their best available option) catches it. Whenever that
+ * spurious link fuses two of the SAME cell's own layers into the same
+ * sheet, cellSheetNode's Map (below) can only keep one -- the other
+ * silently never renders, which was the actual reported symptom.
+ *
+ * Fixed as a hard structural invariant instead of a distance judgment: a
+ * single (x, y) cell can never validly contribute two different heights to
+ * one continuous surface, so no sheet may ever contain two layers of the
+ * same cell. Every NSWE-open (my layer, neighbor layer) pair across the
+ * whole tile becomes a candidate edge, processed Kruskal-style in
+ * ascending height-delta order (closest, most-confident matches first),
+ * accepting a union only when it doesn't violate that invariant. This
+ * generalizes the old "closest available" heuristic without any magic
+ * number: matches are still preferred smallest-delta-first, but a
+ * connection with no valid partner anywhere just doesn't happen, leaving a
+ * legitimate seam in the mesh there instead of guessing.
  */
 function buildSheets(tile: GeoTile): DisjointSet {
   const { cellsX, cellsY, layerCounts, layerOffsets, layerHeights, layerNswe } = tile;
@@ -83,7 +109,9 @@ function buildSheets(tile: GeoTile): DisjointSet {
     return y * cellsX + x;
   }
 
-  function connect(x: number, y: number, layer: number, dx: number, dy: number, direction: number): void {
+  const edges: CandidateEdge[] = [];
+
+  function collectEdges(x: number, y: number, dx: number, dy: number, direction: number): void {
     const nx = x + dx;
     const ny = y + dy;
     if (nx < 0 || nx >= cellsX || ny < 0 || ny >= cellsY) {
@@ -102,59 +130,81 @@ function buildSheets(tile: GeoTile): DisjointSet {
       return;
     }
 
-    const node = myStart + layer;
-    if ((layerNswe[node] & direction) === 0) {
-      return; // blocked that way -- this is what actually splits sheets apart.
-    }
-
-    const myHeight = layerHeights[node];
-    let bestNode = neighborStart;
-    let bestDelta = Math.abs(layerHeights[neighborStart] - myHeight);
-    for (let n = neighborStart + 1; n < neighborStart + neighborCount; n++) {
-      const delta = Math.abs(layerHeights[n] - myHeight);
-      if (delta < bestDelta) {
-        bestDelta = delta;
-        bestNode = n;
+    for (let layer = 0; layer < myCount; layer++) {
+      const node = myStart + layer;
+      if ((layerNswe[node] & direction) === 0) {
+        continue; // blocked that way -- this is what actually splits sheets apart.
+      }
+      const myHeight = layerHeights[node];
+      for (let n = neighborStart; n < neighborStart + neighborCount; n++) {
+        edges.push({ a: node, b: n, delta: Math.abs(layerHeights[n] - myHeight) });
       }
     }
-
-    // A neighbor with fewer layers than mine has fewer candidates to
-    // "closest-height" match against -- in the extreme (a single-layer
-    // neighbor), it has exactly one, so it trivially "wins" regardless of
-    // how far its height actually is from mine. Left unchecked, that pulls
-    // a bridge deck's layer into the same sheet as the ground layer below
-    // it wherever the deck's edge borders single-layer terrain, and since
-    // single-layer cells are one continuous sheet tile-wide, the entire
-    // bridge collapses into the ground sheet. Guard against it: only
-    // commit this union if none of THIS cell's own other layers are an
-    // even closer match to the chosen neighbor node -- when one is (e.g.
-    // the ground layer under the deck), that layer is the real match and
-    // this one should stay unconnected in this direction.
-    const targetHeight = layerHeights[bestNode];
-    for (let ownLayer = 0; ownLayer < myCount; ownLayer++) {
-      if (ownLayer === layer) {
-        continue;
-      }
-      if (Math.abs(layerHeights[myStart + ownLayer] - targetHeight) < bestDelta) {
-        return;
-      }
-    }
-
-    sheets.union(node, bestNode);
   }
 
   for (let y = 0; y < cellsY; y++) {
     for (let x = 0; x < cellsX; x++) {
-      const ci = cellIndex(x, y);
-      const start = layerOffsets[ci];
-      const count = layerCounts[ci];
-      for (let layer = 0; layer < count; layer++) {
-        connect(x, y, layer, 1, 0, NSWE_EAST);
-        connect(x, y, layer, -1, 0, NSWE_WEST);
-        connect(x, y, layer, 0, 1, NSWE_SOUTH);
-        connect(x, y, layer, 0, -1, NSWE_NORTH);
+      collectEdges(x, y, 1, 0, NSWE_EAST);
+      collectEdges(x, y, -1, 0, NSWE_WEST);
+      collectEdges(x, y, 0, 1, NSWE_SOUTH);
+      collectEdges(x, y, 0, -1, NSWE_NORTH);
+    }
+  }
+
+  edges.sort((a, b) => a.delta - b.delta);
+
+  // root -> every cell that currently has one of its layers in that sheet
+  // -- tracked explicitly (rather than re-derived from the DisjointSet each
+  // time) so accepting/rejecting an edge against the "no cell twice in one
+  // sheet" invariant is O(smaller side) instead of an O(totalNodes) rescan.
+  // Seeded via sheets.find(node), not node itself -- the single-single fast
+  // path above has already unioned some nodes together by this point, so
+  // grouping by each node's OWN index would silently split an
+  // already-merged sheet's membership across several stale, never-queried
+  // map entries (every Kruskal lookup below is keyed by a live root from
+  // sheets.find(), which the singleton-per-node seeding would undercount).
+  const cellsInRoot = new Map<number, Set<number>>();
+  for (let ci = 0; ci < cellsX * cellsY; ci++) {
+    for (let node = layerOffsets[ci]; node < layerOffsets[ci + 1]; node++) {
+      const root = sheets.find(node);
+      let set = cellsInRoot.get(root);
+      if (!set) {
+        set = new Set();
+        cellsInRoot.set(root, set);
+      }
+      set.add(ci);
+    }
+  }
+
+  for (const { a, b } of edges) {
+    const rootA = sheets.find(a);
+    const rootB = sheets.find(b);
+    if (rootA === rootB) {
+      continue;
+    }
+
+    const setA = cellsInRoot.get(rootA)!;
+    const setB = cellsInRoot.get(rootB)!;
+    const [small, large] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
+    let collides = false;
+    for (const cell of small) {
+      if (large.has(cell)) {
+        collides = true;
+        break;
       }
     }
+    if (collides) {
+      continue; // would give some cell two layers in the same sheet -- reject, leave a seam.
+    }
+
+    sheets.union(a, b);
+    const newRoot = sheets.find(a);
+    const oldRoot = newRoot === rootA ? rootB : rootA;
+    const survivingSet = cellsInRoot.get(newRoot)!;
+    for (const cell of cellsInRoot.get(oldRoot)!) {
+      survivingSet.add(cell);
+    }
+    cellsInRoot.delete(oldRoot);
   }
 
   return sheets;
