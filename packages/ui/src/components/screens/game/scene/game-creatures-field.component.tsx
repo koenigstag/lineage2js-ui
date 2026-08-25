@@ -80,6 +80,26 @@ function AnimatedCreature({ creature, selected }: AnimatedCreatureProps) {
 }
 
 /**
+ * Working heuristic for an npc/mob the real client doesn't render either
+ * (e.g. npc id 32529, reported invisible in-client) -- every nameless
+ * NpcInfo entry seen so far has turned out to be one of these invisible
+ * trigger/marker NPCs (no entry in public/npc-names, and its own wire Name
+ * came back blank too, see worldCreatureSnapshotFromCreature's `name`
+ * field). Not confirmed against a real server-sent "visible" flag yet (see
+ * this function's own TODO) -- until one turns up, treat "no name at all"
+ * as the signal. Scoped to npc/mob only: player/summon should never
+ * legitimately have an empty name, so there's no real risk of this
+ * heuristic hiding either of those even if something upstream glitched.
+ *
+ * TODO: replace with the real flag once found -- NpcInfo/CharInfo almost
+ * certainly carry SOMETHING that marks a template invisible-by-design
+ * (rather than "just happens to have no display name"), this is a stopgap.
+ */
+function isKnownInvisibleCreature(creature: WorldCreatureSnapshot): boolean {
+  return (creature.kind === "npc" || creature.kind === "mob") && !creature.name;
+}
+
+/**
  * Renders every creature the server currently reports nearby (NpcInfo/
  * CharInfo/UserInfo, see GameStore.bindToClient's syncCreatures) via
  * CreatureModel -- including the local player, which is just another entry
@@ -94,13 +114,15 @@ export const GameCreaturesField = observer(function GameCreaturesField() {
 
   return (
     <>
-      {Array.from(gameStore.creatures.values()).map((creature) => (
-        <AnimatedCreature
-          key={creature.objectId}
-          creature={creature}
-          selected={gameStore.target?.objectId === creature.objectId}
-        />
-      ))}
+      {Array.from(gameStore.creatures.values())
+        .filter((creature) => !isKnownInvisibleCreature(creature))
+        .map((creature) => (
+          <AnimatedCreature
+            key={creature.objectId}
+            creature={creature}
+            selected={gameStore.target?.objectId === creature.objectId}
+          />
+        ))}
     </>
   );
 });
