@@ -7,6 +7,7 @@ import { GameMenu } from "../../menus/game/game.menu";
 import { SettingsContent } from "../settings/settings.window";
 import { SkillsContent } from "../skills/skills.window";
 import { EffectsContent } from "../effects/effects.window";
+import { RadarContent } from "../radar/radar.window";
 import { ActionsContent } from "../actions/actions.window";
 import { CharInfoContent } from "../char-info/char-info.window";
 import { CharacterContent } from "../character/character.window";
@@ -36,6 +37,7 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     settings: () => <SettingsContent />,
     "skills-list": () => <SkillsContent />,
     effects: () => <EffectsContent />,
+    radar: () => <RadarContent />,
     actions: () => <ActionsContent />,
     character: () => <CharacterContent />,
     "char-info": () => <CharInfoContent />,
