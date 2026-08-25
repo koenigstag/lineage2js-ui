@@ -11,6 +11,7 @@ import { useGameStore } from "../../../../stores/StoreContext";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
+import { DroppedItemsField } from "./dropped-items-field.component";
 
 const MOVE_SPEED = 400; // L2 world units / second
 // Once within this distance of a click-to-move target, stop instead of
@@ -339,6 +340,9 @@ export const GameScene = observer(function GameScene() {
 
         {/* Real NPCs/mobs/other players from the live session, if connected -- see GameCreaturesField. */}
         <GameCreaturesField />
+
+        {/* Ground items (SpawnItem/DropItem), if connected -- see DroppedItemsField. */}
+        <DroppedItemsField />
       </Canvas>
     </div>
   );

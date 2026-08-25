@@ -9,6 +9,7 @@ import {
   L2Creature,
   L2Mob,
   L2Summon,
+  type L2DroppedItem,
   ItemType2,
   ItemGrade,
   ShortcutType,
@@ -667,6 +668,31 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
   };
 }
 
+/**
+ * A nearby ground item (SpawnItem/DropItem), for the 3D scene -- see
+ * GameStore.droppedItems/bindToClient's syncDroppedItems. Unlike creatures,
+ * items never move once spawned, so no moveFrom/moveTo/interpolation fields.
+ */
+export interface WorldItemSnapshot {
+  objectId: number;
+  itemId: number;
+  count: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+function worldItemSnapshotFromItem(item: L2DroppedItem): WorldItemSnapshot {
+  return {
+    objectId: item.ObjectId,
+    itemId: item.Id,
+    count: item.Count,
+    x: item.X,
+    y: item.Y,
+    z: item.Z,
+  };
+}
+
 export interface SystemMessageEntry {
   id: number;
   text: string;
@@ -809,6 +835,8 @@ function createDemoParty(): L2PartyMember[] {
 export class GameStore {
   /** ObjectId -> nearby creature (includes the local player -- look it up via `me`, see bindToClient's syncCreatures). */
   creatures: Map<number, WorldCreatureSnapshot> = new Map();
+  /** ObjectId -> nearby ground item, for the 3D scene -- see bindToClient's syncDroppedItems. */
+  droppedItems: Map<number, WorldItemSnapshot> = new Map();
   /** ObjectId of the character entered world with, once Start actually succeeds. */
   me: number | undefined = undefined;
   /** ObjectId of the character highlighted on the char-select screen. */
@@ -1358,6 +1386,14 @@ export class GameStore {
     this.client?.hit(nearest);
   }
 
+  /** Picks up a specific tracked dropped item by objectId -- same client.hit() mechanism as pickUpNearestItem, for clicking a specific item marker in the 3D scene instead of always grabbing the closest one. */
+  pickUpItem(objectId: number) {
+    if (!this.client?.DroppedItems.containsObjectId(objectId)) {
+      return;
+    }
+    this.client.hit(objectId);
+  }
+
   /**
    * Opens the skill's detail window and asks the trainer for its
    * authoritative SpCost/Requirements (RequestAcquireSkillInfo) --
@@ -1645,6 +1681,31 @@ export class GameStore {
     // rendered positions stay live while anything (including ourselves) is
     // walking, not just on spawn/despawn.
     setInterval(syncCreatures, 150);
+
+    // Ground items (SpawnItem/DropItem) for the 3D scene -- same
+    // rebuild-whole-map-from-the-network-layer's-own-collection approach as
+    // syncCreatures, since client.DroppedItems is already kept consistent by
+    // SpawnItemMutator/DropItemMutator/DeleteObjectMutator. No 150ms poll
+    // needed here (unlike creatures) -- items never move once spawned, so
+    // there's nothing to keep ticking between packets.
+    const syncDroppedItems = () => runInAction(() => {
+      if (!client.GameClient.IsConnected) {
+        return;
+      }
+      const next = new Map<number, WorldItemSnapshot>();
+      for (const item of client.DroppedItems) {
+        next.set(item.ObjectId, worldItemSnapshotFromItem(item));
+      }
+      this.droppedItems = next;
+    });
+
+    client.on("PacketReceived", "SpawnItem", syncDroppedItems);
+    client.on("PacketReceived", "DropItem", syncDroppedItems);
+    client.on("PacketReceived", "DeleteObject", syncDroppedItems);
+    // TeleportToLocationMutator clears client.DroppedItems (a new area's
+    // items haven't been (re-)announced yet) -- re-sync so stale markers
+    // from the old location don't linger in the scene until the next spawn.
+    client.on("PacketReceived", "TeleportToLocation", syncDroppedItems);
 
     client.on("PacketReceived", "ItemList", syncInventory);
     client.on("PacketReceived", "InventoryUpdate", syncInventory);
