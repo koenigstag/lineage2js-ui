@@ -21,6 +21,11 @@ const GRID_ITEMS: { id: string; icon?: string; image?: string; titleKey: string 
   { id: "clan", image: clanIcon, titleKey: "game.grid.clan" },
   { id: "map", image: mapIcon, titleKey: "game.grid.map" },
   { id: "chat", icon: "💬", titleKey: "game.grid.chat" },
+  { id: "system-messages", icon: "📜", titleKey: "game.grid.battleLog" },
+  { id: "party-char-info", icon: "👥", titleKey: "game.grid.party" },
+  { id: "hotbar", icon: "⌨️", titleKey: "game.grid.hotbar" },
+  { id: "effects", icon: "✨", titleKey: "game.grid.effects" },
+  { id: "radar", icon: "🧭", titleKey: "game.grid.radar" },
 ];
 
 const iconButtonStyle: CSSProperties = {
@@ -129,13 +134,22 @@ export const GameMenu = observer(function GameMenu() {
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 40px)", gridAutoRows: "40px", gap: 4 }}>
         {GRID_ITEMS.map(({ id, icon, image, titleKey }) => {
+          // party-char-info collapses to nothing (windows-root.tsx) whenever
+          // there's no party -- disable the button rather than let a tap
+          // silently do nothing.
+          const disabled = id === "party-char-info" && game.party.length === 0;
           const title = t(titleKey);
           return (
             <button
               key={id}
               type="button"
               title={title}
-              style={image ? { ...imageButtonStyle, backgroundImage: `url(${image})` } : iconButtonStyle}
+              disabled={disabled}
+              style={{
+                ...(image ? { ...imageButtonStyle, backgroundImage: `url(${image})` } : iconButtonStyle),
+                opacity: disabled ? 0.4 : 1,
+                cursor: disabled ? "not-allowed" : "pointer",
+              }}
               onClick={() => windowManager.toggle(id)}
             >
               {!image && <div title={title}>{icon}</div>}

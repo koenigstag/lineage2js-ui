@@ -3,9 +3,9 @@ import { WINDOW_REGISTRY, type WindowConfig, type WindowPosition } from "../conf
 import { isMobileViewport } from "../lib/useIsMobile";
 
 // Windows that start closed on a mobile-width viewport regardless of their
-// registry defaultOpen -- chat's fixed-width log eats a big chunk of a phone
-// screen; toggle it back on via the game menu's chat button.
-const MOBILE_DEFAULT_CLOSED = new Set(["chat"]);
+// registry defaultOpen -- their fixed-width logs otherwise eat a big chunk
+// of a phone screen; toggle them back on via the game menu's buttons.
+const MOBILE_DEFAULT_CLOSED = new Set(["chat", "system-messages", "party-char-info", "effects", "radar"]);
 
 interface WindowRuntimeState {
   open: boolean;

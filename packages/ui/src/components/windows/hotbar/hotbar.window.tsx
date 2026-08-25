@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent, type MouseEvent } from "react";
+import { Fragment, useEffect, useState, type DragEvent, type MouseEvent } from "react";
 import { observer } from "mobx-react-lite";
 import { L2Shortcut, ShortcutType, type Actions } from "@lineage2js/network";
 import type { IconBorder } from "../core/slot.component";
@@ -8,6 +8,7 @@ import { useGameStore, useSessionStore } from "../../../stores/StoreContext";
 import { resolveShortcutItem } from "../../../config/shortcut-mapping";
 import { isShotItem } from "../../../config/item-mapping";
 import { findActionByCode } from "../../../config/user-actions";
+import { useIsMobile } from "../../../lib/useIsMobile";
 
 const ROW_1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
 const ROW_2 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "[", "]"];
@@ -113,8 +114,14 @@ function shortcutFromDragPayload(slot: number, shortcutType: ShortcutType, targe
 export const HotbarContent = observer(function HotbarContent() {
   const game = useGameStore();
   const session = useSessionStore();
+  const isMobile = useIsMobile();
   const [pressedSlot, setPressedSlot] = useState<number | undefined>(undefined);
   const [dragOverSlot, setDragOverSlot] = useState<number | undefined>(undefined);
+  // Row 0 (plain 1-9,0,-,=) only by default on mobile -- all 4 rows at once
+  // eat too much of a phone screen. The other rows (Ctrl variants) stay one
+  // tap away via the expand tab below, rather than gone entirely.
+  const [expanded, setExpanded] = useState(false);
+  const showAllRows = !isMobile || expanded;
 
   function handleSlotDragStart(e: DragEvent<HTMLDivElement>, slotIndex: number, shortcut: L2Shortcut) {
     setHotbarDragPayload(e, shortcut.Type, shortcut.TargetId, shortcut.Type === ShortcutType.SKILL ? shortcut.Level : undefined, {
@@ -195,39 +202,69 @@ export const HotbarContent = observer(function HotbarContent() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column-reverse", gap: 2 }}>
-      {HOTBAR_ROWS.map((row, rowIndex) => (
-        <div key={rowIndex} style={{ display: "flex", gap: 2 }}>
-          {row.map((slotKey, columnIndex) => {
-            const slotIndex = rowIndex * COLUMNS + columnIndex;
-            const shortcut = game.hotbarSlots[slotIndex];
-            const isDragOver = dragOverSlot === slotIndex;
-            return (
-              <div
-                key={slotKey}
-                draggable={Boolean(shortcut)}
-                onDragStart={shortcut ? (e) => handleSlotDragStart(e, slotIndex, shortcut) : undefined}
-                onDragOver={(e) => handleSlotDragOver(e, slotIndex)}
-                onDragLeave={() => handleSlotDragLeave(slotIndex)}
-                onDrop={(e) => handleSlotDrop(e, slotIndex)}
-                onDragEnd={(e) => handleSlotDragEnd(e, slotIndex)}
-                onClick={() => handleSlotClick(slotIndex, shortcut)}
-                onContextMenu={(e) => handleSlotContextMenu(e, shortcut)}
+      {HOTBAR_ROWS.map((row, rowIndex) => {
+        if (!showAllRows && rowIndex !== 0) {
+          return null;
+        }
+        return (
+          <Fragment key={rowIndex}>
+            {/* Placed right after row 0 in markup order -- with column-reverse
+                that renders it just above row 0 visually, whether collapsed
+                (the topmost thing on screen) or expanded (still directly above
+                row 0, below the Ctrl-variant rows). */}
+            {isMobile && rowIndex === 0 && (
+              <button
+                type="button"
+                onClick={() => setExpanded((current) => !current)}
                 style={{
-                  outline: isDragOver ? "2px solid #d4af6a" : undefined,
-                  outlineOffset: isDragOver ? -2 : undefined,
+                  alignSelf: "center",
+                  background: "#211818",
+                  color: "#cccccc",
+                  border: "1px solid #666666",
+                  borderRadius: 4,
+                  fontSize: 10,
+                  lineHeight: 1,
+                  padding: "2px 10px",
+                  cursor: "pointer",
                 }}
               >
-                <ShortcutSlot
-                  slotKey={slotKey}
-                  shortcut={shortcut}
-                  pressed={pressedSlot === slotIndex}
-                  iconBorder={HOTBAR_ICON_BORDER}
-                />
-              </div>
-            );
-          })}
-        </div>
-      ))}
+                {expanded ? "▼" : "▲"}
+              </button>
+            )}
+            <div style={{ display: "flex", gap: 2 }}>
+              {row.map((slotKey, columnIndex) => {
+                const slotIndex = rowIndex * COLUMNS + columnIndex;
+                const shortcut = game.hotbarSlots[slotIndex];
+                const isDragOver = dragOverSlot === slotIndex;
+                return (
+                  <div
+                    key={slotKey}
+                    draggable={Boolean(shortcut)}
+                    onDragStart={shortcut ? (e) => handleSlotDragStart(e, slotIndex, shortcut) : undefined}
+                    onDragOver={(e) => handleSlotDragOver(e, slotIndex)}
+                    onDragLeave={() => handleSlotDragLeave(slotIndex)}
+                    onDrop={(e) => handleSlotDrop(e, slotIndex)}
+                    onDragEnd={(e) => handleSlotDragEnd(e, slotIndex)}
+                    onClick={() => handleSlotClick(slotIndex, shortcut)}
+                    onContextMenu={(e) => handleSlotContextMenu(e, shortcut)}
+                    style={{
+                      outline: isDragOver ? "2px solid #d4af6a" : undefined,
+                      outlineOffset: isDragOver ? -2 : undefined,
+                    }}
+                  >
+                    <ShortcutSlot
+                      slotKey={slotKey}
+                      shortcut={shortcut}
+                      pressed={pressedSlot === slotIndex}
+                      iconBorder={HOTBAR_ICON_BORDER}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </Fragment>
+        );
+      })}
     </div>
   );
 });
