@@ -78,7 +78,6 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     id: "quest-info",
     type: "titlebar",
     title: "windows.questInfo",
-    icon: "🗞️",
     closable: false,
     draggable: false,
   },
