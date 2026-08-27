@@ -321,7 +321,7 @@ export const LANG_EN_US: LangDictionary = {
       armor: "Armor",
       jewelry: "Jewelry",
     },
-    idLabel: "ID {id}",
+    idLabel: "ID: {id}",
     costLabel: "Cost: {cost}",
     levelLabel: "Level {level}",
     remainingLabel: "Remaining: {time}",

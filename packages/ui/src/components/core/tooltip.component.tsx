@@ -33,8 +33,9 @@ function formatRemaining(ms: number): string {
 }
 
 /**
- * "full" shows grade/equipped/cost/id -- reserved for the item/skill's own
- * domain window (inventory / skills-list), where that detail is the point.
+ * "full" shows grade/equipped/cost/id -- for the item/skill's own domain
+ * window (inventory / skills-list), and for the effects window, where the id
+ * is what tells an icon-less effect apart from another.
  * Every other slot referencing the same item/skill (hotbar, buffs, a
  * skill's required-item preview, ...) uses "short".
  */

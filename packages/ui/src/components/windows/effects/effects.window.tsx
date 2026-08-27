@@ -5,10 +5,13 @@ import { useGameStore } from "../../../stores/StoreContext";
 import { getSkillEffectCategory } from "../../../config/skill-effect-mapping";
 
 const SLOT_SIZE = 34;
+/** Buff icon size for the *target's* effect row (see target-select.window.tsx), which has a fixed-width panel to fit into. */
 export const BUFF_ICON_SIZE = SLOT_SIZE / 2;
+/** The player's own effect icons, at twice that -- this window is bare and sizes to its content, so there's room to actually read them. */
+const EFFECT_ICON_SIZE = BUFF_ICON_SIZE * 2;
 const SLOT_GAP = 2;
 
-const rowStyle = { display: "flex", flexWrap: "wrap" as const, gap: SLOT_GAP, minHeight: BUFF_ICON_SIZE };
+const rowStyle = { display: "flex", flexWrap: "wrap" as const, gap: SLOT_GAP, minHeight: EFFECT_ICON_SIZE };
 
 // Debuffs/Passives are unlikely to ever actually show up here (debuffs
 // render on the target, not the viewer -- see target-select.window.tsx;
@@ -54,10 +57,14 @@ export const EffectsContent = observer(function EffectsContent() {
               key={buff.Id}
               id={buff.Id}
               level={buff.SkillLevel}
-              size={BUFF_ICON_SIZE}
+              size={EFFECT_ICON_SIZE}
               // No cost -- buffs aren't cast by the viewer, MP price isn't relevant here.
               expiresAt={Date.now() + buff.RemainingTime * 1000}
               countdownWarning
+              // Shows the skill id in the tooltip -- the only way to tell which
+              // effect an icon-less gradient placeholder actually is, and so
+              // which ids are still missing art.
+              detail="full"
             />
           ))}
         </div>
@@ -69,9 +76,10 @@ export const EffectsContent = observer(function EffectsContent() {
           <SkillSlot
             id={game.shortBuff.Id}
             level={game.shortBuff.SkillLevel}
-            size={BUFF_ICON_SIZE}
+            size={EFFECT_ICON_SIZE}
             expiresAt={Date.now() + game.shortBuff.RemainingTime * 1000}
             countdownWarning
+            detail="full"
           />
         </div>
       )}

@@ -318,7 +318,7 @@ export const LANG_RU_RU: LangDictionary = {
       armor: "Броня",
       jewelry: "Украшение",
     },
-    idLabel: "ID {id}",
+    idLabel: "ID: {id}",
     costLabel: "Цена: {cost}",
     levelLabel: "Уровень {level}",
     remainingLabel: "Осталось: {time}",
