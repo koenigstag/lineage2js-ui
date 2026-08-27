@@ -35,16 +35,25 @@ const KNOWN_RESPONSE = Uint8Array.from([
 ]);
 
 /**
- * Sent for any challenge that isn't recognized: the same four values
- * AuthGameGuard already announces as data1..data4 (0x00000123, 0x00004567,
- * 0x000089ab, 0x0000cdef, little-endian), id est "here is what I told you
- * earlier". Not a valid answer to KNOWN_CHALLENGE -- nothing is, except
- * KNOWN_RESPONSE -- but there is nothing better to say to a challenge we
- * can't answer, and a server that enforces GameGuard would reject any
- * guess equally.
+ * Filler, NOT an answer: the same four values AuthGameGuard already announces
+ * as data1..data4 (0x00000123, 0x00004567, 0x000089ab, 0x0000cdef,
+ * little-endian), id est "here is what I told you earlier".
+ *
+ * Only the login packet uses it, and only because it has to: its GameGuard
+ * block is a fixed 16 bytes wide inside a fixed-length packet, so something
+ * has to go there even when the challenge isn't one we can answer -- and
+ * these are the bytes that have always gone there and that log in against
+ * real servers today.
+ *
+ * Nowhere else should send it. It cannot satisfy a server that actually
+ * checks (only KNOWN_RESPONSE hashes to the expected digest, and sha1 offers
+ * no second preimage to guess at), so putting it on the wire as if it were an
+ * answer would be claiming something untrue -- and would leave nothing in the
+ * log to explain why verification failed. See gameGuardResponse, which
+ * returns undefined instead.
  */
 // prettier-ignore
-const DEFAULT_RESPONSE = Uint8Array.from([
+export const GAMEGUARD_LOGIN_FILLER = Uint8Array.from([
   0x23, 0x01, 0x00, 0x00, 0x67, 0x45, 0x00, 0x00,
   0xab, 0x89, 0x00, 0x00, 0xef, 0xcd, 0x00, 0x00,
 ]);
@@ -54,7 +63,13 @@ export function toHexString(buffer: Uint8Array): string {
   return Array.from(buffer, (byte) => ("0" + (byte & 0xff).toString(16)).slice(-2)).join("");
 }
 
-/** The 16-byte GameGuard response for a 16-byte challenge. Never throws -- an unknown challenge gets DEFAULT_RESPONSE. */
-export function gameGuardResponse(challenge: Uint8Array): Uint8Array {
-  return toHexString(challenge) === KNOWN_CHALLENGE ? KNOWN_RESPONSE : DEFAULT_RESPONSE;
+/**
+ * The verified 16-byte response for a challenge, or undefined when we don't
+ * have one -- deliberately not a "best effort" guess, since a wrong reply is
+ * no better received than no reply and hides the fact that we had no answer.
+ * A caller that must write something anyway is the login packet's fixed-width
+ * block; it falls back to GAMEGUARD_LOGIN_FILLER.
+ */
+export function gameGuardResponse(challenge: Uint8Array): Uint8Array | undefined {
+  return toHexString(challenge) === KNOWN_CHALLENGE ? KNOWN_RESPONSE : undefined;
 }

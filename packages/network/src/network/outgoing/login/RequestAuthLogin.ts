@@ -1,7 +1,7 @@
 import MMOSession from "../../../mmocore/MMOSession";
 import LoginServerPacket from "./LoginServerPacket";
 import { bigToUint8Array, modPow } from "../../../mmocore/BigintArith";
-import { gameGuardResponse, toHexString } from "../../gameguard";
+import { GAMEGUARD_LOGIN_FILLER, gameGuardResponse, toHexString } from "../../gameguard";
 
 export default class RequestAuthLogin extends LoginServerPacket {
   constructor(private username: string, private password: string, private session: MMOSession) {
@@ -47,7 +47,7 @@ export default class RequestAuthLogin extends LoginServerPacket {
      */
     const query: Uint8Array = new Uint8Array(16);
     query.set(this._buffer.slice(5, 21), 0);
-    this.writeB(gameGuardResponse(query));
+    this.writeB(gameGuardResponse(query) ?? GAMEGUARD_LOGIN_FILLER);
 
     this.writeB(Uint8Array.from([0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])); // footer
     this.writeB(Uint8Array.from(Array(16).fill(0)));
