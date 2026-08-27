@@ -228,6 +228,9 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
         case 0x73:
           rpk = new Packets.SSQInfo();
           break;
+        case 0x74:
+          rpk = new Packets.GameGuardQuery();
+          break;
         case 0x75:
           rpk = new Packets.FriendList();
           break;

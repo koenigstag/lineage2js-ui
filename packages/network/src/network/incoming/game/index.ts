@@ -43,6 +43,7 @@ import ExUISetting from "./ExUISetting";
 import ExVitalityPointInfo from "./ExVitalityPointInfo";
 import ExVoteSystemInfo from "./ExVoteSystemInfo";
 import FriendList from "./FriendList";
+import GameGuardQuery from "./GameGuardQuery";
 import GameClientPacket from "./GameClientPacket";
 import GetItem from "./GetItem";
 import HennaEquipList from "./HennaEquipList";
@@ -180,6 +181,7 @@ export {
   ExVitalityPointInfo,
   ExVoteSystemInfo,
   FriendList,
+  GameGuardQuery,
   GameClientPacket,
   GetItem,
   HennaEquipList,

@@ -121,6 +121,8 @@ import TeleportToLocationMutator from "./TeleportToLocationMutator";
 import TeleportToLocation from "../../incoming/game/TeleportToLocation";
 import UserInfoMutator from "./UserInfoMutator";
 import UserInfo from "../../incoming/game/UserInfo";
+import GameGuardQueryMutator from "./GameGuardQueryMutator";
+import GameGuardQuery from "../../incoming/game/GameGuardQuery";
 import NetPingMutator from "./NetPingMutator";
 import NetPing from "../../incoming/game/NetPing";
 import ValidateLocationMutator from "./ValidateLocationMutator";
@@ -188,6 +190,7 @@ export default [
   [TargetUnselectedMutator.prototype, TargetUnselected],
   [TeleportToLocationMutator.prototype, TeleportToLocation],
   [UserInfoMutator.prototype, UserInfo],
+  [GameGuardQueryMutator.prototype, GameGuardQuery],
   [NetPingMutator.prototype, NetPing],
   [ValidateLocationMutator.prototype, ValidateLocation],
 
