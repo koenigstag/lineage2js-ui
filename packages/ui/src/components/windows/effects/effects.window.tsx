@@ -7,8 +7,13 @@ import { getSkillEffectCategory } from "../../../config/skill-effect-mapping";
 const SLOT_SIZE = 34;
 /** Buff icon size for the *target's* effect row (see target-select.window.tsx), which has a fixed-width panel to fit into. */
 export const BUFF_ICON_SIZE = SLOT_SIZE / 2;
-/** The player's own effect icons, at twice that -- this window is bare and sizes to its content, so there's room to actually read them. */
-const EFFECT_ICON_SIZE = BUFF_ICON_SIZE * 2;
+/**
+ * The player's own effect icons: two thirds of a full slot. Bigger than the
+ * target's row above (this window is bare and sizes to its content, so there
+ * is room to actually read them), but a full slot turned out to be more than
+ * the buff bar needs.
+ */
+const EFFECT_ICON_SIZE = Math.round(SLOT_SIZE * (2 / 3));
 const SLOT_GAP = 2;
 
 const rowStyle = { display: "flex", flexWrap: "wrap" as const, gap: SLOT_GAP, minHeight: EFFECT_ICON_SIZE };
