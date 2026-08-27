@@ -38,6 +38,8 @@ import { getNpcLevel } from "../config/npc-level-mapping";
 import { getNpcName, tryGetNpcName } from "../config/npc-name-mapping";
 import { formatSystemMessage, isNoisySystemMessage } from "../config/system-message-mapping";
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
+import { canMoveStraight } from "../utils/geodata/geo-path";
+import { loadedGeoTiles } from "../utils/geodata/geo-tile-index";
 import type { BaseClass, SexNames } from "../config/character-races";
 
 /**
@@ -1035,6 +1037,14 @@ export class GameStore {
     if (!creature) {
       return;
     }
+    // Same geodata gate as a move order: selecting something in the 3D scene
+    // is the first half of "walk over and act on it" (see the click handling
+    // in GameCreaturesField), so a creature the straight line can't reach --
+    // across a canyon, on a bridge deck above us -- isn't selected at all
+    // rather than selected and then never actually reached.
+    if (!this.isStraightPathClear(creature.X, creature.Y, creature.Z, "target at")) {
+      return;
+    }
     this.client?.hit(objectId);
     this.target = targetSnapshotFromCreature(creature, this.pledgeCache);
     this.pendingAction = undefined;
@@ -1049,9 +1059,47 @@ export class GameStore {
    * through, see GameStore.bindToClient's syncCreatures + interpolatedCreaturePosition),
    * so our own entry in `creatures` picks this up the same way once the
    * server's reply arrives -- no special-casing needed here.
+   *
+   * Withheld entirely when geodata says the straight line there is blocked
+   * (see isStraightPathClear) -- the server would only refuse it, or drag us
+   * along the wall, and either way our own prediction inside CommandMoveTo
+   * would already have started walking.
    */
   moveTo(x: number, y: number, z: number) {
+    if (!this.isStraightPathClear(x, y, z, "move to")) {
+      return;
+    }
     this.client?.moveTo(x, y, z);
+  }
+
+  /**
+   * Geodata veto on anything that would send a move order (or act on
+   * something we'd have to walk to): true unless the geodata we have loaded
+   * positively says the straight line from where we stand to (x, y, z) is
+   * blocked -- a cell we can't leave in that direction, a wall/ledge at our
+   * own level, a hole in the world, or a destination that turns out to be on
+   * a different layer than the one the walk lands on. See canMoveStraight for
+   * what each of those means and why unknown/unloaded geodata never vetoes.
+   *
+   * The point is to not send a packet the server is only going to reject (or,
+   * worse, honour by sliding us along a wall): the real client does the same
+   * check locally before asking. Note the server stays authoritative either
+   * way -- this only ever *withholds* a request, it never moves us.
+   */
+  private isStraightPathClear(x: number, y: number, z: number, what: string): boolean {
+    const me = this.client?.Me;
+    if (!me) {
+      return true;
+    }
+
+    const result = canMoveStraight(loadedGeoTiles(), { x: me.X, y: me.Y, z: me.Z }, { x, y, z });
+    if (!result.canMove) {
+      console.debug(
+        `[geodata] ${what} (${x}, ${y}, ${z}) refused: ${result.verdict}, reachable only to`,
+        result.stopAt
+      );
+    }
+    return result.canMove;
   }
 
   /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
@@ -1181,6 +1229,14 @@ export class GameStore {
     if (Math.hypot(target.X - me.X, target.Y - me.Y) <= pending.range) {
       this.pendingAction = undefined;
       pending.onArrive();
+      return;
+    }
+
+    if (!this.isStraightPathClear(target.X, target.Y, target.Z, "chase to")) {
+      // Nothing to wait for -- no move order goes out, so no StopMoving will
+      // ever arrive to re-enter this. Drop the intent instead of leaving it
+      // pending forever.
+      this.pendingAction = undefined;
       return;
     }
 

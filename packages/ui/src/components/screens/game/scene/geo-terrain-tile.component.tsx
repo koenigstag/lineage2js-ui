@@ -4,6 +4,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { GEO_CELL_SIZE, GEO_TILE_SIZE } from "../../../../config/geodata";
 import { IS_GEODATA_TERRAIN_SMOOTH } from "../../../../config/env";
 import { l2ToThree } from "../../../../utils/coords";
+import { NSWE_EAST, NSWE_NORTH, NSWE_SOUTH, NSWE_WEST } from "../../../../utils/geodata/geo-cells";
 import type { GeoTile } from "../../../../utils/geodata/geo-tile.types";
 
 interface GeoTerrainTileProps {
@@ -22,11 +23,6 @@ interface GeoTerrainTileProps {
    */
   orbitDragActiveRef?: MutableRefObject<boolean>;
 }
-
-const NSWE_EAST = 1;
-const NSWE_WEST = 2;
-const NSWE_SOUTH = 4;
-const NSWE_NORTH = 8;
 
 /** Disjoint-set over (cell, layer) nodes -- node id = layerOffsets[cell] + layer, matching layerHeights/layerNswe's own flat index. */
 class DisjointSet {

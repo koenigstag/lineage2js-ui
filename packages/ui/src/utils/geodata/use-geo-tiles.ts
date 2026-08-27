@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getGeodataTileUrl } from "../../config/geodata";
 import { parseGeoTile } from "./geo-tile-parser";
+import { publishGeoTiles, registerGeoTileSource, releaseGeoTileSource } from "./geo-tile-index";
 import { tileKey, worldToTileCoords } from "./world-to-tile";
 import type { GeoTile } from "./geo-tile.types";
 
@@ -28,11 +29,20 @@ interface UseGeoTilesOptions {
  * community .l2j block/cell layout) happens once, offline, not on every
  * player's device on every load. geo-tile-parser.ts's deserialize is a
  * straight read, no recomputation.
+ *
+ * Also mirrors whatever it currently holds into geo-tile-index.ts, so the
+ * consumers that live outside the React tree (movement validation in
+ * GameStore, creature-movement's gravity) can read the same tiles without a
+ * loader of their own -- see that module for why it's a union across
+ * instances rather than one shared cache.
  */
 export function useGeoTiles(worldX: number, worldY: number, options: UseGeoTilesOptions = {}): LoadedGeoTile[] {
   const { loadRadius = 1, keepRadius = 2 } = options;
   const tileCacheRef = useRef(new Map<string, GeoTile>());
   const tileInFlightRef = useRef(new Set<string>());
+  const sourceIdRef = useRef<number>();
+  sourceIdRef.current ??= registerGeoTileSource();
+  const sourceId = sourceIdRef.current;
   const [, forceRender] = useState(0);
 
   const [centerTileX, centerTileY] = worldToTileCoords(worldX, worldY);
@@ -112,5 +122,14 @@ export function useGeoTiles(worldX: number, worldY: number, options: UseGeoTiles
     const [tileX, tileY] = key.split("_").map(Number);
     loaded.push({ tileX, tileY, tile });
   }
+
+  // Republished after every render (the set changes as fetches land and
+  // eviction runs, neither of which has a dependency this could key on), and
+  // dropped on unmount so a dead instance's tiles don't linger in the union.
+  useEffect(() => {
+    publishGeoTiles(sourceId, loaded);
+  });
+  useEffect(() => () => releaseGeoTileSource(sourceId), [sourceId]);
+
   return loaded;
 }
