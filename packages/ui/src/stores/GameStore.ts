@@ -885,6 +885,8 @@ export class GameStore {
   moveHeartbeatInterval: ReturnType<typeof setInterval> | null = null;
   /** Round trip of the last NetPing exchange, in ms -- see setupNetPing. undefined until the first reply lands. */
   latencyMs: number | undefined = undefined;
+  /** True once an outstanding RequestNetPing has gone unanswered for a full NET_PING_INTERVAL_MS -- see setupNetPing's ping(). Cleared the moment a reply lands. */
+  netPingTimedOut: boolean = false;
   /** Server-reported online time from the latest NetPing reply. Unit unconfirmed -- see the network package's incoming/game/NetPing.ts. */
   onlineTime: number | undefined = undefined;
   netPingInterval: ReturnType<typeof setInterval> | null = null;
@@ -1343,16 +1345,33 @@ export class GameStore {
    * package's incoming/game/NetPing.ts). It's carried through as-is anyway.
    *
    * Every NET_PING_INTERVAL_MS, well inside the reference server's own rate
-   * limit on this packet (2/sec). Re-entrant by design: called on every
-   * UserInfo, and clears any previous interval first, so a re-entered world
-   * doesn't leave two loops running.
+   * limit on this packet (2/sec). Called on every UserInfo (world (re-)enter
+   * is the only reliable "definitely still connected" signal available), but
+   * only actually (re)starts the loop if one isn't already running --
+   * UserInfo can legitimately arrive more than once while already in the
+   * same world session (stat recalc, sit/stand, ... depending on the server
+   * build), and tearing the interval down + firing an extra immediate ping
+   * on every one of those would keep resetting the 10s cadence so the
+   * scheduled ping never gets a chance to land, spending the reference
+   * server's 2/sec-per-account rate limit on nothing but immediate pings --
+   * which reads client-side as the round trip never completing at all.
    */
   private setupNetPing() {
     if (this.netPingInterval) {
-      clearInterval(this.netPingInterval);
+      return;
     }
 
     const ping = () => {
+      if (this.netPingSentAt !== undefined) {
+        // The previous request never got a reply inside a full interval --
+        // surface it instead of silently retrying forever, so a genuinely
+        // unanswered RequestNetPing (0xb1) doesn't just look identical to
+        // "still measuring the first one" in the radar readout.
+        this.netPingTimedOut = true;
+        console.warn(
+          `[NetPing] No reply to RequestNetPing (0xb1) within ${NET_PING_INTERVAL_MS}ms -- the server may be rate-limiting or not answering it.`
+        );
+      }
       this.netPingSentAt = Date.now();
       this.client?.netPing();
     };
@@ -1369,6 +1388,7 @@ export class GameStore {
     if (this.netPingSentAt !== undefined) {
       this.latencyMs = Date.now() - this.netPingSentAt;
       this.netPingSentAt = undefined;
+      this.netPingTimedOut = false;
     }
     this.onlineTime = onlineTime;
   }
@@ -1379,6 +1399,7 @@ export class GameStore {
       this.netPingInterval = null;
     }
     this.netPingSentAt = undefined;
+    this.netPingTimedOut = false;
   }
 
   /**

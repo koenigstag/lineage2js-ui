@@ -67,7 +67,7 @@ export const RadarContent = observer(function RadarContent() {
       {row("Block", `${blockX}_${blockY}`)}
       {row("Cell", `${cellX}_${cellY}`)}
       {row("Block type", blockType ?? "…")}
-      {row("Ping", game.latencyMs === undefined ? "…" : `${game.latencyMs} ms`)}
+      {row("Ping", game.latencyMs !== undefined ? `${game.latencyMs} ms` : game.netPingTimedOut ? "timeout" : "…")}
     </div>
   );
 });
