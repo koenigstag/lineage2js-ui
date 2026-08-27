@@ -61,6 +61,7 @@ import MoveToLocation from "./MoveToLocation";
 import MoveToPawn from "./MoveToPawn";
 import MyTargetSelected from "./MyTargetSelected";
 import NicknameChanged from "./NicknameChanged";
+import NetPing from "./NetPing";
 import NormalCamera from "./NormalCamera";
 import NpcHtmlMessage from "./NpcHtmlMessage";
 import NpcInfo from "./NpcInfo";
@@ -198,6 +199,7 @@ export {
   MoveToPawn,
   MyTargetSelected,
   NicknameChanged,
+  NetPing,
   NormalCamera,
   NpcHtmlMessage,
   NpcInfo,

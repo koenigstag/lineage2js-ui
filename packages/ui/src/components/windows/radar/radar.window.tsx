@@ -15,7 +15,10 @@ const WIDTH = 150;
  * project's own finer streaming geodata "chunk" within it, and -- one level
  * finer still -- the raw L2J geodata "block" (8x8 cells) and "cell" (both
  * region-relative, matching how a .l2j geodata editor addresses them) plus
- * that block's heuristically-classified type (see block-type.ts).
+ * that block's heuristically-classified type (see block-type.ts). Round-trip
+ * latency rides along here too (see GameStore.setupNetPing) -- same kind of
+ * "what is the connection actually doing" readout, and nowhere better to put
+ * it until there's a real HUD.
  *
  * Calls useGeoTiles a second time (independent of GameScene's own call, no
  * shared cache between hook instances) purely for this debug readout --
@@ -64,6 +67,7 @@ export const RadarContent = observer(function RadarContent() {
       {row("Block", `${blockX}_${blockY}`)}
       {row("Cell", `${cellX}_${cellY}`)}
       {row("Block type", blockType ?? "…")}
+      {row("Ping", game.latencyMs === undefined ? "…" : `${game.latencyMs} ms`)}
     </div>
   );
 });

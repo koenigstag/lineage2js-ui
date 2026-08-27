@@ -28,6 +28,7 @@ import CommandLeaveParty from "./CommandLeaveParty";
 import CommandLogin from "./CommandLogin";
 import CommandLogout from "./CommandLogout";
 import CommandMoveTo from "./CommandMoveTo";
+import CommandNetPing from "./CommandNetPing";
 import CommandNextTarget from "./CommandNextTarget";
 import CommandRecommend from "./CommandRecommend";
 import CommandRegisterShortcut from "./CommandRegisterShortcut";
@@ -87,6 +88,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   login: CommandLogin.prototype,
   logout: CommandLogout.prototype,
   moveTo: CommandMoveTo.prototype,
+  netPing: CommandNetPing.prototype,
   nextTarget: CommandNextTarget.prototype,
   recommend: CommandRecommend.prototype,
   registerShortcut: CommandRegisterShortcut.prototype,

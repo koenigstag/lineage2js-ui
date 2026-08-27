@@ -312,6 +312,9 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
         case 0xd7:
           rpk = new Packets.NormalCamera();
           break;
+        case 0xd9:
+          rpk = new Packets.NetPing();
+          break;
         case 0xdb:
           rpk = new Packets.Snoop();
           break;

@@ -263,6 +263,14 @@ export default interface ClientCommands {
    */
   validatePosition(): void;
   /**
+   * Ask the server for a NetPing reply (RequestNetPing). In High Five this
+   * exchange is client-opened -- the server answers with NetPing, it never
+   * pings unprompted -- so nothing arrives unless this is sent. Useful mostly
+   * for measuring the round trip; see incoming/game/NetPing.ts for what the
+   * reply carries.
+   */
+  netPing(): void;
+  /**
    * Cast a magic skill
    * @param magicId
    * @param ctrl

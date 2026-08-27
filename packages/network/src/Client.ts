@@ -46,6 +46,9 @@ export default class Client extends ClientCommands {
   get BasicActionIds(): Set<number> | undefined {
     return this.GameClient.BasicActionIds;
   }
+  get OnlineTime(): number | undefined {
+    return this.GameClient.OnlineTime;
+  }
   get SkillsList(): L2ObjectCollection<L2Skill> {
     return this.GameClient.SkillsList;
   }

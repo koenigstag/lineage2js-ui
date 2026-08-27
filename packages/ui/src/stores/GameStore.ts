@@ -98,6 +98,10 @@ const HOTBAR_SLOT_COUNT = 48; // 4 rows x 12 columns, matches the wire's slot + 
 // melee reach (collision radii + a small buffer) until that exists. Ranged
 // weapons (bow/etc, real range ~500-900) aren't accounted for.
 const MELEE_ATTACK_RANGE = 40;
+// How often to run a NetPing round trip while in the world. Far below the
+// reference server's rate limit on the packet (2/sec) -- this only feeds a
+// latency readout, there's nothing to gain from asking more often.
+const NET_PING_INTERVAL_MS = 10_000;
 // Typical retail NPC talk radius -- no per-npc interactionDistance stat is
 // parsed client-side either, same gap as MELEE_ATTACK_RANGE above.
 const NPC_INTERACT_RANGE = 150;
@@ -879,6 +883,13 @@ export class GameStore {
   pendingAction: PendingAction | undefined = undefined;
   /** setupMoveHeartbeat's own bookkeeping, not observable/UI state -- see that method. */
   moveHeartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  /** Round trip of the last NetPing exchange, in ms -- see setupNetPing. undefined until the first reply lands. */
+  latencyMs: number | undefined = undefined;
+  /** Server-reported online time from the latest NetPing reply. Unit unconfirmed -- see the network package's incoming/game/NetPing.ts. */
+  onlineTime: number | undefined = undefined;
+  netPingInterval: ReturnType<typeof setInterval> | null = null;
+  /** Date.now() when the outstanding RequestNetPing went out, for measuring the round trip. */
+  netPingSentAt: number | undefined = undefined;
   moveHeartbeatChar: L2User | undefined = undefined;
   /** True while the local player is dead, see the Die/Revive event handlers in bindToClient -- drives the death modal. */
   isPlayerDead: boolean = false;
@@ -920,7 +931,14 @@ export class GameStore {
   private static readonly HOTBAR_DELETE_GRACE_MS = 8000;
 
   constructor() {
-    makeAutoObservable(this, { client: false, pendingHotbarDeletes: false, moveHeartbeatInterval: false, moveHeartbeatChar: false });
+    makeAutoObservable(this, {
+      client: false,
+      pendingHotbarDeletes: false,
+      moveHeartbeatInterval: false,
+      moveHeartbeatChar: false,
+      netPingInterval: false,
+      netPingSentAt: false,
+    });
   }
 
   selectCharacter(id: number | undefined) {
@@ -1306,6 +1324,61 @@ export class GameStore {
         this.moveHeartbeatInterval = null;
       }
     });
+  }
+
+  /**
+   * Keeps a NetPing exchange running while we're in the world, and turns it
+   * into a latency reading.
+   *
+   * High Five's NetPing is client-opened: the server only ever answers, never
+   * pings unprompted (lineage2ts's receive/RequestNetPing.ts replies with
+   * send/NetPing.ts and that is the packet's only sender), so nothing arrives
+   * unless we ask. C4-era documentation has this the other way round -- there
+   * the server pinged and an unanswered ping was a problem -- which does not
+   * apply to this protocol version.
+   *
+   * The round trip is measured here rather than read off the reply, because
+   * it's the part we can be sure of: the reply's own payload is the server's
+   * online time, whose unit the reference doesn't pin down (see the network
+   * package's incoming/game/NetPing.ts). It's carried through as-is anyway.
+   *
+   * Every NET_PING_INTERVAL_MS, well inside the reference server's own rate
+   * limit on this packet (2/sec). Re-entrant by design: called on every
+   * UserInfo, and clears any previous interval first, so a re-entered world
+   * doesn't leave two loops running.
+   */
+  private setupNetPing() {
+    if (this.netPingInterval) {
+      clearInterval(this.netPingInterval);
+    }
+
+    const ping = () => {
+      this.netPingSentAt = Date.now();
+      this.client?.netPing();
+    };
+    ping();
+    this.netPingInterval = setInterval(ping, NET_PING_INTERVAL_MS);
+  }
+
+  /**
+   * Turns a landed NetPing reply into a latency reading (see setupNetPing).
+   * Ignores a reply with no outstanding request behind it -- there's nothing
+   * to measure against, and a stale one would read as an absurd round trip.
+   */
+  private recordNetPing(onlineTime: number | undefined) {
+    if (this.netPingSentAt !== undefined) {
+      this.latencyMs = Date.now() - this.netPingSentAt;
+      this.netPingSentAt = undefined;
+    }
+    this.onlineTime = onlineTime;
+  }
+
+  private stopNetPing() {
+    if (this.netPingInterval) {
+      clearInterval(this.netPingInterval);
+      this.netPingInterval = null;
+    }
+    this.netPingSentAt = undefined;
   }
 
   /**
@@ -1873,6 +1946,8 @@ export class GameStore {
     // it in place afterward, see that mutator's own comment) -- safe to
     // attach the StartMoving/StopMoving listeners here.
     client.on("PacketReceived", "UserInfo", () => this.setupMoveHeartbeat(client.Me));
+    client.on("PacketReceived", "UserInfo", () => this.setupNetPing());
+    client.on("PacketReceived", "NetPing", () => runInAction(() => this.recordNetPing(client.OnlineTime)));
     // Henna stat bonuses arrive via their own packet, sent right after
     // world-enter (see EnterWorld.java in the H5 reference server) --
     // re-snapshot once it lands instead of waiting for the next UserInfo.
@@ -2017,9 +2092,11 @@ export class GameStore {
     // at all (network loss, crash).
     client.on("ServerClose", () => runInAction(() => {
       this.isDisconnected = true;
+      this.stopNetPing();
     }));
     client.GameClient.on("Disconnected", () => runInAction(() => {
       this.isDisconnected = true;
+      this.stopNetPing();
     }));
 
     // Real Learn-tab data source -- replaces the demo learnableSkills list

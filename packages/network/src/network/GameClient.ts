@@ -45,6 +45,8 @@ export default class GameClient extends MMOClient {
   ShortBuff: L2Buff | undefined = undefined;
   /** Action ids currently usable (ExBasicActionList) -- the full default set at world-enter, a restricted set while transformed. undefined until the first one arrives (offline/not connected yet), which callers should treat as "no restriction known" rather than "nothing allowed". */
   BasicActionIds: Set<number> | undefined = undefined;
+  /** Server-reported online time for this session, from the latest NetPing reply (see incoming/game/NetPing.ts for the unit caveat). undefined until one arrives. */
+  OnlineTime: number | undefined = undefined;
 
   LastConfirmMessageId!: number;
   LastConfirmMessageRequesterId!: number;
