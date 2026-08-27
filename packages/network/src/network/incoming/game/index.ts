@@ -131,7 +131,6 @@ import VehicleCheckLocation from "./VehicleCheckLocation";
 import VehicleDeparture from "./VehicleDeparture";
 import VehicleInfo from "./VehicleInfo";
 import VehicleStarted from "./VehicleStarted";
-import VersionCheck from "./VersionCheck";
 import WareHouseDepositList from "./WareHouseDepositList";
 import WareHouseWithdrawalList from "./WareHouseWithdrawalList";
 
@@ -269,7 +268,6 @@ export {
   VehicleDeparture,
   VehicleInfo,
   VehicleStarted,
-  VersionCheck,
   WareHouseDepositList,
   WareHouseWithdrawalList,
 

@@ -2,9 +2,10 @@ import { EPacketReceived } from "../events/EventTypes";
 import L2User from "../entities/L2User";
 import MMOConfig from "../mmocore/MMOConfig";
 import CharSelectionInfo from "../network/incoming/game/CharSelectionInfo";
+import KeyPacket from "../network/incoming/game/KeyPacket";
 import PlayFail from "../network/incoming/login/PlayFail";
 import AuthLogin from "../network/outgoing/game/AuthLogin";
-import ProtocolVersion from "../network/outgoing/game/ProtocolVersion";
+import ProtocolVersion, { GAME_PROTOCOL_VERSION } from "../network/outgoing/game/ProtocolVersion";
 import RequestServerLogin from "../network/outgoing/login/RequestServerLogin";
 import AbstractGameCommand from "./AbstractGameCommand";
 
@@ -63,9 +64,24 @@ export default class CommandSelectServer extends AbstractGameCommand {
       // AuthLogin) would leave this promise hanging forever.
       this.GameClient.once("Disconnected", () => reject(new Error("Connection closed by server")));
 
-      this.GameClient.once("PacketReceived:KeyPacket", () =>
-        this.GameClient.sendPacket(new AuthLogin(this.GameClient.Session))
-      );
+      // KeyPacket is the protocol version verdict as well as the crypt key
+      // (see that packet). A refusal is followed immediately by the server
+      // closing the socket, so without this the Disconnected handler above
+      // would win the race and report a generic "connection closed" for what
+      // is really a version mismatch -- the single most likely reason a real
+      // server turns this client away.
+      this.GameClient.once("PacketReceived:KeyPacket", (e: EPacketReceived) => {
+        const packet = e.data.packet as KeyPacket;
+        if (!packet.IsProtocolOk) {
+          reject(
+            new Error(
+              `Server refused protocol version ${GAME_PROTOCOL_VERSION} -- it expects a different Lineage 2 client version.`
+            )
+          );
+          return;
+        }
+        this.GameClient.sendPacket(new AuthLogin(this.GameClient.Session));
+      });
 
       this.GameClient.once("PacketReceived:CharSelectionInfo", (e: EPacketReceived) => {
         const packet = e.data.packet as CharSelectionInfo;
