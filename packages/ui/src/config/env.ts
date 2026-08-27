@@ -8,15 +8,23 @@ export const IS_DEMO_MODE = import.meta.env.VITE_IS_DEMO_MODE === "true";
 
 /**
  * "true" to stitch geodata tiles into a continuous mesh across cell/layer
- * boundaries (buildSheets, see geo-terrain-tile.component.tsx) instead of
- * the default -- one independent flat quad per (cell, layer), no shared
- * vertices between cells at all, matching how the real G3D geodata editor
- * renders it (confirmed by decompiling G3DEditor.jar: every cell renders as
- * its own small self-contained platform, with zero connectivity/merging
- * logic between neighbors). Smoothing is opt-in rather than default because
- * "closest available match" mesh-stitching has no ground-truth reference to
- * validate against -- unlike the independent-quads mode, which is simply
- * what the authoritative tool does.
+ * boundaries at any height difference (buildSheets, see
+ * geo-terrain-tile.component.tsx) instead of the default -- one independent
+ * quad per (cell, layer), no shared vertices between cells at all, matching
+ * how the real G3D geodata editor renders it (confirmed by decompiling
+ * G3DEditor.jar: every cell renders as its own small self-contained
+ * platform, with zero connectivity/merging logic between neighbors).
+ * Full stitching is opt-in rather than default because "closest available
+ * match" has no ground-truth reference to validate against -- unlike the
+ * independent-quads mode, which is simply what the authoritative tool does.
+ *
+ * Note this flag is *not* what decides whether the terrain looks smooth:
+ * the default mode always welds quad corners whose layers are already
+ * within GEO_TERRAIN_WELD_MAX_DELTA of each other (see
+ * utils/geodata/terrain-corner-heights.ts), so ordinary ground -- which the
+ * bake quantizes into 8-unit Z steps -- renders as one continuous surface
+ * either way. This flag only adds the part that needs a judgment call:
+ * matching up layers that are nowhere near level.
  */
 export const IS_GEODATA_TERRAIN_SMOOTH = import.meta.env.VITE_GEODATA_TERRAIN_SMOOTH === "true";
 

@@ -5,12 +5,23 @@ import { GEO_CELL_SIZE, GEO_TILE_SIZE } from "../../../../config/geodata";
 import { IS_GEODATA_TERRAIN_SMOOTH } from "../../../../config/env";
 import { l2ToThree } from "../../../../utils/coords";
 import { NSWE_EAST, NSWE_NORTH, NSWE_SOUTH, NSWE_WEST } from "../../../../utils/geodata/geo-cells";
+import {
+  CORNERS_PER_CELL,
+  computeCornerHeights,
+  type GeoTileNeighbors,
+} from "../../../../utils/geodata/terrain-corner-heights";
 import type { GeoTile } from "../../../../utils/geodata/geo-tile.types";
 
 interface GeoTerrainTileProps {
   tileX: number;
   tileY: number;
   tile: GeoTile;
+  /**
+   * The 8 surrounding tiles, as far as they're loaded -- only read to weld
+   * quad corners across the tile seam (see computeCornerHeights), never to
+   * render anything outside this tile.
+   */
+  neighbors?: GeoTileNeighbors;
   /** Left-click on the terrain surface -- fired with the raycast hit point (three.js space). */
   onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
   /**
@@ -208,18 +219,30 @@ function buildSheets(tile: GeoTile): DisjointSet {
 }
 
 /**
- * Default terrain geometry: one independent flat quad per (cell, layer),
- * no vertices shared with neighboring cells at all -- matches how the real
- * G3D geodata editor renders it (confirmed by decompiling G3DEditor.jar:
- * every cell is its own small self-contained platform, positioned and
- * drawn with zero connectivity/merging logic between neighbors; see
- * config/env.ts's IS_GEODATA_TERRAIN_SMOOTH). Unlike buildSheets, this
- * needs no per-cell height/NSWE matching at all -- each cell's own layers
- * simply don't touch anything outside themselves, so there's nothing to
- * get wrong.
+ * Default terrain geometry: one independent quad per (cell, layer), no
+ * vertices shared with neighboring cells at all -- matches how the real G3D
+ * geodata editor renders it (confirmed by decompiling G3DEditor.jar: every
+ * cell is its own small self-contained platform, positioned and drawn with
+ * zero connectivity/merging logic between neighbors; see config/env.ts's
+ * IS_GEODATA_TERRAIN_SMOOTH). Unlike buildSheets, nothing here is merged or
+ * re-triangulated -- each cell's own layers can't touch anything outside
+ * themselves, so no layer can go missing however the heights line up.
+ *
+ * The quads aren't necessarily flat, though: each one's four corners come
+ * from computeCornerHeights, which pulls corners shared with a
+ * nearly-level neighbor to their common average (see
+ * GEO_TERRAIN_WELD_MAX_DELTA). Cells that only differ by the geodata's own
+ * 8-unit Z quantization therefore meet exactly and read as one continuous
+ * surface, while a real wall or ledge keeps every corner at its own exact
+ * height and stays as sharp a step as it is without any welding.
  */
-function buildFlatCellQuads(tileX: number, tileY: number, tile: GeoTile): THREE.BufferGeometry {
-  const { cellsX, cellsY, layerOffsets, layerHeights } = tile;
+function buildCellQuads(
+  tileX: number,
+  tileY: number,
+  tile: GeoTile,
+  cornerHeights: Float32Array
+): THREE.BufferGeometry {
+  const { cellsX, cellsY, layerOffsets } = tile;
   const totalNodes = layerOffsets[cellsX * cellsY];
 
   const positions = new Float32Array(totalNodes * 4 * 3);
@@ -245,13 +268,14 @@ function buildFlatCellQuads(tileX: number, tileY: number, tile: GeoTile): THREE.
       const l2Y1 = l2Y0 + GEO_CELL_SIZE;
 
       for (let node = layerOffsets[ci]; node < layerOffsets[ci + 1]; node++) {
-        const height = layerHeights[node];
         // Same corner layout/winding as buildSheets' quads (A/B/C/D =
-        // (x,y)/(x+1,y)/(x,y+1)/(x+1,y+1), triangles A-C-B and B-C-D).
-        const a = writeVertex(l2X0, l2Y0, height);
-        const b = writeVertex(l2X1, l2Y0, height);
-        const c = writeVertex(l2X0, l2Y1, height);
-        const d = writeVertex(l2X1, l2Y1, height);
+        // (x,y)/(x+1,y)/(x,y+1)/(x+1,y+1), triangles A-C-B and B-C-D), which
+        // is also the slot order cornerHeights is indexed by.
+        const corner = node * CORNERS_PER_CELL;
+        const a = writeVertex(l2X0, l2Y0, cornerHeights[corner]);
+        const b = writeVertex(l2X1, l2Y0, cornerHeights[corner + 1]);
+        const c = writeVertex(l2X0, l2Y1, cornerHeights[corner + 2]);
+        const d = writeVertex(l2X1, l2Y1, cornerHeights[corner + 3]);
         indices.push(a, c, b, b, c, d);
       }
     }
@@ -266,21 +290,47 @@ function buildFlatCellQuads(tileX: number, tileY: number, tile: GeoTile): THREE.
 
 /**
  * Wireframe mesh(es) for one geodata tile, converted from L2 world space to
- * three.js via utils/coords. Defaults to buildFlatCellQuads (independent
- * per-cell/layer quads, see its own doc comment) unless
- * IS_GEODATA_TERRAIN_SMOOTH opts into buildSheets' stitched mesh: where
- * every cell is single-layer (the common case) that degenerates to one
- * continuous grid, identical to before multilayer support existed; where a
- * cell has multiple layers (a bridge or tunnel stacked over open ground),
- * buildSheets splits the tile's (cell, layer) nodes into disjoint
+ * three.js via utils/coords. Defaults to buildCellQuads (independent
+ * per-cell/layer quads whose shared corners are welded wherever the layers
+ * meeting there are already nearly level, see its own doc comment) unless
+ * IS_GEODATA_TERRAIN_SMOOTH opts into buildSheets' fully stitched mesh:
+ * where every cell is single-layer (the common case) that degenerates to
+ * one continuous grid, identical to before multilayer support existed;
+ * where a cell has multiple layers (a bridge or tunnel stacked over open
+ * ground), buildSheets splits the tile's (cell, layer) nodes into disjoint
  * components -- each becomes its own mesh, so a bridge deck and the ground
  * underneath never get connected by a stray triangle just because they
  * happen to share (x, y).
  */
-export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick, orbitDragActiveRef }: GeoTerrainTileProps) {
+export function GeoTerrainTile({
+  tileX,
+  tileY,
+  tile,
+  neighbors = {},
+  onGroundClick,
+  orbitDragActiveRef,
+}: GeoTerrainTileProps) {
+  // Pulled apart field by field (and put back together inside the memo)
+  // because GeoTerrainField rebuilds the neighbors object on every render
+  // while the tiles in it are stable -- parsed once and cached by
+  // use-geo-tiles. Depending on the tiles themselves rebuilds this mesh
+  // exactly when a neighbor loads or gets evicted, which is when the border
+  // corners can actually change.
+  const { north, south, west, east, northWest, northEast, southWest, southEast } = neighbors;
+
   const geometries = useMemo(() => {
     if (!IS_GEODATA_TERRAIN_SMOOTH) {
-      return [buildFlatCellQuads(tileX, tileY, tile)];
+      const cornerHeights = computeCornerHeights(tile, {
+        north,
+        south,
+        west,
+        east,
+        northWest,
+        northEast,
+        southWest,
+        southEast,
+      });
+      return [buildCellQuads(tileX, tileY, tile, cornerHeights)];
     }
 
     const { cellsX, cellsY, layerOffsets, layerHeights } = tile;
@@ -357,7 +407,7 @@ export function GeoTerrainTile({ tileX, tileY, tile, onGroundClick, orbitDragAct
       result.push(geo);
     }
     return result;
-  }, [tileX, tileY, tile]);
+  }, [tileX, tileY, tile, north, south, west, east, northWest, northEast, southWest, southEast]);
 
   function handleGroundPointerDown(event: ThreeEvent<PointerEvent>) {
     // Native "click" only fires after a matching pointerdown+pointerup

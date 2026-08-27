@@ -50,6 +50,29 @@ export function getGeodataTileUrl(tileX: number, tileY: number): string | undefi
 export const GEO_NO_DATA_HEIGHT = -32768;
 
 /**
+ * Largest Z difference (L2 units) between two layers meeting at the same
+ * mesh corner that still counts as one continuous surface, so the terrain
+ * renderer welds them into a slope instead of drawing two flat platforms
+ * with a step between them (see utils/geodata/terrain-corner-heights.ts).
+ * Purely a rendering value -- the movement/path rules have their own
+ * thresholds below and never read this one.
+ *
+ * Real geodata quantizes Z to multiples of 8 ((value & ~0xf) >> 1, see the
+ * assets-server's l2j-region-reader.ts), so even dead-flat ground comes out
+ * of the bake with 8-unit jitter between neighboring cells. Measured over a
+ * 400-tile (1.6M cell) sample of the real High Five geodata: 79% of
+ * neighboring layer pairs are exactly level, 93% within 8, 96% within 16,
+ * 98.7% within 32, and the distribution has a long thin tail after that --
+ * 32 covers ordinary terrain (up to a step twice the cell's own 16-unit
+ * width) and stops well short of walls and ledges. Two layers of the *same*
+ * cell -- a bridge deck over the ground it spans, the case that must never
+ * be welded -- were never closer than ~50 units anywhere in that sample, so
+ * 32 keeps a margin there (and terrain-corner-heights.ts rules it out
+ * structurally anyway).
+ */
+export const GEO_TERRAIN_WELD_MAX_DELTA = 32;
+
+/**
  * How far up (L2 Z units) a creature may step while walking from one geo-cell
  * to the next. A candidate surface higher than this above the one we're
  * currently standing on isn't a step, it's a wall/ledge at our level, and
