@@ -1,10 +1,30 @@
 import { loadedSurfaceHeightAtWorld } from "./geodata/geo-tile-height";
-import type { WorldCreatureSnapshot } from "../stores/GameStore";
 
 export interface CreatureWorldPosition {
   x: number;
   y: number;
   z: number;
+}
+
+/**
+ * Everything needed to place a creature "now": its last known resting
+ * position plus the move segment it's currently on, if any. Built from a live
+ * L2Creature by GameStore.creatureMoveState -- WorldCreatureSnapshot is one
+ * of these (structurally), so the world scene passes its snapshots straight
+ * in, and the position heartbeat can interpolate the local player from the
+ * same shape without going through a snapshot at all.
+ */
+export interface CreatureMoveState {
+  x: number;
+  y: number;
+  z: number;
+  isMoving: boolean;
+  moveFrom?: { x: number; y: number; z: number };
+  moveTo?: { x: number; y: number; z: number };
+  /** Date.now() epoch ms when the current move segment started. */
+  moveStartedAt?: number;
+  /** World units/second along moveFrom -> moveTo. */
+  speed?: number;
 }
 
 /**
@@ -24,7 +44,7 @@ export interface CreatureWorldPosition {
  * hangs in the air until the segment ends).
  */
 export function interpolatedCreaturePosition(
-  creature: WorldCreatureSnapshot,
+  creature: CreatureMoveState,
   now: number = Date.now()
 ): CreatureWorldPosition {
   const { moveFrom, moveTo, moveStartedAt, speed } = creature;

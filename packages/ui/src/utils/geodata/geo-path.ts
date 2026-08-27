@@ -1,4 +1,5 @@
 import {
+  GEO_MAX_FALL_HEIGHT,
   GEO_MAX_PATH_CELLS,
   GEO_MAX_STEP_UP_HEIGHT,
   GEO_SAME_LEVEL_TOLERANCE,
@@ -26,6 +27,8 @@ export type GeoPathVerdict =
   | "nswe"
   /** The next cell's only surfaces sit more than GEO_MAX_STEP_UP_HEIGHT above us -- a wall/ledge at our level. */
   | "climb"
+  /** The next cell's surface is more than GEO_MAX_FALL_HEIGHT below us -- a cliff, not a slope. */
+  | "fall"
   /** A cell on the line has no surface at all (the .l2j "no data" sentinel). */
   | "hole"
   /** The line is walkable but lands on a different layer than the destination -- e.g. the ground under a bridge we clicked the deck of. */
@@ -64,12 +67,13 @@ interface WalkPosition {
  * "blocks at the player's own level" work: stepping into a cell picks that
  * cell's highest surface no more than GEO_MAX_STEP_UP_HEIGHT above the one
  * we're on (see highestLayerNodeBelow). Anything higher is a wall, and the
- * order is refused. Anything lower is a drop, which is always allowed as long
- * as NSWE lets us leave the cell we're in -- falling is legal, climbing isn't.
- * Finally the surface actually walked to has to match the destination's own
- * surface (GEO_SAME_LEVEL_TOLERANCE), so clicking a bridge deck from
- * underneath it is refused instead of silently ordering a walk along the
- * ground below.
+ * order is refused. Anything lower is a drop, allowed as long as NSWE lets us
+ * leave the cell we're in and the drop stays inside GEO_MAX_FALL_HEIGHT --
+ * falling is legal, climbing isn't, and running off a cliff is a fall the
+ * server would only snap us back out of. Finally the surface actually walked
+ * to has to match the destination's own surface (GEO_SAME_LEVEL_TOLERANCE),
+ * so clicking a bridge deck from underneath it is refused instead of silently
+ * ordering a walk along the ground below.
  *
  * Missing geodata is split in two on purpose. A cell whose *tile* simply
  * isn't loaded (or a build with no geodata configured at all) reports
@@ -166,8 +170,16 @@ export function canMoveStraight(
       return blocked(hasGeoSurface(cell) ? "climb" : "hole", cellX - stepX, cellY - stepY, currentZ);
     }
 
+    const nextZ = cell.tile.layerHeights[node];
+    if (currentZ - nextZ > GEO_MAX_FALL_HEIGHT) {
+      // Per step, not cumulative: a long descent down a mountain road is a
+      // legitimate walk however far it adds up to, while a single cell
+      // dropping this far is a cliff edge.
+      return blocked("fall", cellX - stepX, cellY - stepY, currentZ);
+    }
+
     currentCell = cell;
-    currentZ = cell.tile.layerHeights[node];
+    currentZ = nextZ;
     currentNswe = cell.tile.layerNswe[node];
   }
 

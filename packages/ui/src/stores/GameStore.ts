@@ -40,7 +40,7 @@ import { formatSystemMessage, isNoisySystemMessage } from "../config/system-mess
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
 import { canMoveStraight } from "../utils/geodata/geo-path";
 import { loadedGeoTiles } from "../utils/geodata/geo-tile-index";
-import { loadedSurfaceHeightAtWorld } from "../utils/geodata/geo-tile-height";
+import { interpolatedCreaturePosition, type CreatureMoveState } from "../utils/creature-movement";
 import type { BaseClass, SexNames } from "../config/character-races";
 
 /**
@@ -649,24 +649,35 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
         ? "summon"
         : "npc";
 
-  const isMoving = creature.IsMoving && creature.MoveStartedAt !== undefined;
-
   return {
     objectId: creature.ObjectId,
+    ...creatureMoveState(creature),
     // No "Mob #<id>"/"NPC #<id>" placeholder here (unlike targetSnapshotFromCreature)
     // -- an unnamed npc just gets no floating nameplate in the world scene at
     // all, rather than a raw id (see tryGetNpcName's comment). It still shows
     // that placeholder in the target-select window once actually targeted.
     name: creature instanceof L2Character ? creature.Name : creature.Name || tryGetNpcName(creature.Id) || "",
-    x: creature.X,
-    y: creature.Y,
-    z: creature.Z,
     heading: creature.Heading,
     kind,
     isDead: creature.IsDead,
     race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,
+  };
+}
+
+/**
+ * The move-segment view of a live creature (see CreatureMoveState) -- the
+ * exact input both the world scene's rendering and the local player's
+ * position heartbeat interpolate from, so the two can't drift apart by
+ * reading different fields.
+ */
+function creatureMoveState(creature: L2Creature): CreatureMoveState {
+  const isMoving = creature.IsMoving && creature.MoveStartedAt !== undefined;
+  return {
+    x: creature.X,
+    y: creature.Y,
+    z: creature.Z,
     isMoving,
     moveFrom: isMoving ? { x: creature.MoveFromX!, y: creature.MoveFromY!, z: creature.MoveFromZ! } : undefined,
     moveTo: isMoving ? { x: creature.Dx, y: creature.Dy, z: creature.Dz } : undefined,
@@ -1067,6 +1078,15 @@ export class GameStore {
    * would already have started walking.
    */
   moveTo(x: number, y: number, z: number) {
+    const me = this.client?.Me;
+    if (me) {
+      // Before both the path check below (which starts from where we are) and
+      // CommandMoveTo, which declares that same position as the order's origin
+      // and immediately reports it again via ValidatePosition. Redirecting
+      // mid-walk would otherwise hand the server a position up to a heartbeat
+      // stale -- see reportRenderedPosition.
+      this.reportRenderedPosition(me);
+    }
     if (!this.isStraightPathClear(x, y, z, "move to")) {
       return;
     }
@@ -1233,6 +1253,8 @@ export class GameStore {
       return;
     }
 
+    this.reportRenderedPosition(me);
+
     if (!this.isStraightPathClear(target.X, target.Y, target.Z, "chase to")) {
       // Nothing to wait for -- no move order goes out, so no StopMoving will
       // ever arrive to re-enter this. Drop the intent instead of leaving it
@@ -1258,8 +1280,9 @@ export class GameStore {
    * order. One heartbeat per real ActiveChar instance -- see
    * moveHeartbeatChar's guard against re-attaching on every UserInfo.
    *
-   * Each beat re-grounds our tracked Z first (see groundTrackedZ) so what we
-   * report is the same place we're drawing ourselves.
+   * Each beat re-syncs our tracked position first (see
+   * reportRenderedPosition) so what we report is the same place we're drawing
+   * ourselves.
    */
   private setupMoveHeartbeat(me: L2User) {
     if (this.moveHeartbeatChar === me) {
@@ -1272,7 +1295,7 @@ export class GameStore {
         clearInterval(this.moveHeartbeatInterval);
       }
       this.moveHeartbeatInterval = setInterval(() => {
-        this.groundTrackedZ(me);
+        this.reportRenderedPosition(me);
         this.client?.validatePosition();
       }, 1000);
     });
@@ -1286,38 +1309,48 @@ export class GameStore {
   }
 
   /**
-   * Snaps the local player's tracked Z onto the geodata surface under them --
-   * the same "gravity" the rendered position already uses (see
-   * creature-movement.ts), applied to the Z we actually report to the server.
+   * Pulls the local player's tracked position onto the one we're actually
+   * drawing, right before reporting it (RequestValidatePosition carries x, y,
+   * z and heading -- see lineage2ts's own client-side send of this packet,
+   * which this client's outgoing ValidatePosition matches field for field).
    *
-   * Without it the two disagree while walking over any relief: L2Creature's
-   * own move stepping walks Z linearly from the segment's origin height to
-   * its destination height (see setMovingTo's zStep, which exists to stop
-   * that value drifting away from the server's), and a straight line between
-   * two endpoints is not the terrain between them. The reference server acts
-   * on that gap: lineage2ts's ValidatePosition handler treats a reported Z
-   * more than 200 units off its own as out of sync, and either re-grounds
-   * itself (when our reports are at least self-consistent, within 800 of the
-   * previous one) or sends a corrective ValidateLocation -- the second of
-   * which is a visible snap-back. Falling more than 800 below what the server
-   * thinks is an immediate correction regardless.
+   * The two are computed from the same move segment but by different means,
+   * and they drift apart. The renderer solves the segment analytically for
+   * "now" (interpolatedCreaturePosition), while the tracked value is
+   * L2Creature's own 100ms stepper accumulating floor()ed integer deltas -- so
+   * it trails the drawn position by a few units a second on its own, and by
+   * far more whenever those timer ticks don't land on time (a browser clamps
+   * setInterval to once a second in a background tab, which stalls the stepper
+   * while wall-clock -- and the server -- keep going). Z drifts for a
+   * different reason on top: the stepper walks it linearly from the segment's
+   * origin height to its destination height, and a straight line between two
+   * endpoints is not the terrain between them, while the renderer reads the
+   * geodata surface (see creature-movement.ts's gravity).
    *
-   * Reporting the surface instead keeps us inside that tolerance for the
-   * ordinary hill/slope case, and matches what the server does to itself when
-   * it decides a Z is wrong (GeoPolygonCache.getObjectZ -- its own gravity).
-   * No-ops where geodata says nothing (nothing loaded, a hole, or no geodata
-   * configured at all), leaving the tracked value exactly as it was.
+   * The reference server acts on both. lineage2ts's ValidatePosition handler
+   * treats a reported position more than 500 units off its own as out of sync,
+   * and a reported Z more than 200 off; depending on how far out it either
+   * re-grounds itself (GeoPolygonCache.getObjectZ -- its own gravity) or
+   * replies with a corrective ValidateLocation, the second of which is a
+   * visible snap-back. Reporting the drawn position keeps us inside those
+   * tolerances, and it's the honest answer anyway: it's where this client
+   * believes it is.
    *
-   * Deliberately only while moving (this runs off the heartbeat, which only
-   * ticks between StartMoving and StopMoving): a stopped player's Z came from
-   * the server's own MoveToLocation destination and is already authoritative,
-   * and setMovingTo snaps to it on arrival.
+   * A no-op while standing still: a resting position came from the server's
+   * own MoveToLocation destination and is already authoritative (setMovingTo
+   * snaps to it on arrival), so there's nothing to correct it toward.
+   * Rounded because the wire field is an int32, which the stepper's
+   * fractional Z wasn't.
    */
-  private groundTrackedZ(me: L2User) {
-    const surfaceZ = loadedSurfaceHeightAtWorld(me.X, me.Y, me.Z);
-    if (surfaceZ !== null) {
-      me.Z = surfaceZ;
+  private reportRenderedPosition(me: L2User) {
+    const state = creatureMoveState(me);
+    if (!state.isMoving) {
+      return;
     }
+    const rendered = interpolatedCreaturePosition(state);
+    me.X = Math.round(rendered.x);
+    me.Y = Math.round(rendered.y);
+    me.Z = Math.round(rendered.z);
   }
 
   /**

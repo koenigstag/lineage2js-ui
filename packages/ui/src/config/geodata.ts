@@ -67,6 +67,24 @@ export const GEO_NO_DATA_HEIGHT = -32768;
 export const GEO_MAX_STEP_UP_HEIGHT = 64;
 
 /**
+ * How far down (L2 Z units) a single geo-cell step may drop before the line
+ * counts as running off a cliff rather than down a slope. Dropping is
+ * otherwise unrestricted (see geo-path.ts) -- this is only the point past
+ * which the server stops going along with it.
+ *
+ * Taken from the reference server's position validation (lineage2ts's
+ * ValidatePosition handler): a client reporting a Z more than 800 units below
+ * what the server thinks gets an immediate corrective ValidateLocation, so a
+ * walk the client believes falls further than that in one step is one it will
+ * be snapped back out of anyway. Weaker evidence than the NSWE rules above --
+ * that check is about a reported Z versus the server's, not about whether the
+ * move order itself is legal, and during a fall the server is descending its
+ * own path too -- so treat 800 as a sane ceiling on a single drop rather than
+ * a number the protocol actually mandates.
+ */
+export const GEO_MAX_FALL_HEIGHT = 800;
+
+/**
  * How far (L2 Z units) the surface a straight-line walk actually lands on may
  * differ from the destination's own Z before the destination counts as being
  * on a *different level* (the far side of a bridge deck we're standing under,
