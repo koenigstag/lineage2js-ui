@@ -126,13 +126,23 @@ export class SessionStore {
    * Pings every listed server in the background (not awaited by login()) --
    * see @lineage2js/network's pingGameServer for how, since the login
    * protocol itself has no ping field.
+   *
+   * Resolved the same way CommandSelectServer resolves the address it
+   * actually connects to (see L2Server.resolveHost) -- under Secure that's
+   * the login server's own hostname, not the ServerList's bare IP, since a
+   * ws<->tcp proxy fronting a raw-TCP game server is typically only reachable
+   * (and only has a valid cert) at that hostname. Pinging the raw IP over
+   * plain ws:// regardless of Secure would read as every server being
+   * unreachable in that setup, even though the real connection works fine.
    */
   pingServers(): void {
+    const { Secure, Ip: loginHost } = this.client.LoginClient.Config;
+
     for (const server of this.servers) {
       const id = server.Id;
       this.serverPings[id] = undefined;
 
-      pingGameServer(server.Ipv4(), server.Port).then(
+      pingGameServer(server.resolveHost(Secure, loginHost), server.Port, Secure).then(
         (ms) => runInAction(() => { this.serverPings[id] = ms; }),
         () => runInAction(() => { this.serverPings[id] = null; })
       );

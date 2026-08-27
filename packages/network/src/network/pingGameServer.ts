@@ -29,9 +29,18 @@ function packUnencrypted(packet: ProtocolVersion): Uint8Array {
  * servers first send a rejection packet, others just close. Either the
  * first received byte or the connection closing (WebSocketAdapter.recv()
  * rejects once it sees the close) signals "done", so both cases resolve.
+ *
+ * `ip`/`secure` must be resolved the same way the real connection resolves
+ * them (see L2Server.resolveHost's doc comment) -- under Secure, a bare
+ * ServerList IP has no valid TLS cert and/or isn't reachable directly at
+ * all when a ws<->tcp proxy fronts the real (often raw-TCP-only) game
+ * server, only the login server's own hostname is. Dialing the raw IP over
+ * plain ws:// regardless of Secure, like this used to, means the ping never
+ * reaches anything that can answer in that setup -- indistinguishable
+ * client-side from the server simply being unreachable.
  */
-export async function pingGameServer(ip: string, port: number, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<number> {
-  const stream = new WebSocketAdapter(`ws://${ip}:${port}`);
+export async function pingGameServer(ip: string, port: number, secure: boolean, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<number> {
+  const stream = new WebSocketAdapter(`${secure ? "wss" : "ws"}://${ip}:${port}`);
   const start = performance.now();
 
   let timer!: ReturnType<typeof setTimeout>;
