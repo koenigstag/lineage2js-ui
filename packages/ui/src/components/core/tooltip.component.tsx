@@ -51,6 +51,8 @@ export type TooltipInfo =
       count?: number;
       grade?: string;
       isEquipped?: boolean;
+      /** Pre-formatted stat lines, see item-mapping.ts's getItemStatLines(). Only rendered at "full" detail. */
+      stats?: string[];
     }
   | {
       kind: "skill";
@@ -108,6 +110,13 @@ const TooltipContent = observer(function TooltipContent({ info }: { info: Toolti
         <>
           <div>{info.name}{countSuffix}{gradeSuffix}</div>
           {isFull && <div>{getTypeText(info.type)}</div>}
+          {isFull && info.stats && info.stats.length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              {info.stats.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>
+          )}
           {isFull && info.isEquipped && <div style={{ marginTop: 6 }}>{t("tooltip.equippedLabel")}</div>}
           {isFull && <div style={{ marginTop: 6 }}>{t("tooltip.idLabel", { id: info.id })}</div>}
         </>

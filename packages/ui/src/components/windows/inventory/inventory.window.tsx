@@ -101,6 +101,13 @@ function InventoryGridItem({ item, onEquipToggle }: { item: L2Item; onEquipToggl
         count={item.Count}
         grade={getItemGradeLabel(item)}
         isEquipped={item.IsEquipped}
+        enchantLevel={item.EnchantLevel}
+        attackElement={{ type: item.AttackElementType, value: item.AttackElementVal }}
+        // Boolean(), not "!== 0": AugmentBonus is declared but never
+        // assigned unless a packet set it, so an item that has never been
+        // through the wire (demo inventory) carries undefined here -- which
+        // "!== 0" reads as augmented, and every item claimed to be.
+        isAugmented={Boolean(item.AugmentBonus)}
         detail="full"
       />
     </div>

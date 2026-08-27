@@ -1,4 +1,4 @@
-import { L2Item, ItemType2, ItemGrade, ShotsType } from "@lineage2js/network";
+import { L2Item, ItemType2, ItemGrade, ShotsType, Element } from "@lineage2js/network";
 import type { IconSlotType } from "../components/core/icon-frame.component";
 import type { SlotContent } from "../components/windows/core/slot.component";
 import type { TooltipDetail } from "../components/core/tooltip.component";
@@ -93,6 +93,79 @@ export function getItemGradeLabel(item: L2Item): string | undefined {
   return EQUIPMENT_SLOT_TYPES.has(getItemSlotType(item)) || isShotItem(item) ? NG_LABEL : undefined;
 }
 
+const ELEMENT_KEYS: Partial<Record<Element, string>> = {
+  [Element.Fire]: "fire",
+  [Element.Water]: "water",
+  [Element.Wind]: "wind",
+  [Element.Earth]: "earth",
+  [Element.Holy]: "holy",
+  [Element.Unholy]: "unholy",
+};
+
+/**
+ * The stat lines an item's tooltip shows, in the order a real client lists
+ * them: what it does in a fight first, then what it costs to carry.
+ *
+ * Split by where the number comes from, because the two halves have very
+ * different reliability. The combat stats are datapack (see
+ * DatapackStore.itemStats) -- the wire never sends them, so they describe
+ * the item *template* and know nothing about this particular instance.
+ * Enchant level, attack attribute and augmentation are the opposite: they're
+ * per-instance and come straight off the wire, and until now the UI parsed
+ * and then discarded them.
+ *
+ * Reactive read of the datapack, like getItemName/getItemGradeLabel -- must
+ * be called at render time inside an observer.
+ */
+export function getItemStatLines({ id, attackElement, isAugmented }: ItemSlotParams): string[] {
+  const lines: string[] = [];
+  const stats = rootStore.datapack.itemStats[id];
+
+  if (stats) {
+    const stat = (key: string, value: number | undefined) => {
+      if (value !== undefined) {
+        lines.push(t(`tooltip.${key}`, { value }));
+      }
+    };
+    stat("pAtkLabel", stats.pAtk);
+    stat("mAtkLabel", stats.mAtk);
+    stat("pDefLabel", stats.pDef);
+    stat("mDefLabel", stats.mDef);
+    stat("shieldDefLabel", stats.shieldDef);
+    stat("shieldRateLabel", stats.shieldRate);
+    stat("evasionLabel", stats.evasion);
+    stat("atkSpdLabel", stats.atkSpd);
+    stat("critLabel", stats.crit);
+    // Only for something that actually reaches: every melee weapon in the
+    // datapack is 40, which says nothing.
+    if (stats.range !== undefined && stats.range > MELEE_ATTACK_RANGE) {
+      stat("rangeLabel", stats.range);
+    }
+    stat("accuracyLabel", stats.accuracy);
+    stat("mpConsumeLabel", stats.mpConsume);
+    if (stats.soulshots !== undefined || stats.spiritshots !== undefined) {
+      lines.push(t("tooltip.shotsLabel", { soulshots: stats.soulshots ?? 0, spiritshots: stats.spiritshots ?? 0 }));
+    }
+    stat("weightLabel", stats.weight);
+  }
+
+  // Per-instance, straight off the wire (see GameClientPacket.readItem).
+  if (attackElement && attackElement.value > 0) {
+    const element = ELEMENT_KEYS[attackElement.type as Element];
+    if (element) {
+      lines.push(t("tooltip.attributeLabel", { element: t(`tooltip.elements.${element}`), value: attackElement.value }));
+    }
+  }
+  if (isAugmented) {
+    lines.push(t("tooltip.augmentedLabel"));
+  }
+
+  return lines;
+}
+
+/** Datapack attack range for anything swung by hand -- above it the weapon genuinely has reach and the number is worth a line. */
+const MELEE_ATTACK_RANGE = 40;
+
 export interface ItemSlotParams {
   id: number;
   /** Icon-slot category -- callers with a full L2Item pass getItemSlotType(item); placeholder items (e.g. a skill's required-item) that don't carry Type2/BodyPart pass "item-misc" directly. */
@@ -100,12 +173,21 @@ export interface ItemSlotParams {
   count?: number;
   grade?: string;
   isEquipped?: boolean;
+  /** Per-instance, from the wire -- rendered as retail does, as a "+N" in front of the name. */
+  enchantLevel?: number;
+  /** Per-instance attack attribute, from the wire. `type` is an Element; a zero value means none. */
+  attackElement?: { type: number; value: number };
+  /** Per-instance, from the wire (AugmentBonus is non-zero). */
+  isAugmented?: boolean;
   /** "full" is reserved for the inventory window (the item's own domain). Defaults to "short" -- see TooltipDetail. */
   detail?: TooltipDetail;
 }
 
 /** Builds the Slot component's content for an item icon -- the one place assembling the "item" tooltip shape (see inventory.window.tsx and skill.window.tsx's required-item slot). */
-export function getItemSlotContent({ id, slotType, count, grade, isEquipped, detail = "short" }: ItemSlotParams): SlotContent {
+export function getItemSlotContent(params: ItemSlotParams): SlotContent {
+  const { id, slotType, count, grade, isEquipped, enchantLevel, detail = "short" } = params;
+  const name = getItemName({ Id: id });
+
   return {
     type: slotType,
     data: { id, count },
@@ -113,12 +195,15 @@ export function getItemSlotContent({ id, slotType, count, grade, isEquipped, det
     iconUrl: getItemIconUrl(id),
     tooltip: {
       kind: "item",
-      name: getItemName({ Id: id }),
+      // Retail puts the enchant in front of the name rather than on a line
+      // of its own, and it reads the same way here: "+7 Sword of Delusion".
+      name: enchantLevel ? `+${enchantLevel} ${name}` : name,
       type: slotType,
       id,
       count,
       grade,
       isEquipped,
+      stats: getItemStatLines(params),
       detail,
     },
   };
