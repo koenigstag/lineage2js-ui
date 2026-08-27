@@ -73,7 +73,7 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     draggable: true,
   },
   skill: { id: "skill", type: "titlebar", title: "windows.skill", closable: true, draggable: true },
-  quests: { id: "quests", type: "titlebar", title: "windows.quests", icon: "🗞️", closable: true, draggable: true },
+  quests: { id: "quests", type: "titlebar", title: "windows.quests", closable: true, draggable: true },
   "quest-info": {
     id: "quest-info",
     type: "titlebar",
