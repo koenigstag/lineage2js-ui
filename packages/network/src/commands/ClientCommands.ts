@@ -55,6 +55,21 @@ export default interface ClientCommands {
    */
   createCharacter(charData: L2Character): Promise<L2User[]>;
   /**
+   * Delete one of selectServer()'s characters (by its index in that list).
+   * Deferred, not immediate: the character comes back in the resolved roster
+   * with a DeleteSecondsLeft countdown running, and restoreCharacter cancels
+   * it until it expires. Rejects with a CharDeleteFailReason if the server
+   * refuses (clan member, clan leader).
+   * @param slotIndex
+   */
+  deleteCharacter(slotIndex: number): Promise<L2User[]>;
+  /**
+   * Cancel a pending deletion (by roster index), resolving with the roster in
+   * which that character's DeleteSecondsLeft is back to zero.
+   * @param slotIndex
+   */
+  restoreCharacter(slotIndex: number): Promise<L2User[]>;
+  /**
    * Leave the world and go back to character selection without dropping the
    * game-server connection. Resolves with the account's characters, same
    * shape as selectServer(). Required before any char-select-state request

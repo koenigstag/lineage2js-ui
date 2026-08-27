@@ -2,6 +2,7 @@ export * from "./AccountKickedReason";
 export * from "./AcquireSkillType";
 export * from "./Actions";
 export * from "./CharCreateFailReason";
+export * from "./CharDeleteFailReason";
 export * from "./ChatType";
 export * from "./ClanPriviledge";
 export * from "./ClassId";

@@ -87,6 +87,12 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
         case 0x1c:
           rpk = new Packets.TradeDone();
           break;
+        case 0x1d:
+          rpk = new Packets.CharDeleteSuccess();
+          break;
+        case 0x1e:
+          rpk = new Packets.CharDeleteFail();
+          break;
         case 0x1f:
           rpk = new Packets.ActionFailed();
           break;

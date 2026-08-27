@@ -12,6 +12,8 @@ import CommandCast from "./CommandCast";
 import CommandChangePartyLeader from "./CommandChangePartyLeader";
 import CommandCraft from "./CommandCraft";
 import CommandCreateCharacter from "./CommandCreateCharacter";
+import CommandDeleteCharacter from "./CommandDeleteCharacter";
+import CommandRestoreCharacter from "./CommandRestoreCharacter";
 import CommandDeclineCoupleAction from "./CommandDeclineCoupleAction";
 import CommandDeclineDuel from "./CommandDeclineDuel";
 import CommandDeclineJoinParty from "./CommandDeclineJoinParty";
@@ -72,6 +74,8 @@ import CommandValidatePosition from "./CommandValidatePosition";
   changePartyLeader: CommandChangePartyLeader.prototype,
   craft: CommandCraft.prototype,
   createCharacter: CommandCreateCharacter.prototype,
+  deleteCharacter: CommandDeleteCharacter.prototype,
+  restoreCharacter: CommandRestoreCharacter.prototype,
   declineCoupleAction: CommandDeclineCoupleAction.prototype,
   declineDuel: CommandDeclineDuel.prototype,
   declineJoinParty: CommandDeclineJoinParty.prototype,

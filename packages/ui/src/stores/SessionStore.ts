@@ -7,6 +7,7 @@ import {
   type L2Server,
   type L2User,
   type CharCreateFailReason,
+  type CharDeleteFailReason,
   type LoginFailReason,
   type PlayFailReason,
 } from "@lineage2js/network";
@@ -31,6 +32,11 @@ const PLAY_FAIL_MESSAGES: Partial<Record<keyof typeof PlayFailReason, string>> =
   REASON_SERVER_MAINTENANCE: "Server is under maintenance.",
   REASON_ACCESS_FAILED: "Access failed, try again later.",
   REASON_ACCESS_FAILED_TRY_AGAIN_LATER: "Access failed, try again later.",
+};
+
+const CHAR_DELETE_FAIL_MESSAGES: Partial<Record<keyof typeof CharDeleteFailReason, string>> = {
+  REASON_YOU_MAY_NOT_DELETE_CLAN_MEMBER: "You can't delete a character who is in a clan.",
+  REASON_CLAN_LEADERS_MAY_NOT_BE_DELETED: "A clan leader can't be deleted. Disband the clan or hand it over first.",
 };
 
 const CHAR_CREATE_FAIL_MESSAGES: Partial<Record<keyof typeof CharCreateFailReason, string>> = {
@@ -218,6 +224,57 @@ export class SessionStore {
         this.error = describeFailure(reason, CHAR_CREATE_FAIL_MESSAGES, "Could not create character.");
       });
       return undefined;
+    } finally {
+      runInAction(() => {
+        this.isConnecting = false;
+      });
+    }
+  }
+
+  /**
+   * Starts deleting a character by roster slot, and refreshes the roster from
+   * the server's reply. Deferred, not immediate -- the character stays in the
+   * roster with DeleteSecondsLeft counting down, and restoreCharacter cancels
+   * it until it runs out (see CommandDeleteCharacter).
+   */
+  async deleteCharacter(slotIndex: number): Promise<boolean> {
+    this.isConnecting = true;
+    this.error = undefined;
+
+    try {
+      const characters = await this.client.deleteCharacter(slotIndex);
+      runInAction(() => {
+        this.characters = characters;
+      });
+      return true;
+    } catch (reason) {
+      runInAction(() => {
+        this.error = describeFailure(reason, CHAR_DELETE_FAIL_MESSAGES, "Could not delete that character.");
+      });
+      return false;
+    } finally {
+      runInAction(() => {
+        this.isConnecting = false;
+      });
+    }
+  }
+
+  /** Cancels a pending deletion by roster slot, and refreshes the roster. */
+  async restoreCharacter(slotIndex: number): Promise<boolean> {
+    this.isConnecting = true;
+    this.error = undefined;
+
+    try {
+      const characters = await this.client.restoreCharacter(slotIndex);
+      runInAction(() => {
+        this.characters = characters;
+      });
+      return true;
+    } catch (reason) {
+      runInAction(() => {
+        this.error = describeFailure(reason, {}, "Could not restore that character.");
+      });
+      return false;
     } finally {
       runInAction(() => {
         this.isConnecting = false;

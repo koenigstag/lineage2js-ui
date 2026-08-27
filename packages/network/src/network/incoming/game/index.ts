@@ -12,6 +12,8 @@ import AutoAttackStop from "./AutoAttackStop";
 import ChangeMoveType from "./ChangeMoveType";
 import ChangeWaitType from "./ChangeWaitType";
 import CharCreateFail from "./CharCreateFail";
+import CharDeleteFail from "./CharDeleteFail";
+import CharDeleteSuccess from "./CharDeleteSuccess";
 import CharCreateOk from "./CharCreateOk";
 import CharInfo from "./CharInfo";
 import CharSelected from "./CharSelected";
@@ -150,6 +152,8 @@ export {
   ChangeMoveType,
   ChangeWaitType,
   CharCreateFail,
+  CharDeleteFail,
+  CharDeleteSuccess,
   CharCreateOk,
   CharInfo,
   CharSelected,

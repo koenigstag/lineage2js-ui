@@ -71,7 +71,7 @@ export default class CharSelectionInfo extends GameClientPacket {
       char.MaxHp = this.readF();
       char.MaxMp = this.readF();
 
-      const _daysLeftBeforeDelete = this.readD();
+      char.DeleteSecondsLeft = this.readD();
       char.ClassId = (ClassId as any)[this.readD()];
       // Set on whichever character has the most recent last-access time --
       // what the real client preselects on the selection screen.

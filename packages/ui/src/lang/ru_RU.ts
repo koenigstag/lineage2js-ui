@@ -139,6 +139,12 @@ export const LANG_RU_RU: LangDictionary = {
     enterWorldFailed: "Не удалось войти в игру.",
     entering: "Вход...",
     startButton: "Старт",
+    deleteButton: "Удалить",
+    restoreButton: "Восстановить",
+    deleteConfirm: "Удалить {name}? Персонажа можно восстановить, пока не истечёт таймер.",
+    restoreConfirm: "Отменить удаление {name}?",
+    deleteFailed: "Не удалось удалить персонажа.",
+    restoreFailed: "Не удалось восстановить персонажа.",
   },
   targetSelect: {
     status: "Статус",

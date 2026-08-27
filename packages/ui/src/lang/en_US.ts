@@ -142,6 +142,12 @@ export const LANG_EN_US: LangDictionary = {
     enterWorldFailed: "Could not enter the world.",
     entering: "Entering...",
     startButton: "Start",
+    deleteButton: "Delete",
+    restoreButton: "Restore",
+    deleteConfirm: "Delete {name}? The character stays restorable until the timer runs out.",
+    restoreConfirm: "Cancel the pending deletion of {name}?",
+    deleteFailed: "Could not delete that character.",
+    restoreFailed: "Could not restore that character.",
   },
   targetSelect: {
     status: "Status",

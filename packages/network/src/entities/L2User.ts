@@ -23,6 +23,7 @@ export default class L2User extends L2Character {
   private _fame!: number;
   private _vitality!: number;
   private _isLastUsed!: boolean;
+  private _deleteSecondsLeft = 0;
   private _exp!: number;
   private _expPercent!: number;
   private _sp!: number;
@@ -190,6 +191,20 @@ export default class L2User extends L2Character {
 
   public set IsLastUsed(value: boolean) {
     this._isLastUsed = value;
+  }
+
+  /**
+   * Seconds until a pending deletion of this character goes through, or 0
+   * when none is running -- see CharSelectionInfo, which reads it straight
+   * off the roster (lineage2ts writes its own deleteSecondsLeft there).
+   * Non-zero is what makes a character restorable rather than deletable.
+   */
+  public get DeleteSecondsLeft(): number {
+    return this._deleteSecondsLeft;
+  }
+
+  public set DeleteSecondsLeft(value: number) {
+    this._deleteSecondsLeft = value;
   }
 
   public get Exp(): number {

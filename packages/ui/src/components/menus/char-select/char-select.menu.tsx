@@ -24,6 +24,38 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
     }
   }
 
+  // The roster keeps a character that's pending deletion, counting down (see
+  // L2User.DeleteSecondsLeft), rather than dropping it -- so the same slot is
+  // either deletable or restorable, never both. The real client swaps the
+  // button the same way.
+  const slotIndex = session.characters.findIndex((character) => character.ObjectId === game.selectedCharacterId);
+  const selected = slotIndex < 0 ? undefined : session.characters[slotIndex];
+  const isPendingDeletion = (selected?.DeleteSecondsLeft ?? 0) > 0;
+
+  async function handleDeleteCharacter() {
+    if (!selected) {
+      return;
+    }
+    if (!(await confirm(t("charSelect.deleteConfirm", { name: selected.Name })))) {
+      return;
+    }
+    if (!(await session.deleteCharacter(slotIndex))) {
+      await alert(session.error ?? t("charSelect.deleteFailed"));
+    }
+  }
+
+  async function handleRestoreCharacter() {
+    if (!selected) {
+      return;
+    }
+    if (!(await confirm(t("charSelect.restoreConfirm", { name: selected.Name })))) {
+      return;
+    }
+    if (!(await session.restoreCharacter(slotIndex))) {
+      await alert(session.error ?? t("charSelect.restoreFailed"));
+    }
+  }
+
   async function handleLogout() {
     if (await confirm(t("charSelect.logoutConfirm"))) {
       game.selectCharacter(undefined);
@@ -55,6 +87,15 @@ export const CharSelectMenu = observer(function CharSelectMenu() {
       >
         {session.isConnecting ? t("charSelect.loading") : t("charSelect.createButton")}
       </BaseButton>
+      {isPendingDeletion ? (
+        <BaseButton onClick={handleRestoreCharacter} disabled={session.isConnecting}>
+          {t("charSelect.restoreButton")}
+        </BaseButton>
+      ) : (
+        <BaseButton onClick={handleDeleteCharacter} disabled={!selected || session.isConnecting}>
+          {t("charSelect.deleteButton")}
+        </BaseButton>
+      )}
       <BaseButton onClick={handleLogout}>{t("charSelect.reLoginButton")}</BaseButton>
       {modal}
       {alertModal}
