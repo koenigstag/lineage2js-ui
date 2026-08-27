@@ -1,4 +1,5 @@
 import { makeAutoObservable } from "mobx";
+import { fetchDatapack } from "../lib/datapack-cache";
 import type { ItemGrade } from "@lineage2js/network";
 import type { LANG } from "../lang/lang";
 import type { BaseStats, BaseClass, RaceNames, SexNames } from "../config/character-races";
@@ -167,7 +168,7 @@ export class DatapackStore {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}item-names/${lang}.json`);
+      const response = await fetchDatapack(`item-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
       this.itemNamesCache[lang] = names;
       this.setItemNames(names);
@@ -188,7 +189,7 @@ export class DatapackStore {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}skill-names/${lang}.json`);
+      const response = await fetchDatapack(`skill-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
       this.skillNamesCache[lang] = names;
       this.setSkillNames(names);
@@ -209,7 +210,7 @@ export class DatapackStore {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}action-names/${lang}.json`);
+      const response = await fetchDatapack(`action-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
       this.actionNamesCache[lang] = names;
       this.setActionNames(names);
@@ -230,7 +231,7 @@ export class DatapackStore {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}class-names/${lang}.json`);
+      const response = await fetchDatapack(`class-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
       this.classNamesCache[lang] = names;
       this.setClassNames(names);
@@ -251,7 +252,7 @@ export class DatapackStore {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}npc-names/${lang}.json`);
+      const response = await fetchDatapack(`npc-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
       this.npcNamesCache[lang] = names;
       this.setNpcNames(names);
@@ -272,7 +273,7 @@ export class DatapackStore {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}quest-names/${lang}.json`);
+      const response = await fetchDatapack(`quest-names/${lang}.json`);
       const names: Record<string, string> = await response.json();
       this.questNamesCache[lang] = names;
       this.setQuestNames(names);
@@ -295,7 +296,7 @@ export class DatapackStore {
     if (this.npcRacesRequested) return;
     this.npcRacesRequested = true;
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}npc-races/data.json`);
+      const response = await fetchDatapack(`npc-races/data.json`);
       const races: Record<string, string> = await response.json();
       this.setNpcRaces(races);
     } catch {
@@ -312,7 +313,7 @@ export class DatapackStore {
     if (this.npcLevelsRequested) return;
     this.npcLevelsRequested = true;
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}npc-levels/data.json`);
+      const response = await fetchDatapack(`npc-levels/data.json`);
       const levels: Record<string, number> = await response.json();
       this.setNpcLevels(levels);
     } catch {
@@ -329,7 +330,7 @@ export class DatapackStore {
     if (this.itemGradesRequested) return;
     this.itemGradesRequested = true;
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}item-grades/data.json`);
+      const response = await fetchDatapack(`item-grades/data.json`);
       const byGrade: Record<string, number[]> = await response.json();
       const grades: Record<string, ItemGrade> = {};
       for (const [gradeIndex, itemIds] of Object.entries(byGrade)) {
@@ -352,7 +353,7 @@ export class DatapackStore {
     if (this.itemStatsRequested) return;
     this.itemStatsRequested = true;
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}item-stats/data.json`);
+      const response = await fetchDatapack(`item-stats/data.json`);
       this.setItemStats(await response.json());
     } catch {
       this.itemStatsRequested = false;
@@ -375,7 +376,7 @@ export class DatapackStore {
     if (this.skillEffectFieldsRequested) return;
     this.skillEffectFieldsRequested = true;
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}skill-effect-fields/data.json`);
+      const response = await fetchDatapack(`skill-effect-fields/data.json`);
       const fields: Record<string, [number, string, number]> = await response.json();
       this.setSkillEffectFields(fields);
     } catch {
@@ -392,7 +393,7 @@ export class DatapackStore {
     if (this.characterBaseStatsRequested) return;
     this.characterBaseStatsRequested = true;
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}character-base-stats/data.json`);
+      const response = await fetchDatapack(`character-base-stats/data.json`);
       const stats: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<SexNames, BaseStats>>>>> = await response.json();
       this.setCharacterBaseStats(stats);
     } catch {
@@ -417,12 +418,12 @@ export class DatapackStore {
       return;
     }
     try {
-      const enResponse = await fetch(`${import.meta.env.BASE_URL}system-messages/en.json`);
+      const enResponse = await fetchDatapack(`system-messages/en.json`);
       const en: Record<string, string> = await enResponse.json();
       let merged = en;
       if (lang !== "en") {
         try {
-          const langResponse = await fetch(`${import.meta.env.BASE_URL}system-messages/${lang}.json`);
+          const langResponse = await fetchDatapack(`system-messages/${lang}.json`);
           const overrides: Record<string, string> = await langResponse.json();
           merged = { ...en, ...overrides };
         } catch {
