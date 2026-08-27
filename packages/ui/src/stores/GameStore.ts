@@ -40,6 +40,7 @@ import { formatSystemMessage, isNoisySystemMessage } from "../config/system-mess
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
 import { canMoveStraight } from "../utils/geodata/geo-path";
 import { loadedGeoTiles } from "../utils/geodata/geo-tile-index";
+import { loadedSurfaceHeightAtWorld } from "../utils/geodata/geo-tile-height";
 import type { BaseClass, SexNames } from "../config/character-races";
 
 /**
@@ -1256,6 +1257,9 @@ export class GameStore {
    * (see GameStore.moveTo's own docs), only at the start of each move
    * order. One heartbeat per real ActiveChar instance -- see
    * moveHeartbeatChar's guard against re-attaching on every UserInfo.
+   *
+   * Each beat re-grounds our tracked Z first (see groundTrackedZ) so what we
+   * report is the same place we're drawing ourselves.
    */
   private setupMoveHeartbeat(me: L2User) {
     if (this.moveHeartbeatChar === me) {
@@ -1267,7 +1271,10 @@ export class GameStore {
       if (this.moveHeartbeatInterval) {
         clearInterval(this.moveHeartbeatInterval);
       }
-      this.moveHeartbeatInterval = setInterval(() => this.client?.validatePosition(), 1000);
+      this.moveHeartbeatInterval = setInterval(() => {
+        this.groundTrackedZ(me);
+        this.client?.validatePosition();
+      }, 1000);
     });
 
     me.on("StopMoving", () => {
@@ -1276,6 +1283,41 @@ export class GameStore {
         this.moveHeartbeatInterval = null;
       }
     });
+  }
+
+  /**
+   * Snaps the local player's tracked Z onto the geodata surface under them --
+   * the same "gravity" the rendered position already uses (see
+   * creature-movement.ts), applied to the Z we actually report to the server.
+   *
+   * Without it the two disagree while walking over any relief: L2Creature's
+   * own move stepping walks Z linearly from the segment's origin height to
+   * its destination height (see setMovingTo's zStep, which exists to stop
+   * that value drifting away from the server's), and a straight line between
+   * two endpoints is not the terrain between them. The reference server acts
+   * on that gap: lineage2ts's ValidatePosition handler treats a reported Z
+   * more than 200 units off its own as out of sync, and either re-grounds
+   * itself (when our reports are at least self-consistent, within 800 of the
+   * previous one) or sends a corrective ValidateLocation -- the second of
+   * which is a visible snap-back. Falling more than 800 below what the server
+   * thinks is an immediate correction regardless.
+   *
+   * Reporting the surface instead keeps us inside that tolerance for the
+   * ordinary hill/slope case, and matches what the server does to itself when
+   * it decides a Z is wrong (GeoPolygonCache.getObjectZ -- its own gravity).
+   * No-ops where geodata says nothing (nothing loaded, a hole, or no geodata
+   * configured at all), leaving the tracked value exactly as it was.
+   *
+   * Deliberately only while moving (this runs off the heartbeat, which only
+   * ticks between StartMoving and StopMoving): a stopped player's Z came from
+   * the server's own MoveToLocation destination and is already authoritative,
+   * and setMovingTo snaps to it on arrival.
+   */
+  private groundTrackedZ(me: L2User) {
+    const surfaceZ = loadedSurfaceHeightAtWorld(me.X, me.Y, me.Z);
+    if (surfaceZ !== null) {
+      me.Z = surfaceZ;
+    }
   }
 
   /**
