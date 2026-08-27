@@ -28,6 +28,7 @@ export const App = observer(function App() {
     datapack.loadSkillEffectFields();
     datapack.loadCharacterBaseStats();
     datapack.loadItemGrades();
+    datapack.loadItemStats();
   }, [datapack]);
 
   // Per-language tables -- re-fetched (or served from cache) whenever ui.lang changes.
