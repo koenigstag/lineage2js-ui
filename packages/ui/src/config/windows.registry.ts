@@ -94,7 +94,6 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     id: "macro",
     type: "titlebar",
     title: "windows.macro",
-    icon: "🪄",
     closable: true,
     draggable: true,
   },
