@@ -130,26 +130,31 @@ const CLIPS: ClipSource[] = [
  *
  * Measured, not guessed: every number below is NumRawFrames / AnimRate off
  * the sequence itself, read out of the client's own Animations/*.ukx via
- * umodel's PSA export (the `wait_hand`/`walk_hand`/`run_hand`/`death`
- * sequence for each rig, matching CLIPS' own preference for the unarmed
- * variants). Re-measure the same way if a rig or clip is added here, rather
- * than interpolating: the rates are per-sequence and share no pattern.
+ * umodel's PSA export, taking each rig's first CLIPS candidate that exists
+ * there (so the unarmed variant wherever one is shipped). Re-measure the
+ * same way if a rig or clip is added here, rather than interpolating: the
+ * rates are per-sequence and share no pattern -- the same gesture is 30fps
+ * for an attack and 3fps for an idle, and a dwarf's walk is 10fps where an
+ * elf's is 20.
  *
  * Nothing here is invented to fill a gap. A clip with no row keeps its Unity
- * timing and the run says so, which is the honest state for sit/sitIdle/
- * attack/cast until someone with a client measures them.
+ * timing and the run says so; all ten rigs ship all nine sequences, so there
+ * are no rows missing at the moment.
  */
 const AUTHORED_SECONDS: Record<string, Record<string, number>> = {
-  MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 51f@15
-  FFighter: { idle: 3.3333, walk: 0.7333, run: 0.8, death: 2.5625 }, // 10f@3, 11f@15, 12f@15, 41f@16
-  MMagic: { idle: 3.3333, walk: 0.8, run: 0.8333, death: 2.8333 }, // 10f@3, 12f@15, 10f@12, 34f@12
-  FMagic: { idle: 3.3333, walk: 0.7333, run: 0.8333, death: 2.9167 }, // 10f@3, 11f@15, 10f@12, 35f@12
-  MElf: { idle: 3.3333, walk: 0.8, run: 0.8, death: 3.0 }, // 10f@3, 12f@15, 12f@15, 36f@12
-  FElf: { idle: 3.3333, walk: 0.7333, run: 0.9, death: 2.5333 }, // 10f@3, 11f@15, 18f@20, 38f@15
-  MDarkElf: { idle: 3.3333, walk: 0.8333, run: 0.6667, death: 2.0 }, // 10f@3, 10f@12, 16f@24, 30f@15
-  FDarkElf: { idle: 2.6667, walk: 0.7917, run: 0.6667, death: 2.6667 }, // 16f@6, 19f@24, 16f@24, 32f@12
-  MDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, death: 5.6667 }, // 16f@6, 7f@10, 11f@15, 68f@12
-  FDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, death: 3.8333 }, // 16f@6, 14f@20, 11f@15, 46f@12
+  // Trailing comment on each row is that rig's own NumRawFrames@AnimRate, in
+  // the same order as the durations, so a number can be traced back to the
+  // sequence it came from without re-exporting anything.
+  MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, sit: 3.4167, sitIdle: 2.3333, attack: 1.4333, pickup: 0.5833, cast: 1.8333, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 41f@12, 7f@3, 43f@30, 7f@12, 55f@30, 51f@15
+  FFighter: { idle: 3.3333, walk: 0.7333, run: 0.8, sit: 4.3333, sitIdle: 2.6667, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5625 }, // 10f@3, 11f@15, 12f@15, 52f@12, 8f@3, 46f@30, 10f@20, 55f@30, 41f@16
+  MMagic: { idle: 3.3333, walk: 0.8, run: 0.8333, sit: 3.8333, sitIdle: 1.6, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.8333 }, // 10f@3, 12f@15, 10f@12, 23f@6, 8f@5, 43f@30, 5f@10, 55f@30, 34f@12
+  FMagic: { idle: 3.3333, walk: 0.7333, run: 0.8333, sit: 3.3333, sitIdle: 2.0, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.9167 }, // 10f@3, 11f@15, 10f@12, 40f@12, 10f@5, 43f@30, 5f@10, 55f@30, 35f@12
+  MElf: { idle: 3.3333, walk: 0.8, run: 0.8, sit: 4.0, sitIdle: 2.3333, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 3.0 }, // 10f@3, 12f@15, 12f@15, 60f@15, 14f@6, 43f@30, 5f@10, 55f@30, 36f@12
+  FElf: { idle: 3.3333, walk: 0.7333, run: 0.9, sit: 4.3, sitIdle: 2.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5333 }, // 10f@3, 11f@15, 18f@20, 43f@10, 10f@5, 46f@30, 3f@6, 55f@30, 38f@15
+  MDarkElf: { idle: 3.3333, walk: 0.8333, run: 0.6667, sit: 2.8333, sitIdle: 2.3333, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.0 }, // 10f@3, 10f@12, 16f@24, 17f@6, 7f@3, 46f@30, 3f@6, 55f@30, 30f@15
+  FDarkElf: { idle: 2.6667, walk: 0.7917, run: 0.6667, sit: 3.3333, sitIdle: 3.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.6667 }, // 16f@6, 19f@24, 16f@24, 40f@12, 15f@5, 46f@30, 3f@6, 55f@30, 32f@12
+  MDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 4.75, sitIdle: 3.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 5.6667 }, // 16f@6, 7f@10, 11f@15, 57f@12, 15f@5, 46f@30, 5f@10, 55f@30, 68f@12
+  FDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 3.3333, sitIdle: 2.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 3.8333 }, // 16f@6, 14f@20, 11f@15, 40f@12, 10f@5, 46f@30, 3f@6, 55f@30, 46f@12
 };
 
 /** m000 is the bare default set every rig ships; higher numbers are armor. */
