@@ -1,4 +1,5 @@
 import { CharacterModel } from "./character-model.component";
+import { SkeletonModel } from "./skeleton-model.component";
 import { PlayerModel } from "./player-model.component";
 import { getNpcRaceColor } from "../../../config/npc-race-mapping";
 import type { RaceNames } from "../../../config/character-races";
@@ -39,7 +40,13 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
  * Resolves a WorldCreatureSnapshot (player, NPC, mob, or summon -- including
  * the local player, which is just another entry in GameStore.creatures) to
  * the right visual: players get their real race/class/sex look via
- * PlayerModel, everything else gets an NpcRace-tinted CharacterModel.
+ * PlayerModel, NPCs get an NpcRace-tinted humanoid on the same rig, and
+ * mobs/summons stay on the older capsule placeholder.
+ *
+ * The split is deliberate rather than incidental: a humanoid skeleton is the
+ * right shape for a person and the wrong one for a wolf, so mobs keep the
+ * shape-agnostic capsule until there's per-archetype geometry to give them
+ * (see TODO.md's "Basic 3D models for mobs").
  */
 export function CreatureModel({ creature, selected, ...position }: CreatureModelProps) {
   if (creature.kind === "player" && creature.race && creature.baseClass && creature.sex) {
@@ -60,8 +67,9 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
 
   const color = getNpcRaceColor(creature.race) ?? KIND_FALLBACK_COLOR[creature.kind];
   const cursor = selected ? KIND_CURSOR[creature.kind] : undefined;
+  const Model = creature.kind === "npc" ? SkeletonModel : CharacterModel;
   return (
-    <CharacterModel
+    <Model
       {...position}
       selected={selected}
       color={color}
