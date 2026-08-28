@@ -9,7 +9,16 @@ import {
 } from "../../../utils/models/character-model";
 
 /** The states the converted rigs carry a clip for -- see convert-unity-models.ts's CLIPS. */
-export type CharacterAnimation = "idle" | "walk" | "run" | "sit" | "sitIdle" | "attack" | "cast" | "death";
+export type CharacterAnimation =
+  | "idle"
+  | "walk"
+  | "run"
+  | "sit"
+  | "sitIdle"
+  | "pickup"
+  | "attack"
+  | "cast"
+  | "death";
 
 export interface GltfCharacterModelProps {
   asset: CharacterModelAsset;
@@ -61,17 +70,25 @@ const MAX_TIME_SCALE = 2;
 /** Plays once and holds its last frame instead of looping. */
 const ONE_SHOT: ReadonlySet<CharacterAnimation> = new Set<CharacterAnimation>([
   "sit",
+  "pickup",
   "attack",
   "cast",
   "death",
 ]);
 
 /**
- * Transitions that end in a pose of their own: sitting down leads into the
- * seated idle. Anything else in ONE_SHOT simply holds where it stopped, which
- * is what a corpse wants.
+ * Where each one-shot leaves the body. Sitting down leads into the seated
+ * idle; a stoop, a swing and a cast all end back on their feet -- which also
+ * means the state that triggered them can outlast the clip without freezing
+ * the body mid-motion. Death is the one that settles nowhere: it holds where
+ * it stopped, which is the point of a corpse.
  */
-const SETTLES_INTO: Partial<Record<CharacterAnimation, CharacterAnimation>> = { sit: "sitIdle" };
+const SETTLES_INTO: Partial<Record<CharacterAnimation, CharacterAnimation>> = {
+  sit: "sitIdle",
+  pickup: "idle",
+  attack: "idle",
+  cast: "idle",
+};
 
 /**
  * A converted retail body (see assets-server/scripts/convert-unity-models.ts),
@@ -135,6 +152,14 @@ export function GltfCharacterModel({
 
     const next = model.actions.get(wanted) ?? model.actions.get("idle");
     if (!next) return;
+
+    // Already looping this exact cycle -- which happens when a one-shot has
+    // settled back into idle and the state that triggered it only drops
+    // afterwards. Restarting the loop for that would visibly jump.
+    if (next.isRunning() && !ONE_SHOT.has(wanted)) {
+      started.current = true;
+      return;
+    }
 
     if (ONE_SHOT.has(wanted)) {
       next.setLoop(LoopOnce, 1);

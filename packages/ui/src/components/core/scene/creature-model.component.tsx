@@ -38,8 +38,9 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
 };
 
 /**
- * Dead creatures hold the end of the fall, seated ones the seated pose, and
- * the rest idle unless they're on a move segment -- where walk vs run comes
+ * Dead creatures hold the end of the fall, seated ones the seated pose,
+ * whoever just picked something up stoops for it, and the rest idle unless
+ * they're on a move segment -- where walk vs run comes
  * from the creature's own move type (CharInfo/NpcInfo/UserInfo, kept current
  * by ChangeMoveType), the same flag the server picks its speed off, rather
  * than from guessing at that speed.
@@ -47,8 +48,12 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
 function animationFor(creature: WorldCreatureSnapshot): CharacterAnimation {
   if (creature.isDead) return "death";
   if (creature.isSitting) return "sit";
-  if (!creature.isMoving) return "idle";
-  return creature.isRunning ? "run" : "walk";
+  // Movement outranks the pick-up stoop: the server is authoritative about
+  // where a creature is going, while the stoop is a client-side window that
+  // can overlap the next move order.
+  if (creature.isMoving) return creature.isRunning ? "run" : "walk";
+  if (creature.isPickingUp) return "pickup";
+  return "idle";
 }
 
 /**

@@ -21,6 +21,7 @@ import {
   Actions,
   type Client,
   type L2User,
+  type EGetItem,
   type ESystemMessage,
   type ECreatureSay,
   type EDie,
@@ -65,6 +66,13 @@ export interface WorldCreatureSnapshot {
   isDead: boolean;
   /** Seated (ChangeWaitType) -- can't move, and the body plays the sitting pose. */
   isSitting: boolean;
+  /**
+   * Mid pick-up, for the length of the animation. Unlike everything else
+   * here this isn't a state the server tracks -- GetItem is a one-off "X
+   * picked up Y" broadcast, so the window is the client's own (see
+   * GameStore.notePickup).
+   */
+  isPickingUp: boolean;
   /**
    * Walking vs running (CharInfo/NpcInfo/UserInfo, kept current by
    * ChangeMoveType), which is also what L2Creature.CurrentSpeed picks its
@@ -656,7 +664,7 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
 }
 
 /** Similar to targetSnapshotFromCreature, but for the world scene's WorldCreatureSnapshot (position, not stats) -- name resolution differs, see the `name` field's own comment below. */
-function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureSnapshot {
+function worldCreatureSnapshotFromCreature(creature: L2Creature, isPickingUp: boolean): WorldCreatureSnapshot {
   const isAttackable = creature instanceof L2Mob;
   const kind: WorldCreatureSnapshot["kind"] = creature instanceof L2Character
     ? "player"
@@ -679,6 +687,7 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
     isDead: creature.IsDead,
     isSitting: creature.IsSitting,
     isRunning: creature.IsRunning,
+    isPickingUp,
     race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,
@@ -736,6 +745,12 @@ export interface SystemMessageEntry {
 }
 
 let nextSystemMessageEntryId = 1;
+/**
+ * How long a creature keeps playing the pick-up animation. Longer than the
+ * clip on purpose -- see notePickup.
+ */
+const PICKUP_ANIMATION_MS = 1200;
+
 const SYSTEM_MESSAGES_MAX_ENTRIES = 200;
 
 export interface ChatMessage {
@@ -947,10 +962,19 @@ export class GameStore {
   pendingHotbarDeletes = new Map<number, number>();
   private static readonly HOTBAR_DELETE_GRACE_MS = 8000;
 
+  /**
+   * creature objectId -> Date.now() when its pick-up animation is over. Not
+   * reactive: the GetItem handler re-syncs the creature snapshots itself, and
+   * those are what the scene actually reads.
+   */
+  // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
+  pickingUpUntil = new Map<number, number>();
+
   constructor() {
     makeAutoObservable(this, {
       client: false,
       pendingHotbarDeletes: false,
+      pickingUpUntil: false,
       moveHeartbeatInterval: false,
       moveHeartbeatChar: false,
       netPingInterval: false,
@@ -1182,6 +1206,31 @@ export class GameStore {
     }
     this.recordSystemMessage(CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID, [], []);
     return true;
+  }
+
+  /**
+   * Starts the pick-up window for a creature, off the server's own "X picked
+   * up Y" broadcast (GetItem), so other players' pick-ups animate too.
+   *
+   * A window rather than a flag the server maintains, because there is no
+   * such flag: the pick-up is an instant on the server and only the animation
+   * takes time. It only has to outlast the clip -- once that finishes the
+   * body hands itself back to idle (see GltfCharacterModel's SETTLES_INTO),
+   * so an over-long window is harmless, while a short one would cut the
+   * animation off mid-stoop. The one thing it does cost: a second pick-up
+   * inside the window extends it rather than replaying the stoop, so grabbing
+   * a pile of drops animates once rather than once per item.
+   */
+  private notePickup(creatureId: number) {
+    const now = Date.now();
+    for (const [id, until] of this.pickingUpUntil) {
+      if (until <= now) this.pickingUpUntil.delete(id);
+    }
+    this.pickingUpUntil.set(creatureId, now + PICKUP_ANIMATION_MS);
+  }
+
+  private isPickingUp(creatureId: number): boolean {
+    return (this.pickingUpUntil.get(creatureId) ?? 0) > Date.now();
   }
 
   /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
@@ -1945,7 +1994,7 @@ export class GameStore {
       // as everyone else. Find it back via GameStore.me as the map key.
       const next = new Map<number, WorldCreatureSnapshot>();
       for (const creature of client.CreaturesList) {
-        next.set(creature.ObjectId, worldCreatureSnapshotFromCreature(creature));
+        next.set(creature.ObjectId, worldCreatureSnapshotFromCreature(creature, this.isPickingUp(creature.ObjectId)));
       }
       this.creatures = next;
     });
@@ -1975,6 +2024,14 @@ export class GameStore {
         next.set(item.ObjectId, worldItemSnapshotFromItem(item));
       }
       this.droppedItems = next;
+    });
+
+    // Re-syncs immediately rather than waiting on the poll below: a pick-up
+    // is over in about a second, and a third of that spent standing still
+    // would be the visible part.
+    client.on("GetItem", (e: EGetItem) => {
+      runInAction(() => this.notePickup(e.data.creatureId));
+      syncCreatures();
     });
 
     client.on("PacketReceived", "SpawnItem", syncDroppedItems);

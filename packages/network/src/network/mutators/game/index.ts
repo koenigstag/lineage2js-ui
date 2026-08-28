@@ -11,6 +11,8 @@ import AskJoinPartyMutator from "./AskJoinPartyMutator";
 import AskJoinParty from "../../incoming/game/AskJoinParty";
 import AttackMutator from "./AttackMutator";
 import Attack from "../../incoming/game/Attack";
+import GetItemMutator from "./GetItemMutator";
+import GetItem from "../../incoming/game/GetItem";
 import ChangeMoveTypeMutator from "./ChangeMoveTypeMutator";
 import ChangeMoveType from "../../incoming/game/ChangeMoveType";
 import ChangeWaitTypeMutator from "./ChangeWaitTypeMutator";
@@ -138,6 +140,7 @@ export default [
   [AskJoinPartyMutator.prototype, AskJoinParty],
   [AttackMutator.prototype, Attack],
   [ChangeMoveTypeMutator.prototype, ChangeMoveType],
+  [GetItemMutator.prototype, GetItem],
   [ChangeWaitTypeMutator.prototype, ChangeWaitType],
   [CharInfoMutator.prototype, CharInfo],
   [CharSelectedMutator.prototype, CharSelected],

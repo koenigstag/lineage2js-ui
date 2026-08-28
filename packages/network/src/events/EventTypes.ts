@@ -105,6 +105,11 @@ export declare type ECharInfo = {
   data: { creature: L2Creature };
   once: boolean;
 };
+export declare type EGetItem = {
+  type: string;
+  data: { creatureId: number; itemId: number };
+  once: boolean;
+};
 export declare type ERevive = {
   type: string;
   data: { creature: L2Creature };
@@ -224,6 +229,7 @@ export declare type OnPartyMemberPosition = [
   (e: EPartyMemberPosition) => void
 ];
 export declare type OnCharInfo = ["CharInfo", (e: ECharInfo) => void];
+export declare type OnGetItem = ["GetItem", (e: EGetItem) => void];
 export declare type OnRevive = ["Revive", (e: ERevive) => void];
 export declare type OnServerClose = [
   "ServerClose",
@@ -269,6 +275,7 @@ export declare type EventHandlerType =
   | OnPartySmallWindow
   | OnPartyMemberPosition
   | OnCharInfo
+  | OnGetItem
   | OnRevive
   | OnServerClose
   | OnConfirmDlg

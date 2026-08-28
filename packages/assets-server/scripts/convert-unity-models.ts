@@ -95,9 +95,9 @@ interface ClipSource {
 }
 
 // Adding one here is enough to export it; the client plays whichever of them
-// it has state for (see CreatureModel's animationFor). idle/walk/run/death and
-// sit are driven today -- attack and cast are ahead of that state, since
-// nothing tells the client a creature is swinging or casting yet.
+// it has state for (see CreatureModel's animationFor). idle/walk/run/death,
+// sit and pickup are driven today -- attack and cast are ahead of that state,
+// since nothing tells the client a creature is swinging or casting yet.
 //
 // The unarmed ("Hand") variants throughout: no weapon is rendered yet, and the
 // armed variants pose the hands around a weapon that isn't there.
@@ -109,6 +109,7 @@ const CLIPS: ClipSource[] = [
   { name: "sit", candidates: ["sit"] },
   { name: "sitIdle", candidates: ["sitwait"] },
   { name: "attack", candidates: ["atk01_hand", "atk01_1hs"] },
+  { name: "pickup", candidates: ["picitem"] },
   // The casting motion itself, not the release: CastMid is the wind-up every
   // rig that casts at all ships, CastEnd the follow-through some also do.
   { name: "cast", candidates: ["castmid", "castend", "magicnotarget"] },
