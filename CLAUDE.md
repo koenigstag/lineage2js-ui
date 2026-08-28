@@ -92,6 +92,16 @@ treat a failing typecheck as a build failure, not just a lint nit.
 - Env vars are Vite-style (`VITE_*` prefix, see `.env.example` and
   `vite-env.d.ts`), and get baked into the client bundle at build time —
   don't put anything secret in a `VITE_*` var, it ends up in the public JS.
+  Adding one means touching four places, not one: `vite-env.d.ts` (typed +
+  documented), `.env.example`, wherever it's read, and
+  `.github/workflows/deploy-pages.yml`'s `env:` block, which passes every
+  `VITE_*` the client reads through from a repository variable. A var missing
+  from the workflow isn't a build error — the feature just silently falls
+  back on the deployed site, which is how the game-menu icons shipped
+  art-less. The only vars deliberately kept out of it are
+  `VITE_DEV_LOGIN_USERNAME`/`VITE_DEV_LOGIN_PASSWORD` and `VITE_IS_DEMO_MODE`;
+  if a new one belongs in that category, say so in a comment there rather
+  than just leaving it out.
 - No test suite yet. Verification is: `pnpm --filter @lineage2js/ui build`
   (typecheck + build) plus manual visual testing — run the Vite dev server
   and drive it with a real browser (Playwright is a reasonable way to script
