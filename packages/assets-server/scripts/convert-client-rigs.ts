@@ -31,6 +31,8 @@ import { fileURLToPath } from "node:url";
 import * as THREE from "three";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { MATERIAL_SLOTS, type MaterialSlot } from "./models/fbx-body";
 import { readPsa, toThreeClip, type PsaFile, type PsaSequence } from "./models/psa-anim";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -64,6 +66,8 @@ const UNIT_SCALE = 100;
 interface PieceSource {
   /** Suffix after the rig name, e.g. "m000_u". */
   suffix: string;
+  /** Which tint the runtime paints it with -- the merged mesh gets one material per slot. */
+  slot: MaterialSlot;
   /** Package and rig to take it from -- not always this rig's own, see FShaman. */
   from?: { pkg: string; rig: string };
 }
@@ -80,7 +84,15 @@ interface ClientRig {
 }
 
 /** The pieces a body is made of, in the same slots the Unity path uses. */
-const BODY_PIECES = ["m000_u", "m000_l", "m000_b", "m000_g", "m000_f", "m000_m00_bh", "m000_m00_ah"];
+const BODY_PIECES: PieceSource[] = [
+  { suffix: "m000_u", slot: "outfit" },
+  { suffix: "m000_l", slot: "outfit" },
+  { suffix: "m000_b", slot: "outfit" },
+  { suffix: "m000_g", slot: "skin" },
+  { suffix: "m000_f", slot: "skin" },
+  { suffix: "m000_m00_bh", slot: "hair" },
+  { suffix: "m000_m00_ah", slot: "hair" },
+];
 
 const RIGS: ClientRig[] = [
   { rig: "MOrc", pkg: "Orc", animObject: "MOrc_anim" },
@@ -96,12 +108,12 @@ const RIGS: ClientRig[] = [
     pkg: "Shaman",
     animObject: "FShaman_anim",
     pieces: [
-      { suffix: "m000_u", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_l", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_b", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_g", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_f" },
-      { suffix: "m000_m00_ah" },
+      { suffix: "m000_u", slot: "outfit", from: { pkg: "Orc", rig: "FOrc" } },
+      { suffix: "m000_l", slot: "outfit", from: { pkg: "Orc", rig: "FOrc" } },
+      { suffix: "m000_b", slot: "outfit", from: { pkg: "Orc", rig: "FOrc" } },
+      { suffix: "m000_g", slot: "skin", from: { pkg: "Orc", rig: "FOrc" } },
+      { suffix: "m000_f", slot: "skin" },
+      { suffix: "m000_m00_ah", slot: "hair" },
     ],
   },
   { rig: "MKamael", pkg: "Kamael", animObject: "MKamael_anim" },
@@ -200,6 +212,8 @@ interface AssembledBody {
   boneNames: Set<string>;
   /** Bounding-box height in client units, for the log -- an orc should read taller than a dwarf. */
   height: number;
+  /** Joints no body piece had, taken from a hairstyle -- reported so a surprise shows up in the run. */
+  adopted: string[];
 }
 
 /**
@@ -209,36 +223,109 @@ interface AssembledBody {
  * pieces before this pipeline was written), so the first piece's skeleton is
  * the rig's and the rest contribute only their meshes.
  */
-function assemble(pieces: THREE.Group[]): AssembledBody {
-  const root = pieces[0];
-  const skinned: THREE.SkinnedMesh[] = [];
-  root.traverse((object) => {
-    if ((object as THREE.SkinnedMesh).isSkinnedMesh) skinned.push(object as THREE.SkinnedMesh);
-  });
-  if (skinned.length === 0) throw new Error("First piece has no skinned mesh");
-  const skeleton = skinned[0].skeleton;
-
-  for (const piece of pieces.slice(1)) {
-    const meshes: THREE.SkinnedMesh[] = [];
-    piece.traverse((object) => {
-      if ((object as THREE.SkinnedMesh).isSkinnedMesh) meshes.push(object as THREE.SkinnedMesh);
+function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): AssembledBody {
+  const meshOf = (group: THREE.Group): THREE.SkinnedMesh => {
+    let found: THREE.SkinnedMesh | undefined;
+    group.traverse((object) => {
+      if (!found && (object as THREE.SkinnedMesh).isSkinnedMesh) found = object as THREE.SkinnedMesh;
     });
-    for (const mesh of meshes) {
-      mesh.removeFromParent();
-      mesh.bind(skeleton, mesh.bindMatrix);
-      skinned[0].parent?.add(mesh);
-    }
+    if (!found) throw new Error("A body piece came out of umodel with no skinned mesh");
+    return found;
+  };
+
+  const primary = meshOf(pieces[0].group);
+  const bones = [...primary.skeleton.bones];
+  const boneInverses = [...primary.skeleton.boneInverses];
+  // Sanitised throughout: the same joint is spelled "Bip01_Pelvis" on a body
+  // piece and "Bip01 Pelvis" on a hair one, and three's own binding
+  // normalises spaces to underscores anyway -- comparing raw names would
+  // rebuild the whole skeleton for every piece that spells it the other way.
+  const boneIndexByName = new Map(
+    bones.map((bone, index) => [THREE.PropertyBinding.sanitizeNodeName(bone.name), index])
+  );
+  const rootBone = bones.find((bone) => !(bone.parent as THREE.Bone | null)?.isBone) ?? bones[0];
+  const adopted: string[] = [];
+
+  /** A joint the primary skeleton doesn't have -- hair strands, and the weapon attachment points a hairstyle piece drags along. */
+  function adoptBone(pieceBone: THREE.Bone): number {
+    const name = THREE.PropertyBinding.sanitizeNodeName(pieceBone.name);
+    const existing = boneIndexByName.get(name);
+    if (existing !== undefined) return existing;
+
+    const pieceParent = pieceBone.parent as THREE.Bone | null;
+    const parent = pieceParent?.isBone ? bones[adoptBone(pieceParent)] : rootBone;
+    const clone = pieceBone.clone(false);
+    clone.name = name;
+    parent.add(clone);
+    clone.updateMatrixWorld(true);
+
+    bones.push(clone);
+    boneInverses.push(new THREE.Matrix4().copy(clone.matrixWorld).invert());
+    boneIndexByName.set(name, bones.length - 1);
+    adopted.push(name);
+    return bones.length - 1;
   }
 
-  const boneNames = new Set(skeleton.bones.map((bone) => THREE.PropertyBinding.sanitizeNodeName(bone.name)));
+  const geometries: THREE.BufferGeometry[] = [];
+  const slots: MaterialSlot[] = [];
+  for (const piece of pieces) {
+    const mesh = meshOf(piece.group);
+    piece.group.updateMatrixWorld(true);
+
+    const geometry = mesh.geometry.clone();
+    // Re-point skinIndex at the shared bone array: a piece may reference a
+    // subset of the skeleton, in its own order, and a silently mismatched
+    // index is a limb hanging off the wrong joint.
+    const remap = mesh.skeleton.bones.map((bone) => adoptBone(bone));
+    const skinIndex = (geometry.getAttribute("skinIndex") as THREE.BufferAttribute).array;
+    for (let i = 0; i < skinIndex.length; i++) skinIndex[i] = remap[skinIndex[i]];
+
+    // mergeGeometries insists on identical attribute sets; drop what this
+    // pipeline doesn't use rather than requiring every piece to carry it.
+    for (const name of Object.keys(geometry.attributes)) {
+      if (!["position", "normal", "uv", "skinIndex", "skinWeight"].includes(name)) {
+        geometry.deleteAttribute(name);
+      }
+    }
+    geometries.push(geometry);
+    slots.push(piece.slot);
+  }
+
+  // Per tint slot first, then the slots together with groups -- glTF turns
+  // every group into its own primitive, so this is the difference between one
+  // draw call per body and one per body part. It is also what gives the
+  // runtime the three materials it paints a character by (see
+  // instantiateCharacterModel, which looks them up by name).
+  const slotGeometries = MATERIAL_SLOTS.map((slot) => {
+    const forSlot = geometries.filter((_, index) => slots[index] === slot);
+    return forSlot.length > 0 ? mergeGeometries(forSlot, false) : null;
+  }).filter((geometry): geometry is THREE.BufferGeometry => geometry !== null);
+
+  const merged = mergeGeometries(slotGeometries, true);
+  if (!merged) throw new Error("Body pieces have incompatible geometry attributes");
+
+  primary.geometry = merged;
+  // Rebind: adopting joints changed the array the skin indices point into.
+  primary.bind(new THREE.Skeleton(bones, boneInverses), primary.bindMatrix);
+  primary.material = MATERIAL_SLOTS.filter((slot) => slots.includes(slot)).map(
+    (slot) => new THREE.MeshStandardMaterial({ name: slot, color: 0xffffff, roughness: 0.75 })
+  );
+  primary.name = "body";
+
+  // Only the first piece's tree is exported, so the other six skeletons --
+  // identical copies of this one -- never reach the file.
+  const root = pieces[0].group;
+  for (const piece of pieces.slice(1)) piece.group.clear();
+
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
-  return { root, boneNames, height: (box.max.y - box.min.y) * UNIT_SCALE };
+  const boneNames = new Set(bones.map((bone) => THREE.PropertyBinding.sanitizeNodeName(bone.name)));
+  return { root, boneNames, height: (box.max.y - box.min.y) * UNIT_SCALE, adopted };
 }
 
 async function convertRig(umodel: string, client: string, workDir: string, source: ClientRig): Promise<void> {
-  const pieceSources: PieceSource[] = source.pieces ?? BODY_PIECES.map((suffix) => ({ suffix }));
-  const exported: string[] = [];
+  const pieceSources: PieceSource[] = source.pieces ?? BODY_PIECES;
+  const exported: { file: string; slot: MaterialSlot }[] = [];
 
   for (const piece of pieceSources) {
     const from = piece.from ?? { pkg: source.pkg, rig: source.rig };
@@ -252,11 +339,13 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
         continue; // a rig that doesn't ship this piece simply has fewer of them
       }
     }
-    if (fs.existsSync(file)) exported.push(file);
+    if (fs.existsSync(file)) exported.push({ file, slot: piece.slot });
   }
   if (exported.length === 0) throw new Error(`No body pieces found for ${source.rig}`);
 
-  const pieces = await Promise.all(exported.map(loadPiece));
+  const pieces = await Promise.all(
+    exported.map(async (piece) => ({ group: await loadPiece(piece.file), slot: piece.slot }))
+  );
   const body = assemble(pieces);
 
   const psaDir = path.join(workDir, `${source.pkg}-anim`);
