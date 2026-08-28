@@ -73,7 +73,10 @@ interface RigSource {
 const RIGS: RigSource[] = [
   { rig: "MFighter", pkg: "Fighter" },
   { rig: "FFighter", pkg: "Fighter", donor: "FDarkElf" },
-  { rig: "MMagic", pkg: "Magic" },
+  // MMagic ships every clip but Stand, which the retail rig does have
+  // (33f@12) -- the Unity project simply didn't import it. MFighter for the
+  // same reason the other male rigs use it.
+  { rig: "MMagic", pkg: "Magic", donor: "MFighter" },
   { rig: "FMagic", pkg: "Magic", donor: "FDarkElf" },
   { rig: "MElf", pkg: "Elf", donor: "MFighter" },
   { rig: "FElf", pkg: "Elf", donor: "FDarkElf" },
