@@ -1,6 +1,7 @@
-import { CharacterModel } from "./character-model.component";
-import { SkeletonModel } from "./skeleton-model.component";
+import { CharacterBody } from "./character-body.component";
+import { locomotionAnimation, type CharacterAnimation } from "./gltf-character-model.component";
 import { PlayerModel } from "./player-model.component";
+import { getNpcModelUrl } from "../../../config/character-models";
 import { getNpcRaceColor } from "../../../config/npc-race-mapping";
 import type { RaceNames } from "../../../config/character-races";
 import type { WorldCreatureSnapshot } from "../../../stores/GameStore";
@@ -36,17 +37,24 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
   npc: "help",
 };
 
+/** Dead creatures hold the end of the fall; the rest idle unless they're on a move segment. */
+function animationFor(creature: WorldCreatureSnapshot): CharacterAnimation {
+  if (creature.isDead) return "death";
+  if (!creature.isMoving) return "idle";
+  return locomotionAnimation(creature.speed);
+}
+
 /**
  * Resolves a WorldCreatureSnapshot (player, NPC, mob, or summon -- including
  * the local player, which is just another entry in GameStore.creatures) to
- * the right visual: players get their real race/class/sex look via
- * PlayerModel, NPCs get an NpcRace-tinted humanoid on the same rig, and
- * mobs/summons stay on the older capsule placeholder.
+ * the right visual: players get their real race/class/sex body via
+ * PlayerModel, NPCs of a playable race get that race's body tinted by
+ * NpcRace, and everything else falls back to the capsule placeholder.
  *
- * The split is deliberate rather than incidental: a humanoid skeleton is the
- * right shape for a person and the wrong one for a wolf, so mobs keep the
- * shape-agnostic capsule until there's per-archetype geometry to give them
- * (see TODO.md's "Basic 3D models for mobs").
+ * The split isn't incidental: the converted bodies are all humanoid, which is
+ * the right shape for a person and the wrong one for a wolf, so mobs and
+ * summons stay on the shape-agnostic capsule until there's per-archetype
+ * geometry to give them (see TODO.md's "Basic 3D models for mobs").
  */
 export function CreatureModel({ creature, selected, ...position }: CreatureModelProps) {
   if (creature.kind === "player" && creature.race && creature.baseClass && creature.sex) {
@@ -60,6 +68,8 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
         // non-players, TS just can't see the kind-based guarantee.
         variant={{ race: creature.race as RaceNames, baseClass: creature.baseClass, sex: creature.sex }}
         nickname={creature.name}
+        animation={animationFor(creature)}
+        speed={creature.speed}
         isDead={creature.isDead}
       />
     );
@@ -67,11 +77,15 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
 
   const color = getNpcRaceColor(creature.race) ?? KIND_FALLBACK_COLOR[creature.kind];
   const cursor = selected ? KIND_CURSOR[creature.kind] : undefined;
-  const Model = creature.kind === "npc" ? SkeletonModel : CharacterModel;
   return (
-    <Model
+    <CharacterBody
       {...position}
       selected={selected}
+      // NpcInfo carries no sex or class, so a humanoid NPC borrows its race's
+      // male fighter body; mobs and summons have no model to ask for.
+      modelUrl={creature.kind === "npc" ? getNpcModelUrl(creature.race) : undefined}
+      animation={animationFor(creature)}
+      speed={creature.speed}
       color={color}
       nickname={creature.name}
       cursor={cursor}

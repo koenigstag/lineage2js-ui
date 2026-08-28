@@ -18,6 +18,8 @@ interface ImportMetaEnv {
   readonly VITE_LOGIN_BACKGROUND_VIDEO_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/geodata-tiles/{tileX}_{tileY}.bin" -- pre-baked geodata tile (see assets-server/scripts/convert-l2j-geodata.ts), "{tileX}"/"{tileY}" get replaced with the tile's coordinates. Deserialized directly, see geo-tile-parser.ts. */
   readonly VITE_GEODATA_TILE_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/models/" -- folder of converted character bodies (see assets-server/scripts/convert-unity-models.ts), one `<rig>.glb` per race/sex. Unset (or a body that fails to load) leaves that character on the placeholder capsule, see config/character-models.ts. */
+  readonly VITE_CHARACTER_MODEL_BASE_URL: string;
   /** @lineage2js/network Logger verbosity bitmask (NONE=0, INFO=1, WARNING=2, ERROR=4, DEBUG=8). Defaults to INFO. */
   readonly VITE_L2JSC_LOG_LEVEL: string;
   /**

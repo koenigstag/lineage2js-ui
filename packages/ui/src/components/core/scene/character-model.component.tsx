@@ -1,6 +1,13 @@
 import { DoubleSide } from "three";
 import { NicknameLabel } from "./nickname-label.component";
 
+/**
+ * @deprecated Invented placeholder tone, not ported from any real art source
+ * -- same status as character-races.ts's own colour tables. Only reached for a
+ * creature with no race-specific tone of its own (mobs, npcs, summons).
+ */
+export const DEFAULT_SKIN_COLOR = "#d8b98a";
+
 interface CharacterModelProps {
   x: number;
   /** World-up (three.js Y) foot position. Defaults to 0 (flat-floor scenes). */
@@ -35,7 +42,7 @@ export function CharacterModel({
   z,
   angleToCenter,
   color,
-  skinColor = "#d8b98a",
+  skinColor = DEFAULT_SKIN_COLOR,
   heightScale = 1,
   widthScale = 1,
   hasCape = false,

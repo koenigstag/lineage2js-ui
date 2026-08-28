@@ -14,17 +14,22 @@ pitch; this file is for working in the code.
 - `packages/ui` (`@lineage2js/ui`) — the web client. Vite + React + TypeScript
   + MobX (`mobx-react-lite`). This is where almost all UI work happens.
 - `packages/assets-server` (`@lineage2js/assets-server`) — Express static
-  server for game icons (skills/items/actions/classes). Real image files
-  live under `assets/highfive/icons/<kind>/<id>.png` and are gitignored
-  (only the folder structure + `.gitkeep` are tracked) since that art is
-  copyrighted -- don't ever commit real icons here or anywhere else in this
-  repo. Client-UI art belongs here too rather than in the UI bundle, under
-  the same rule -- the game menu's own button icons are
+  server for game icons (skills/items/actions/classes), pre-baked geodata
+  tiles, and converted character models. Real files live under
+  `assets/highfive/{icons,geodata-tiles,models}/` and are gitignored (only
+  the folder structure + `.gitkeep` are tracked) since that art is
+  copyrighted -- don't ever commit real icons, geodata or models here or
+  anywhere else in this repo. Client-UI art belongs here too rather than in
+  the UI bundle, under the same rule -- the game menu's own button icons are
   `assets/legacy/icons/game-menu/<button>@64.png` (see the UI's
   `config/icon-urls.ts`; every consumer needs a fallback for when the art
   isn't served). Serves with `Cache-Control: max-age + must-revalidate` and
   an ETag from file size/mtime, so overwriting a file is enough to
-  invalidate clients' caches (no URL versioning needed).
+  invalidate clients' caches (no URL versioning needed). `scripts/` holds
+  the offline converters that produce those files from sources the user
+  supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles) and
+  `convert:models` (the Unity L2J client's FBX bodies + Unity `.anim` clips
+  -> one `.glb` per race/sex).
 
 ## Commands
 
@@ -67,6 +72,13 @@ treat a failing typecheck as a build failure, not just a lint nit.
     hotbar/inventory icon slot system. `IconFrame` renders a gradient
     background by type, or a real image via `iconUrl` (falls back to the
     gradient automatically if the image 404s/fails to load).
+- `components/core/scene/` — the 3D bodies. `CharacterBody` picks between the
+  converted retail model (`GltfCharacterModel`, loaded from
+  `VITE_CHARACTER_MODEL_BASE_URL` via `config/character-models.ts`) and the
+  procedural `CharacterModel` capsule. The capsule is a first-class fallback,
+  not an error state: orcs, Kamael, mobs and summons have no model, and no
+  model server is configured by default -- so never make the glTF path
+  mandatory, and keep both branches working.
 - `config/z-index.ts` — stacking order is **modals > windows > menus >
   screens**. Don't invent new z-index values elsewhere.
 - `config/icon-urls.ts` — builds real icon image URLs from `VITE_*_ICON_BASE_URL`
