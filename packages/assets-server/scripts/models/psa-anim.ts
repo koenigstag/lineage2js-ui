@@ -19,7 +19,15 @@
 import * as THREE from "three";
 import fs from "node:fs";
 
-/** Positions come out of the client at 100x the scale umodel's glTF export uses. */
+/**
+ * Positions come out of the client at 100x the scale umodel's glTF export uses.
+ *
+ * This is the only conversion the keys need. A rig whose units are restored
+ * by scaling its root node -- which is how convert-client-rigs.ts does it --
+ * gets that factor applied to the whole tree at render time, this track
+ * included, so folding it in here as well would apply it twice and fling the
+ * body a hundred body-heights into the air.
+ */
 const POSITION_SCALE = 0.01;
 
 interface Chunk {
@@ -106,8 +114,6 @@ export interface ClipOptions {
   rootBone: string;
   /** Applied to the root's translation, for a rig driven by another's clip. */
   rootMotionScale?: number;
-  /** Undoes umodel's own 0.01, so a client rig lands in the same units as the Unity-derived ones. */
-  unitScale: number;
 }
 
 /**
@@ -119,7 +125,7 @@ export interface ClipOptions {
 export function toThreeClip(psa: PsaFile, sequence: PsaSequence, name: string, options: ClipOptions): THREE.AnimationClip {
   const boneCount = psa.boneNames.length;
   const tracks: THREE.KeyframeTrack[] = [];
-  const scale = POSITION_SCALE * options.unitScale;
+  const scale = POSITION_SCALE;
 
   for (let bone = 0; bone < boneCount; bone++) {
     const boneName = THREE.PropertyBinding.sanitizeNodeName(psa.boneNames[bone]);

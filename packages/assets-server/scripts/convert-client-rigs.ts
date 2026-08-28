@@ -68,6 +68,14 @@ interface PieceSource {
   suffix: string;
   /** Which tint the runtime paints it with -- the merged mesh gets one material per slot. */
   slot: MaterialSlot;
+  /**
+   * Alternatives, not additions: pieces sharing a variant name fill the same
+   * spot on the body different ways, and only the first one a rig actually
+   * ships is taken. The client picks between them by the character's own
+   * appearance -- hairStyle for these -- which nothing in this pipeline
+   * models yet, and merging every candidate puts two haircuts on one head.
+   */
+  variant?: string;
   /** Package and rig to take it from -- not always this rig's own, see FShaman. */
   from?: { pkg: string; rig: string };
 }
@@ -90,8 +98,8 @@ const BODY_PIECES: PieceSource[] = [
   { suffix: "m000_b", slot: "outfit" },
   { suffix: "m000_g", slot: "skin" },
   { suffix: "m000_f", slot: "skin" },
-  { suffix: "m000_m00_bh", slot: "hair" },
-  { suffix: "m000_m00_ah", slot: "hair" },
+  { suffix: "m000_m00_bh", slot: "hair", variant: "hair" },
+  { suffix: "m000_m00_ah", slot: "hair", variant: "hair" },
 ];
 
 const RIGS: ClientRig[] = [
@@ -214,6 +222,58 @@ interface AssembledBody {
   height: number;
   /** Joints no body piece had, taken from a hairstyle -- reported so a surprise shows up in the run. */
   adopted: string[];
+  /** Pieces that arrived unskinned and were bound to a joint, as "piece -> bone". */
+  reattached: string[];
+}
+
+/**
+ * The joint a piece hangs off, for a piece that isn't skinned at all.
+ *
+ * Not every part of a body is weighted. The orc and shaman faces -- and one
+ * of their two hairstyles -- put a single full weight on the skeleton's root
+ * on every vertex, which is how the client stores a mesh it attaches to a
+ * joint at runtime instead of skinning it. Merged as they come, they hang off
+ * the pelvis: upright and roughly in the right place, but turning with the
+ * hips rather than the head. (The Kamael package needs none of this -- its
+ * faces and hair are weighted to the head like everything else.)
+ *
+ * Which joint is recorded nowhere in the export, so it comes from the
+ * geometry: a rigid part rests on the joint that carries it, so the bone
+ * nearest to where it sits in the reference pose is the one. Re-pointing the
+ * skin index is the whole fix -- in the reference pose a bone's matrix and
+ * its inverse cancel, so the piece does not move, it only starts following.
+ *
+ * Returns null for a piece that is genuinely skinned, which is most of them.
+ */
+function rigidAttachment(mesh: THREE.SkinnedMesh): { root: number; bone: THREE.Bone } | null {
+  const bones = mesh.skeleton.bones;
+  const root = bones.findIndex((bone) => !(bone.parent as THREE.Bone | null)?.isBone);
+  if (root < 0) return null;
+
+  const skinIndex = mesh.geometry.getAttribute("skinIndex") as THREE.BufferAttribute;
+  const skinWeight = mesh.geometry.getAttribute("skinWeight") as THREE.BufferAttribute;
+  for (let vertex = 0; vertex < skinIndex.count; vertex++) {
+    for (let influence = 0; influence < 4; influence++) {
+      if (skinWeight.getComponent(vertex, influence) === 0) continue;
+      if (skinIndex.getComponent(vertex, influence) !== root) return null;
+    }
+  }
+
+  mesh.geometry.computeBoundingBox();
+  const centre = mesh.geometry.boundingBox!.getCenter(new THREE.Vector3());
+  mesh.localToWorld(centre);
+
+  const position = new THREE.Vector3();
+  let nearest = bones[root];
+  let shortest = Infinity;
+  for (const bone of bones) {
+    const distance = position.setFromMatrixPosition(bone.matrixWorld).distanceTo(centre);
+    if (distance < shortest) {
+      shortest = distance;
+      nearest = bone;
+    }
+  }
+  return { root, bone: nearest };
 }
 
 /**
@@ -223,7 +283,7 @@ interface AssembledBody {
  * pieces before this pipeline was written), so the first piece's skeleton is
  * the rig's and the rest contribute only their meshes.
  */
-function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): AssembledBody {
+function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string }[]): AssembledBody {
   // All of them, not just the first: a piece whose mesh has more than one
   // material arrives from GLTFLoader as a group of that many skinned meshes
   // (the Kamael torso is two), and taking one would leave the rest in the
@@ -253,6 +313,7 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
   const boneIndexByName = new Map(bones.map((bone, index) => [boneKey(bone.name), index]));
   const rootBone = bones.find((bone) => !(bone.parent as THREE.Bone | null)?.isBone) ?? bones[0];
   const adopted: string[] = [];
+  const reattached: string[] = [];
 
   /** A joint the primary skeleton doesn't have -- hair strands, and the weapon attachment points a hairstyle piece drags along. */
   function adoptBone(pieceBone: THREE.Bone): number {
@@ -285,6 +346,13 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
     // subset of the skeleton, in its own order, and a silently mismatched
     // index is a limb hanging off the wrong joint.
     const remap = mesh.skeleton.bones.map((bone) => adoptBone(bone));
+    // An unskinned piece carries every vertex on the root, so pointing that
+    // one entry at the joint it hangs from moves the whole piece onto it.
+    const rigid = rigidAttachment(mesh);
+    if (rigid) {
+      remap[rigid.root] = adoptBone(rigid.bone);
+      reattached.push(`${piece.name} -> ${THREE.PropertyBinding.sanitizeNodeName(rigid.bone.name)}`);
+    }
     const skinIndex = (geometry.getAttribute("skinIndex") as THREE.BufferAttribute).array;
     for (let i = 0; i < skinIndex.length; i++) skinIndex[i] = remap[skinIndex[i]];
 
@@ -331,14 +399,16 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   const boneNames = new Set(bones.map((bone) => THREE.PropertyBinding.sanitizeNodeName(bone.name)));
-  return { root, boneNames, height: (box.max.y - box.min.y) * UNIT_SCALE, adopted };
+  return { root, boneNames, height: (box.max.y - box.min.y) * UNIT_SCALE, adopted, reattached };
 }
 
 async function convertRig(umodel: string, client: string, workDir: string, source: ClientRig): Promise<void> {
   const pieceSources: PieceSource[] = source.pieces ?? BODY_PIECES;
   const exported: { file: string; slot: MaterialSlot; own: boolean }[] = [];
 
+  const filled = new Set<string>();
   for (const piece of pieceSources) {
+    if (piece.variant && filled.has(piece.variant)) continue;
     const from = piece.from ?? { pkg: source.pkg, rig: source.rig };
     const object = `${from.rig}_${piece.suffix}`;
     const outDir = path.join(workDir, from.pkg);
@@ -350,7 +420,9 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
         continue; // a rig that doesn't ship this piece simply has fewer of them
       }
     }
-    if (fs.existsSync(file)) exported.push({ file, slot: piece.slot, own: from.pkg === source.pkg });
+    if (!fs.existsSync(file)) continue;
+    exported.push({ file, slot: piece.slot, own: from.pkg === source.pkg });
+    if (piece.variant) filled.add(piece.variant);
   }
   if (exported.length === 0) throw new Error(`No body pieces found for ${source.rig}`);
 
@@ -363,7 +435,11 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
   // drives.
   const ordered = [...exported].sort((a, b) => Number(b.own) - Number(a.own));
   const pieces = await Promise.all(
-    ordered.map(async (piece) => ({ group: await loadPiece(piece.file), slot: piece.slot }))
+    ordered.map(async (piece) => ({
+      group: await loadPiece(piece.file),
+      slot: piece.slot,
+      name: path.basename(piece.file, ".gltf"),
+    }))
   );
   const body = assemble(pieces);
 
@@ -393,11 +469,12 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
         boneNames: body.boneNames,
         rootBone: ROOT_BONE,
         inPlace: wanted.inPlace,
-        unitScale: UNIT_SCALE,
       })
     );
   }
 
+  // On the node rather than baked into the vertices, so it reaches the bones
+  // too -- which is why the clips above stay in the rig's own pre-scale units.
   body.root.scale.setScalar(UNIT_SCALE);
 
   const glb = (await new GLTFExporter().parseAsync(body.root, {
@@ -412,6 +489,7 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
     `  ${source.rig}: ${exported.length} pieces, ${clips.length} clips, ` +
       `${Math.round(body.height)} units tall, ${Math.round(glb.byteLength / 1024)} KB -> ${path.basename(outFile)}` +
       (body.adopted.length ? `  (+${body.adopted.length} joints from other pieces)` : "") +
+      (body.reattached.length ? `  (attached: ${body.reattached.join(", ")})` : "") +
       (missing.length ? `  (no sequence for ${missing.join("/")})` : "")
   );
 }
