@@ -29,9 +29,19 @@ export interface ClipTargetRig {
   rootMotionScale: number;
 }
 
-/** Keeps a walk/run cycle playing in place -- world position comes from the server, not the clip. */
 export interface ClipOptions {
+  /** Keeps a walk/run cycle playing in place -- world position comes from the server, not the clip. */
   inPlace?: boolean;
+  /**
+   * Seconds this sequence runs for in the retail client, which is the only
+   * place that number survives: the Unity project's clips all sit on a flat
+   * 24fps timeline, while every retail AnimSequence carries its own AnimRate
+   * (3fps for an idle, 10-24 for locomotion, 12-16 for a death). Left
+   * undefined the clip keeps the Unity timing, which plays anywhere from
+   * roughly right to nine times too fast depending on the sequence -- see
+   * convert-unity-models.ts's AUTHORED_SECONDS for the measured numbers.
+   */
+  authoredDuration?: number;
 }
 
 function convertQuaternionKeys(keys: UnityAnimationClip["rotations"][number]["keys"]): {
@@ -100,5 +110,17 @@ export function toThreeClip(
   // Unity's stop time is the authored loop length, which can run past the last
   // keyframe (a cycle that holds its final pose for a beat before repeating).
   if (source.stopTime > clip.duration) clip.duration = source.stopTime;
+
+  // Retime onto the retail duration (see ClipOptions.authoredDuration).
+  // Proportional rather than per-frame on purpose: some of the Unity clips
+  // are frame-for-frame copies of the retail sequence, others were resampled
+  // to a different frame count entirely, and only the total duration is
+  // trustworthy for both. The loop point lands up to one frame early on a
+  // key-for-key clip as a result, which is not something an eye catches on a
+  // twelve-frame cycle.
+  if (options.authoredDuration && clip.duration > 0) {
+    for (const track of clip.tracks) track.scale(options.authoredDuration / clip.duration);
+    clip.duration = options.authoredDuration;
+  }
   return clip;
 }

@@ -108,6 +108,37 @@ const CLIPS: ClipSource[] = [
   { name: "death", candidates: ["death"] },
 ];
 
+/**
+ * How long each sequence runs in the retail client, in seconds, by rig and
+ * clip -- the timing the Unity project lost.
+ *
+ * Unity's clips are all on one flat 24fps timeline, whereas every retail
+ * AnimSequence carries its own AnimRate: 3fps for a human idle, 6 for a
+ * dwarf's, 10 to 24 across the locomotion cycles, 12 to 16 for the deaths.
+ * Converted verbatim, an MFighter idle came out 0.375s instead of 3.33s --
+ * a breathing loop running nine times too fast -- and no single correction
+ * covers the rest, since the error runs from 0.96x (MDarkElf death, right by
+ * accident) to 8.9x.
+ *
+ * Measured, not guessed: every number below is NumRawFrames / AnimRate off
+ * the sequence itself, read out of the client's own Animations/*.ukx via
+ * umodel's PSA export (the `wait_hand`/`walk_hand`/`run_hand`/`death`
+ * sequence for each rig, matching CLIPS' own preference for the unarmed
+ * variants). Re-measure the same way if a rig or clip is added here.
+ */
+const AUTHORED_SECONDS: Record<string, Record<string, number>> = {
+  MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 51f@15
+  FFighter: { idle: 3.3333, walk: 0.7333, run: 0.8, death: 2.5625 }, // 10f@3, 11f@15, 12f@15, 41f@16
+  MMagic: { idle: 3.3333, walk: 0.8, run: 0.8333, death: 2.8333 }, // 10f@3, 12f@15, 10f@12, 34f@12
+  FMagic: { idle: 3.3333, walk: 0.7333, run: 0.8333, death: 2.9167 }, // 10f@3, 11f@15, 10f@12, 35f@12
+  MElf: { idle: 3.3333, walk: 0.8, run: 0.8, death: 3.0 }, // 10f@3, 12f@15, 12f@15, 36f@12
+  FElf: { idle: 3.3333, walk: 0.7333, run: 0.9, death: 2.5333 }, // 10f@3, 11f@15, 18f@20, 38f@15
+  MDarkElf: { idle: 3.3333, walk: 0.8333, run: 0.6667, death: 2.0 }, // 10f@3, 10f@12, 16f@24, 30f@15
+  FDarkElf: { idle: 2.6667, walk: 0.7917, run: 0.6667, death: 2.6667 }, // 16f@6, 19f@24, 16f@24, 32f@12
+  MDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, death: 5.6667 }, // 16f@6, 7f@10, 11f@15, 68f@12
+  FDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, death: 3.8333 }, // 16f@6, 14f@20, 11f@15, 46f@12
+};
+
 /** m000 is the bare default set every rig ships; higher numbers are armor. */
 const BODY_PART_SUFFIXES: { suffixes: string[]; slot: BodyPart["slot"] }[] = [
   { suffixes: ["m000_u"], slot: "outfit" },
@@ -199,6 +230,10 @@ async function convertRig(unityDir: string, source: RigSource): Promise<void> {
   for (const wanted of CLIPS) {
     let file: string | undefined;
     let rootMotionScale = 1;
+    // Which rig's sequence this ends up being, so a borrowed clip is retimed
+    // against the duration the donor's own sequence has in the client rather
+    // than the borrower's.
+    let clipRig = source.rig;
     for (const candidate of wanted.candidates) {
       file = ownClips.get(candidate);
       if (file) break;
@@ -210,6 +245,7 @@ async function convertRig(unityDir: string, source: RigSource): Promise<void> {
       }
       if (file) {
         borrowed.push(wanted.name);
+        clipRig = source.donor ?? source.rig;
         rootMotionScale = donorHeight === 0 ? 1 : body.height / donorHeight;
       }
     }
@@ -220,7 +256,7 @@ async function convertRig(unityDir: string, source: RigSource): Promise<void> {
         wanted.name,
         readUnityAnimationClip(file),
         { boneNames: body.boneNames, rootBone: ROOT_BONE, unityScale: body.unityScale, rootMotionScale },
-        { inPlace: wanted.inPlace }
+        { inPlace: wanted.inPlace, authoredDuration: AUTHORED_SECONDS[clipRig]?.[wanted.name] }
       )
     );
   }
