@@ -24,6 +24,8 @@ import {
   type EGetItem,
   type EMagicSkillUse,
   type EMagicSkillLaunched,
+  type EChangeWaitType,
+  type EAttacked,
   type ESystemMessage,
   type ECreatureSay,
   type EDie,
@@ -81,6 +83,15 @@ export interface WorldCreatureSnapshot {
    * client's guess (see GameStore.noteCast).
    */
   isCasting: boolean;
+  /**
+   * Getting back up off the ground, for the length of that motion. Another
+   * client-side window (see GameStore.noteStandUp): ChangeWaitType announces
+   * the standing flag the moment it flips, and says nothing about the couple
+   * of seconds the server then spends refusing to move.
+   */
+  isStandingUp: boolean;
+  /** Mid swing, for the length of the attack clip -- see GameStore.noteAttack. */
+  isAttacking: boolean;
   /**
    * Walking vs running (CharInfo/NpcInfo/UserInfo, kept current by
    * ChangeMoveType), which is also what L2Creature.CurrentSpeed picks its
@@ -672,10 +683,21 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
 }
 
 /** Similar to targetSnapshotFromCreature, but for the world scene's WorldCreatureSnapshot (position, not stats) -- name resolution differs, see the `name` field's own comment below. */
+/**
+ * The client-side gesture windows a snapshot carries, none of which the
+ * server keeps a flag for -- each is a listener's own timer over a one-off
+ * broadcast (GetItem, MagicSkillUse, ChangeWaitType, Attack).
+ */
+interface CreatureGestures {
+  isPickingUp: boolean;
+  isCasting: boolean;
+  isStandingUp: boolean;
+  isAttacking: boolean;
+}
+
 function worldCreatureSnapshotFromCreature(
   creature: L2Creature,
-  isPickingUp: boolean,
-  isCasting: boolean
+  gestures: CreatureGestures
 ): WorldCreatureSnapshot {
   const isAttackable = creature instanceof L2Mob;
   const kind: WorldCreatureSnapshot["kind"] = creature instanceof L2Character
@@ -699,8 +721,7 @@ function worldCreatureSnapshotFromCreature(
     isDead: creature.IsDead,
     isSitting: creature.IsSitting,
     isRunning: creature.IsRunning,
-    isPickingUp,
-    isCasting,
+    ...gestures,
     race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,
@@ -763,6 +784,31 @@ let nextSystemMessageEntryId = 1;
  * clip on purpose -- see notePickup.
  */
 const PICKUP_ANIMATION_MS = 1200;
+
+/**
+ * How long a creature keeps playing the stand-up motion. Sized to outlast
+ * the longest of the ten rigs' Stand sequences (FFighter/FElf at 3.4s, see
+ * the assets server's AUTHORED_SECONDS) for the same reason as
+ * PICKUP_ANIMATION_MS: overshooting costs nothing once the clip has settled
+ * back into idle, while cutting it short is visible.
+ *
+ * Not a movement gate. The server holds the character seated for its own
+ * stand-up delay (2.5s in the reference server) and refuses orders until
+ * then -- which is what makes the motion worth drawing at all -- but that
+ * number is the server's to enforce, and this client doesn't try to
+ * second-guess it.
+ */
+const STAND_UP_ANIMATION_MS = 3500;
+
+/**
+ * How long a creature keeps swinging after an Attack broadcast. The attack
+ * clips run 1.43-1.53s across the rigs, so this just outlasts the longest.
+ *
+ * Retail scales the swing to the attacker's attack speed; the wire carries
+ * no duration here (unlike a cast's HitTime) and PAtkSpd is only known for
+ * the local player, so every attacker swings at the clip's own pace for now.
+ */
+const ATTACK_ANIMATION_MS = 1600;
 
 const SYSTEM_MESSAGES_MAX_ENTRIES = 200;
 
@@ -991,12 +1037,22 @@ export class GameStore {
   // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
   castingUntil = new Map<number, number>();
 
+  /** creature objectId -> Date.now() when its stand-up motion is over. Same shape as pickingUpUntil. */
+  // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
+  standingUpUntil = new Map<number, number>();
+
+  /** creature objectId -> Date.now() when its swing is over. Same shape as pickingUpUntil. */
+  // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
+  attackingUntil = new Map<number, number>();
+
   constructor() {
     makeAutoObservable(this, {
       client: false,
       pendingHotbarDeletes: false,
       pickingUpUntil: false,
       castingUntil: false,
+      standingUpUntil: false,
+      attackingUntil: false,
       moveHeartbeatInterval: false,
       moveHeartbeatChar: false,
       netPingInterval: false,
@@ -1289,6 +1345,48 @@ export class GameStore {
 
   private isCasting(creatureId: number): boolean {
     return (this.castingUntil.get(creatureId) ?? 0) > Date.now();
+  }
+
+  /**
+   * Starts the stand-up window, off the server's own ChangeWaitType -- only
+   * on the seated -> standing edge, since the packet also arrives for sitting
+   * down and for fake death.
+   *
+   * Worth drawing precisely because the server does not treat standing up as
+   * instant: it broadcasts the standing flag straight away but keeps refusing
+   * move orders for its own stand-up delay afterwards. Without the motion the
+   * character snapped upright and then ignored clicks for two and a half
+   * seconds with nothing on screen to explain it.
+   */
+  private noteStandUp(creatureId: number) {
+    const now = Date.now();
+    for (const [id, until] of this.standingUpUntil) {
+      if (until <= now) this.standingUpUntil.delete(id);
+    }
+    this.standingUpUntil.set(creatureId, now + STAND_UP_ANIMATION_MS);
+  }
+
+  private isStandingUp(creatureId: number): boolean {
+    return (this.standingUpUntil.get(creatureId) ?? 0) > Date.now();
+  }
+
+  /**
+   * Starts the swing window, off the server's Attack broadcast -- so every
+   * attacker in view swings, not just whoever we are watching. Repeated hits
+   * inside the window extend it rather than restarting the clip, which is
+   * what keeps a sustained fight looking continuous instead of stuttering
+   * back to the first frame on every blow.
+   */
+  private noteAttack(creatureId: number) {
+    const now = Date.now();
+    for (const [id, until] of this.attackingUntil) {
+      if (until <= now) this.attackingUntil.delete(id);
+    }
+    this.attackingUntil.set(creatureId, now + ATTACK_ANIMATION_MS);
+  }
+
+  private isAttacking(creatureId: number): boolean {
+    return (this.attackingUntil.get(creatureId) ?? 0) > Date.now();
   }
 
   /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
@@ -2054,11 +2152,12 @@ export class GameStore {
       for (const creature of client.CreaturesList) {
         next.set(
           creature.ObjectId,
-          worldCreatureSnapshotFromCreature(
-            creature,
-            this.isPickingUp(creature.ObjectId),
-            this.isCasting(creature.ObjectId)
-          )
+          worldCreatureSnapshotFromCreature(creature, {
+            isPickingUp: this.isPickingUp(creature.ObjectId),
+            isCasting: this.isCasting(creature.ObjectId),
+            isStandingUp: this.isStandingUp(creature.ObjectId),
+            isAttacking: this.isAttacking(creature.ObjectId),
+          })
         );
       }
       this.creatures = next;
@@ -2108,6 +2207,23 @@ export class GameStore {
 
     client.on("MagicSkillLaunched", (e: EMagicSkillLaunched) => {
       runInAction(() => this.noteCastFinished(e.data.creatureId));
+      syncCreatures();
+    });
+
+    // Only the seated -> standing edge starts the stand-up motion; the same
+    // packet also announces sitting down and fake death, and the snapshot
+    // still holds the previous state at this point (syncCreatures below is
+    // what replaces it), which is what makes the edge visible here at all.
+    client.on("ChangeWaitType", (e: EChangeWaitType) => {
+      const wasSitting = this.creatures.get(e.data.creatureId)?.isSitting ?? false;
+      if (wasSitting && !e.data.isSitting) {
+        runInAction(() => this.noteStandUp(e.data.creatureId));
+      }
+      syncCreatures();
+    });
+
+    client.on("Attacked", (e: EAttacked) => {
+      runInAction(() => this.noteAttack(e.data.object));
       syncCreatures();
     });
 

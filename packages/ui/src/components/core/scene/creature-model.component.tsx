@@ -38,12 +38,12 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
 };
 
 /**
- * Dead creatures hold the end of the fall, seated ones the seated pose,
- * whoever is casting holds the cast, whoever just picked something up stoops
- * for it, and the rest idle unless they're on a move segment -- where walk vs
- * run comes from the creature's own move type (CharInfo/NpcInfo/UserInfo,
- * kept current by ChangeMoveType), the same flag the server picks its speed
- * off, rather than from guessing at that speed.
+ * Dead creatures hold the end of the fall and seated ones the seated pose;
+ * casting, swinging, stooping over a drop and getting back up each hold
+ * their own motion; and the rest idle unless they're on a move segment --
+ * where walk vs run comes from the creature's own move type
+ * (CharInfo/NpcInfo/UserInfo, kept current by ChangeMoveType), the same flag
+ * the server picks its speed off, rather than from guessing at that speed.
  */
 function animationFor(creature: WorldCreatureSnapshot): CharacterAnimation {
   if (creature.isDead) return "death";
@@ -55,7 +55,13 @@ function animationFor(creature: WorldCreatureSnapshot): CharacterAnimation {
   // Cast before pick-up: its window is the server's own cast time
   // (MagicSkillUse), the stoop's is the client's guess.
   if (creature.isCasting) return "cast";
+  if (creature.isAttacking) return "attack";
   if (creature.isPickingUp) return "pickup";
+  // Last of the gestures on purpose: the stand-up window is deliberately
+  // longer than any rig's clip, so it is still open once the body has
+  // settled back into idle -- anything more specific happening in that tail
+  // is the truer thing to draw.
+  if (creature.isStandingUp) return "stand";
   return "idle";
 }
 

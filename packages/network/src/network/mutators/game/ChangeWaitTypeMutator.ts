@@ -27,5 +27,14 @@ export default class ChangeWaitTypeMutator extends IMMOClientMutator<GameClient,
         creature.IsMoving = false;
       }
     }
+
+    // Standing back up is a motion of its own, and the server holds the
+    // character in place for roughly its length before accepting orders
+    // again -- a listener needs the moment it starts, which the flag above
+    // can't give it once it has been overwritten.
+    this.fire("ChangeWaitType", {
+      creatureId: packet.ObjectId,
+      isSitting: packet.MoveType === SITTING,
+    });
   }
 }

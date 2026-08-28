@@ -105,9 +105,11 @@ const CLIPS: ClipSource[] = [
   { name: "idle", candidates: ["wait_hand", "wait_1hs"] },
   { name: "walk", candidates: ["walk_hand", "walk_1hs"], inPlace: true },
   { name: "run", candidates: ["run_hand", "run_1hs"], inPlace: true },
-  // Sitting down, then the seated pose it settles into.
+  // Sitting down, then the seated pose it settles into, then getting back up
+  // -- a separate sequence in the client, not the sit played backwards.
   { name: "sit", candidates: ["sit"] },
   { name: "sitIdle", candidates: ["sitwait"] },
+  { name: "stand", candidates: ["stand"] },
   { name: "attack", candidates: ["atk01_hand", "atk01_1hs"] },
   { name: "pickup", candidates: ["picitem"] },
   // The casting motion itself, not the release: CastMid is the wind-up every
@@ -145,16 +147,16 @@ const AUTHORED_SECONDS: Record<string, Record<string, number>> = {
   // Trailing comment on each row is that rig's own NumRawFrames@AnimRate, in
   // the same order as the durations, so a number can be traced back to the
   // sequence it came from without re-exporting anything.
-  MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, sit: 3.4167, sitIdle: 2.3333, attack: 1.4333, pickup: 0.5833, cast: 1.8333, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 41f@12, 7f@3, 43f@30, 7f@12, 55f@30, 51f@15
-  FFighter: { idle: 3.3333, walk: 0.7333, run: 0.8, sit: 4.3333, sitIdle: 2.6667, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5625 }, // 10f@3, 11f@15, 12f@15, 52f@12, 8f@3, 46f@30, 10f@20, 55f@30, 41f@16
-  MMagic: { idle: 3.3333, walk: 0.8, run: 0.8333, sit: 3.8333, sitIdle: 1.6, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.8333 }, // 10f@3, 12f@15, 10f@12, 23f@6, 8f@5, 43f@30, 5f@10, 55f@30, 34f@12
-  FMagic: { idle: 3.3333, walk: 0.7333, run: 0.8333, sit: 3.3333, sitIdle: 2.0, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.9167 }, // 10f@3, 11f@15, 10f@12, 40f@12, 10f@5, 43f@30, 5f@10, 55f@30, 35f@12
-  MElf: { idle: 3.3333, walk: 0.8, run: 0.8, sit: 4.0, sitIdle: 2.3333, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 3.0 }, // 10f@3, 12f@15, 12f@15, 60f@15, 14f@6, 43f@30, 5f@10, 55f@30, 36f@12
-  FElf: { idle: 3.3333, walk: 0.7333, run: 0.9, sit: 4.3, sitIdle: 2.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5333 }, // 10f@3, 11f@15, 18f@20, 43f@10, 10f@5, 46f@30, 3f@6, 55f@30, 38f@15
-  MDarkElf: { idle: 3.3333, walk: 0.8333, run: 0.6667, sit: 2.8333, sitIdle: 2.3333, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.0 }, // 10f@3, 10f@12, 16f@24, 17f@6, 7f@3, 46f@30, 3f@6, 55f@30, 30f@15
-  FDarkElf: { idle: 2.6667, walk: 0.7917, run: 0.6667, sit: 3.3333, sitIdle: 3.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.6667 }, // 16f@6, 19f@24, 16f@24, 40f@12, 15f@5, 46f@30, 3f@6, 55f@30, 32f@12
-  MDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 4.75, sitIdle: 3.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 5.6667 }, // 16f@6, 7f@10, 11f@15, 57f@12, 15f@5, 46f@30, 5f@10, 55f@30, 68f@12
-  FDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 3.3333, sitIdle: 2.0, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 3.8333 }, // 16f@6, 14f@20, 11f@15, 40f@12, 10f@5, 46f@30, 3f@6, 55f@30, 46f@12
+  MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, sit: 3.4167, sitIdle: 2.3333, stand: 2.7333, attack: 1.4333, pickup: 0.5833, cast: 1.8333, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 41f@12, 7f@3, 41f@15, 43f@30, 7f@12, 55f@30, 51f@15
+  FFighter: { idle: 3.3333, walk: 0.7333, run: 0.8, sit: 4.3333, sitIdle: 2.6667, stand: 3.4, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5625 }, // 10f@3, 11f@15, 12f@15, 52f@12, 8f@3, 51f@15, 46f@30, 10f@20, 55f@30, 41f@16
+  MMagic: { idle: 3.3333, walk: 0.8, run: 0.8333, sit: 3.8333, sitIdle: 1.6, stand: 2.75, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.8333 }, // 10f@3, 12f@15, 10f@12, 23f@6, 8f@5, 33f@12, 43f@30, 5f@10, 55f@30, 34f@12
+  FMagic: { idle: 3.3333, walk: 0.7333, run: 0.8333, sit: 3.3333, sitIdle: 2.0, stand: 3.0, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.9167 }, // 10f@3, 11f@15, 10f@12, 40f@12, 10f@5, 36f@12, 43f@30, 5f@10, 55f@30, 35f@12
+  MElf: { idle: 3.3333, walk: 0.8, run: 0.8, sit: 4.0, sitIdle: 2.3333, stand: 2.6667, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 3.0 }, // 10f@3, 12f@15, 12f@15, 60f@15, 14f@6, 32f@12, 43f@30, 5f@10, 55f@30, 36f@12
+  FElf: { idle: 3.3333, walk: 0.7333, run: 0.9, sit: 4.3, sitIdle: 2.0, stand: 3.4, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5333 }, // 10f@3, 11f@15, 18f@20, 43f@10, 10f@5, 51f@15, 46f@30, 3f@6, 55f@30, 38f@15
+  MDarkElf: { idle: 3.3333, walk: 0.8333, run: 0.6667, sit: 2.8333, sitIdle: 2.3333, stand: 1.75, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.0 }, // 10f@3, 10f@12, 16f@24, 17f@6, 7f@3, 21f@12, 46f@30, 3f@6, 55f@30, 30f@15
+  FDarkElf: { idle: 2.6667, walk: 0.7917, run: 0.6667, sit: 3.3333, sitIdle: 3.0, stand: 3.3333, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.6667 }, // 16f@6, 19f@24, 16f@24, 40f@12, 15f@5, 50f@15, 46f@30, 3f@6, 55f@30, 32f@12
+  MDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 4.75, sitIdle: 3.0, stand: 2.6667, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 5.6667 }, // 16f@6, 7f@10, 11f@15, 57f@12, 15f@5, 32f@12, 46f@30, 5f@10, 55f@30, 68f@12
+  FDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 3.3333, sitIdle: 2.0, stand: 3.3333, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 3.8333 }, // 16f@6, 14f@20, 11f@15, 40f@12, 10f@5, 40f@12, 46f@30, 3f@6, 55f@30, 46f@12
 };
 
 /** m000 is the bare default set every rig ships; higher numbers are armor. */

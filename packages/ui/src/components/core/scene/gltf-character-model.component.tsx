@@ -15,6 +15,7 @@ export type CharacterAnimation =
   | "run"
   | "sit"
   | "sitIdle"
+  | "stand"
   | "pickup"
   | "attack"
   | "cast"
@@ -85,6 +86,7 @@ const ONE_SHOT: ReadonlySet<CharacterAnimation> = new Set<CharacterAnimation>([
  */
 const SETTLES_INTO: Partial<Record<CharacterAnimation, CharacterAnimation>> = {
   sit: "sitIdle",
+  stand: "idle",
   pickup: "idle",
   attack: "idle",
   cast: "idle",

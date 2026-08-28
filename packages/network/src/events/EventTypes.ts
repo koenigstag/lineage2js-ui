@@ -110,6 +110,12 @@ export declare type EGetItem = {
   data: { creatureId: number; itemId: number };
   once: boolean;
 };
+export declare type EChangeWaitType = {
+  type: string;
+  /** isSitting is the new state; the previous one is whatever the listener already had. */
+  data: { creatureId: number; isSitting: boolean };
+  once: boolean;
+};
 export declare type EMagicSkillUse = {
   type: string;
   /** hitTime is the server's own cast duration in ms, straight off the packet. */
@@ -241,6 +247,10 @@ export declare type OnPartyMemberPosition = [
 ];
 export declare type OnCharInfo = ["CharInfo", (e: ECharInfo) => void];
 export declare type OnGetItem = ["GetItem", (e: EGetItem) => void];
+export declare type OnChangeWaitType = [
+  "ChangeWaitType",
+  (e: EChangeWaitType) => void
+];
 export declare type OnMagicSkillUse = [
   "MagicSkillUse",
   (e: EMagicSkillUse) => void
@@ -295,6 +305,7 @@ export declare type EventHandlerType =
   | OnPartyMemberPosition
   | OnCharInfo
   | OnGetItem
+  | OnChangeWaitType
   | OnMagicSkillUse
   | OnMagicSkillLaunched
   | OnRevive
