@@ -11,6 +11,8 @@ import AskJoinPartyMutator from "./AskJoinPartyMutator";
 import AskJoinParty from "../../incoming/game/AskJoinParty";
 import AttackMutator from "./AttackMutator";
 import Attack from "../../incoming/game/Attack";
+import ChangeMoveTypeMutator from "./ChangeMoveTypeMutator";
+import ChangeMoveType from "../../incoming/game/ChangeMoveType";
 import ChangeWaitTypeMutator from "./ChangeWaitTypeMutator";
 import ChangeWaitType from "../../incoming/game/ChangeWaitType";
 import CharInfoMutator from "./CharInfoMutator";
@@ -135,6 +137,7 @@ export default [
   [ActionFailedMutator.prototype, ActionFailed],
   [AskJoinPartyMutator.prototype, AskJoinParty],
   [AttackMutator.prototype, Attack],
+  [ChangeMoveTypeMutator.prototype, ChangeMoveType],
   [ChangeWaitTypeMutator.prototype, ChangeWaitType],
   [CharInfoMutator.prototype, CharInfo],
   [CharSelectedMutator.prototype, CharSelected],

@@ -63,6 +63,15 @@ export interface WorldCreatureSnapshot {
   heading: number;
   kind: "player" | "mob" | "summon" | "npc";
   isDead: boolean;
+  /** Seated (ChangeWaitType) -- can't move, and the body plays the sitting pose. */
+  isSitting: boolean;
+  /**
+   * Walking vs running (CharInfo/NpcInfo/UserInfo, kept current by
+   * ChangeMoveType), which is also what L2Creature.CurrentSpeed picks its
+   * speed off -- so it decides both how fast the move segment below advances
+   * and which locomotion cycle the body plays.
+   */
+  isRunning: boolean;
   // RaceNames, for every creature kind -- RaceNames's 6 player-race values are a
   // literal subset of NpcRace's 23 (verified: identical spelling for every
   // shared key), so one field covers both instead of two parallel
@@ -668,6 +677,8 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature): WorldCreatureS
     heading: creature.Heading,
     kind,
     isDead: creature.IsDead,
+    isSitting: creature.IsSitting,
+    isRunning: creature.IsRunning,
     race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,

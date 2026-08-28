@@ -80,7 +80,7 @@ const RIGS: RigSource[] = [
   { rig: "MDarkElf", pkg: "DarkElf", donor: "MFighter" },
   { rig: "FDarkElf", pkg: "DarkElf" },
   { rig: "MDwarf", pkg: "Dwarf", donor: "MFighter" },
-  { rig: "FDwarf", pkg: "Dwarf" },
+  { rig: "FDwarf", pkg: "Dwarf", donor: "FDarkElf" },
 ];
 
 const PKG_BY_RIG = new Map(RIGS.map((source) => [source.rig, source.pkg]));
@@ -94,10 +94,10 @@ interface ClipSource {
   inPlace?: boolean;
 }
 
-// The four states the client can actually drive from what it knows about a
-// creature (see CreatureModel's animationFor). Every rig ships plenty more --
-// attacks, casting, sitting, social poses -- and adding one here is enough to
-// export it, but an unused clip is just weight in a file every player fetches.
+// Adding one here is enough to export it; the client plays whichever of them
+// it has state for (see CreatureModel's animationFor). idle/walk/run/death and
+// sit are driven today -- attack and cast are ahead of that state, since
+// nothing tells the client a creature is swinging or casting yet.
 //
 // The unarmed ("Hand") variants throughout: no weapon is rendered yet, and the
 // armed variants pose the hands around a weapon that isn't there.
@@ -105,6 +105,13 @@ const CLIPS: ClipSource[] = [
   { name: "idle", candidates: ["wait_hand", "wait_1hs"] },
   { name: "walk", candidates: ["walk_hand", "walk_1hs"], inPlace: true },
   { name: "run", candidates: ["run_hand", "run_1hs"], inPlace: true },
+  // Sitting down, then the seated pose it settles into.
+  { name: "sit", candidates: ["sit"] },
+  { name: "sitIdle", candidates: ["sitwait"] },
+  { name: "attack", candidates: ["atk01_hand", "atk01_1hs"] },
+  // The casting motion itself, not the release: CastMid is the wind-up every
+  // rig that casts at all ships, CastEnd the follow-through some also do.
+  { name: "cast", candidates: ["castmid", "castend", "magicnotarget"] },
   { name: "death", candidates: ["death"] },
 ];
 
@@ -124,7 +131,12 @@ const CLIPS: ClipSource[] = [
  * the sequence itself, read out of the client's own Animations/*.ukx via
  * umodel's PSA export (the `wait_hand`/`walk_hand`/`run_hand`/`death`
  * sequence for each rig, matching CLIPS' own preference for the unarmed
- * variants). Re-measure the same way if a rig or clip is added here.
+ * variants). Re-measure the same way if a rig or clip is added here, rather
+ * than interpolating: the rates are per-sequence and share no pattern.
+ *
+ * Nothing here is invented to fill a gap. A clip with no row keeps its Unity
+ * timing and the run says so, which is the honest state for sit/sitIdle/
+ * attack/cast until someone with a client measures them.
  */
 const AUTHORED_SECONDS: Record<string, Record<string, number>> = {
   MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 51f@15
@@ -227,6 +239,7 @@ async function convertRig(unityDir: string, source: RigSource): Promise<void> {
 
   const clips: THREE.AnimationClip[] = [];
   const borrowed: string[] = [];
+  const untimed: string[] = [];
   for (const wanted of CLIPS) {
     let file: string | undefined;
     let rootMotionScale = 1;
@@ -251,12 +264,15 @@ async function convertRig(unityDir: string, source: RigSource): Promise<void> {
     }
     if (!file) continue;
 
+    const authoredDuration = AUTHORED_SECONDS[clipRig]?.[wanted.name];
+    if (authoredDuration === undefined) untimed.push(wanted.name);
+
     clips.push(
       toThreeClip(
         wanted.name,
         readUnityAnimationClip(file),
         { boneNames: body.boneNames, rootBone: ROOT_BONE, unityScale: body.unityScale, rootMotionScale },
-        { inPlace: wanted.inPlace, authoredDuration: AUTHORED_SECONDS[clipRig]?.[wanted.name] }
+        { inPlace: wanted.inPlace, authoredDuration }
       )
     );
   }
@@ -276,6 +292,12 @@ async function convertRig(unityDir: string, source: RigSource): Promise<void> {
       `${body.offPose.length ? `, ignored the skeleton in ${body.offPose.join("/")}` : ""}` +
       `, ${(glb.byteLength / 1024).toFixed(0)} KB -> ${path.basename(outFile)}`
   );
+  // Said out loud rather than left to be noticed on screen: a clip with no
+  // measured duration keeps the Unity project's flat 24fps timing, which runs
+  // anywhere from slightly to several times too fast (see AUTHORED_SECONDS).
+  if (untimed.length > 0) {
+    console.warn(`    no measured duration for ${untimed.join("/")} -- playing at the source project's timing`);
+  }
 }
 
 async function main(): Promise<void> {

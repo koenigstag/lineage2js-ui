@@ -1,5 +1,5 @@
 import { CharacterBody } from "./character-body.component";
-import { locomotionAnimation, type CharacterAnimation } from "./gltf-character-model.component";
+import type { CharacterAnimation } from "./gltf-character-model.component";
 import { PlayerModel } from "./player-model.component";
 import { getNpcModelUrl } from "../../../config/character-models";
 import { getNpcRaceColor } from "../../../config/npc-race-mapping";
@@ -37,11 +37,18 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
   npc: "help",
 };
 
-/** Dead creatures hold the end of the fall; the rest idle unless they're on a move segment. */
+/**
+ * Dead creatures hold the end of the fall, seated ones the seated pose, and
+ * the rest idle unless they're on a move segment -- where walk vs run comes
+ * from the creature's own move type (CharInfo/NpcInfo/UserInfo, kept current
+ * by ChangeMoveType), the same flag the server picks its speed off, rather
+ * than from guessing at that speed.
+ */
 function animationFor(creature: WorldCreatureSnapshot): CharacterAnimation {
   if (creature.isDead) return "death";
+  if (creature.isSitting) return "sit";
   if (!creature.isMoving) return "idle";
-  return locomotionAnimation(creature.speed);
+  return creature.isRunning ? "run" : "walk";
 }
 
 /**

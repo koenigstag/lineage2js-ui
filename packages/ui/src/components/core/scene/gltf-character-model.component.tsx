@@ -9,7 +9,7 @@ import {
 } from "../../../utils/models/character-model";
 
 /** The states the converted rigs carry a clip for -- see convert-unity-models.ts's CLIPS. */
-export type CharacterAnimation = "idle" | "walk" | "run" | "death";
+export type CharacterAnimation = "idle" | "walk" | "run" | "sit" | "sitIdle" | "attack" | "cast" | "death";
 
 export interface GltfCharacterModelProps {
   asset: CharacterModelAsset;
@@ -54,19 +54,24 @@ const CROSSFADE_SECONDS = 0.15;
  * no matter what this said. Unlike those durations, the two numbers here
  * are still estimates rather than something measured out of the client.
  */
-const REFERENCE_SPEED: Record<CharacterAnimation, number> = { idle: 0, walk: 55, run: 120, death: 0 };
+const REFERENCE_SPEED: Partial<Record<CharacterAnimation, number>> = { walk: 55, run: 120 };
 const MIN_TIME_SCALE = 0.5;
 const MAX_TIME_SCALE = 2;
 
+/** Plays once and holds its last frame instead of looping. */
+const ONE_SHOT: ReadonlySet<CharacterAnimation> = new Set<CharacterAnimation>([
+  "sit",
+  "attack",
+  "cast",
+  "death",
+]);
+
 /**
- * Which cycle a moving creature is playing. The server never says whether it
- * is walking or running -- ChangeMoveType carries that and nothing reads it
- * yet -- so the move segment's own speed decides, splitting the difference
- * between the two cycles' authored speeds.
+ * Transitions that end in a pose of their own: sitting down leads into the
+ * seated idle. Anything else in ONE_SHOT simply holds where it stopped, which
+ * is what a corpse wants.
  */
-export function locomotionAnimation(speed: number | undefined): CharacterAnimation {
-  return (speed ?? 0) >= (REFERENCE_SPEED.walk + REFERENCE_SPEED.run) / 2 ? "run" : "walk";
-}
+const SETTLES_INTO: Partial<Record<CharacterAnimation, CharacterAnimation>> = { sit: "sitIdle" };
 
 /**
  * A converted retail body (see assets-server/scripts/convert-unity-models.ts),
@@ -121,21 +126,48 @@ export function GltfCharacterModel({
   const started = useRef(false);
 
   useEffect(() => {
-    const next = model.actions.get(animation) ?? model.actions.get("idle");
+    // A creature already in this state when it came into view skips straight
+    // to where the state ends up, rather than replaying the transition in
+    // front of the player: someone found sitting is sitting, not standing up
+    // to sit down again, and a corpse is not still falling over.
+    const settled = SETTLES_INTO[animation];
+    const wanted = !started.current && settled ? settled : animation;
+
+    const next = model.actions.get(wanted) ?? model.actions.get("idle");
     if (!next) return;
 
-    if (animation === "death") {
+    if (ONE_SHOT.has(wanted)) {
       next.setLoop(LoopOnce, 1);
       next.clampWhenFinished = true;
     }
     next.reset();
-    if (animation === "death" && !started.current) next.time = next.getClip().duration;
+    // No settled pose to skip to, so hold the end of the transition instead.
+    if (!started.current && ONE_SHOT.has(wanted) && !settled) next.time = next.getClip().duration;
 
     const previous = [...model.actions.values()].find((action) => action !== next && action.isRunning());
     if (previous && started.current) next.crossFadeFrom(previous, CROSSFADE_SECONDS, false);
     else for (const action of model.actions.values()) if (action !== next) action.stop();
     next.play();
     started.current = true;
+  }, [model, animation]);
+
+  // Hands a finished transition over to the pose it settles into -- without
+  // this, sitting down would freeze on the last frame of standing up out of
+  // the chair backwards.
+  useEffect(() => {
+    const settled = SETTLES_INTO[animation];
+    const transition = settled && model.actions.get(animation);
+    const held = settled && model.actions.get(settled);
+    if (!transition || !held) return;
+
+    function onFinished(event: { action: AnimationAction }) {
+      if (event.action !== transition) return;
+      held!.reset().play();
+      held!.crossFadeFrom(transition!, CROSSFADE_SECONDS, false);
+    }
+
+    model.mixer.addEventListener("finished", onFinished);
+    return () => model.mixer.removeEventListener("finished", onFinished);
   }, [model, animation]);
 
   useEffect(() => {
