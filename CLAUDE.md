@@ -18,9 +18,13 @@ pitch; this file is for working in the code.
   live under `assets/highfive/icons/<kind>/<id>.png` and are gitignored
   (only the folder structure + `.gitkeep` are tracked) since that art is
   copyrighted -- don't ever commit real icons here or anywhere else in this
-  repo. Serves with `Cache-Control: max-age + must-revalidate` and an ETag
-  from file size/mtime, so overwriting a file is enough to invalidate
-  clients' caches (no URL versioning needed).
+  repo. Client-UI art belongs here too rather than in the UI bundle, under
+  the same rule -- the game menu's own button icons are
+  `assets/legacy/icons/game-menu/<button>@64.png` (see the UI's
+  `config/icon-urls.ts`; every consumer needs a fallback for when the art
+  isn't served). Serves with `Cache-Control: max-age + must-revalidate` and
+  an ETag from file size/mtime, so overwriting a file is enough to
+  invalidate clients' caches (no URL versioning needed).
 
 ## Commands
 

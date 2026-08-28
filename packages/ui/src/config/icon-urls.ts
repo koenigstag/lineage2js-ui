@@ -4,6 +4,7 @@ const SLOT_ICON_BASE_URL = import.meta.env.VITE_SLOT_ICON_BASE_URL;
 const ACTION_ICON_BASE_URL = import.meta.env.VITE_ACTION_ICON_BASE_URL;
 const CLASS_ICON_BASE_URL = import.meta.env.VITE_CLASS_ICON_BASE_URL;
 const RACE_ICON_BASE_URL = import.meta.env.VITE_RACE_ICON_BASE_URL;
+const GAME_MENU_ICON_BASE_URL = import.meta.env.VITE_GAME_MENU_ICON_BASE_URL;
 
 const ITEM_ID_TO_ICON_MAP: Record<string | number, string> = {};
 const SLOT_ID_TO_ICON_MAP: Record<string | number, string> = {};
@@ -123,6 +124,25 @@ export function getRaceIconUrl(
 ): string | undefined {
   if (isNil(raceId) || Object.keys(RACE_ID_TO_ICON_MAP).length === 0) return undefined;
   return buildIconUrl(RACE_ICON_BASE_URL, RACE_ID_TO_ICON_MAP[raceId]);
+}
+
+/**
+ * Icon URL for one of the game menu's grid buttons, by button name
+ * ("character", "inventory", ...) -- the art is copyrighted client
+ * material, so it lives on the assets server
+ * (assets/legacy/icons/game-menu, gitignored) instead of being bundled,
+ * and the menu falls back to a plain glyph when it isn't served (see
+ * game.menu.tsx).
+ *
+ * No index.json lookup unlike the id-keyed getters above: the set is a
+ * fixed handful of names the menu itself already knows, and each file is
+ * simply named after its button. The "@64" suffix picks the 64px variant
+ * -- the only size the menu renders (each icon also has an untagged
+ * full-resolution original next to it, far too large to send to a
+ * browser for a 40px button).
+ */
+export function getGameMenuIconUrl(name: string): string | undefined {
+  return buildIconUrl(GAME_MENU_ICON_BASE_URL, `${name}@64.png`);
 }
 
 /** Icon URL by slot.id */

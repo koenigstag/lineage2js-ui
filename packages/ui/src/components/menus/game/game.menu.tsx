@@ -1,22 +1,22 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { useAlert } from "../../core/alert-modal";
 import { useGameStore, useSessionStore, useUiStore, useWindowManagerStore } from "../../../stores/StoreContext";
 import { useIsMobile } from "../../../lib/useIsMobile";
-import characterIcon from "../../../assets/menus/game/character@64.png";
-import inventoryIcon from "../../../assets/menus/game/inventory@64.png";
-import actionsIcon from "../../../assets/menus/game/actions@64.png";
-import clanIcon from "../../../assets/menus/game/clan@64.png";
-import skillsIcon from "../../../assets/menus/game/skills@64.png";
-import questsIcon from "../../../assets/menus/game/quests@64.png";
-import mapIcon from "../../../assets/menus/game/map@64.png";
-import menuIcon from "../../../assets/menus/game/menu@64.png";
+import { getGameMenuIconUrl } from "../../../config/icon-urls";
 import { t } from "../../../lang/lang";
+
+const menuIcon = getGameMenuIconUrl("menu");
 
 interface GridItem {
   id: string;
+  /**
+   * Shown when `image` is unset (no assets server configured) or fails to
+   * load -- every button has one, since the real art is copyrighted client
+   * material this repo can't ship (see getGameMenuIconUrl).
+   */
   icon?: string;
   image?: string;
   titleKey: string;
@@ -25,13 +25,13 @@ interface GridItem {
 }
 
 const GRID_ITEMS: GridItem[] = [
-  { id: "character", image: characterIcon, titleKey: "game.grid.character" },
-  { id: "inventory", image: inventoryIcon, titleKey: "game.grid.inventory" },
-  { id: "actions", image: actionsIcon, titleKey: "game.grid.actions" },
-  { id: "skills-list", image: skillsIcon, titleKey: "game.grid.skills" },
-  { id: "quests", image: questsIcon, titleKey: "game.grid.quests" },
-  { id: "clan", image: clanIcon, titleKey: "game.grid.clan" },
-  { id: "map", image: mapIcon, titleKey: "game.grid.map" },
+  { id: "character", icon: "👨", image: getGameMenuIconUrl("character"), titleKey: "game.grid.character" },
+  { id: "inventory", icon: "🎒", image: getGameMenuIconUrl("inventory"), titleKey: "game.grid.inventory" },
+  { id: "actions", icon: "🤜", image: getGameMenuIconUrl("actions"), titleKey: "game.grid.actions" },
+  { id: "skills-list", icon: "📖", image: getGameMenuIconUrl("skills"), titleKey: "game.grid.skills" },
+  { id: "quests", icon: "🗞️", image: getGameMenuIconUrl("quests"), titleKey: "game.grid.quests" },
+  { id: "clan", icon: "🚩", image: getGameMenuIconUrl("clan"), titleKey: "game.grid.clan" },
+  { id: "map", icon: "🗺️", image: getGameMenuIconUrl("map"), titleKey: "game.grid.map" },
   { id: "chat", icon: "💬", titleKey: "game.grid.chat", mobileOnly: true },
   { id: "system-messages", icon: "📜", titleKey: "game.grid.battleLog", mobileOnly: true },
   { id: "party-char-info", icon: "👥", titleKey: "game.grid.party", mobileOnly: true },
@@ -62,8 +62,13 @@ const imageButtonStyle: CSSProperties = {
   border: "none",
   padding: 0,
   cursor: "pointer",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
+};
+
+const iconImageStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+  display: "block",
 };
 
 const submenuRowStyle: CSSProperties = {
@@ -92,6 +97,53 @@ const submenuIconStyle: CSSProperties = {
 
 // Odd rows (1st, 3rd, ...) vs even rows (2nd, 4th, ...).
 const SUBMENU_ROW_COLORS = ["#10100f", "#171717"];
+
+interface MenuIconButtonProps {
+  /** Real icon from the assets server, when one is configured (see getGameMenuIconUrl). */
+  image?: string;
+  /** Glyph drawn instead whenever that image is missing or fails to load. */
+  icon?: string;
+  title: string;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+/**
+ * One 40x40 button of the menu grid. The real icon goes in an <img> rather
+ * than a CSS background so a file the assets server doesn't have is
+ * actually observable: on error the button falls back to the framed glyph,
+ * exactly how the mobile-only buttons have always looked. Same approach as
+ * IconFrame's iconUrl (components/core/icon-frame.component.tsx).
+ */
+function MenuIconButton({ image, icon, title, disabled = false, onClick }: MenuIconButtonProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [image]);
+
+  const showImage = Boolean(image) && !imageFailed;
+
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      style={{
+        ...(showImage ? imageButtonStyle : iconButtonStyle),
+        opacity: disabled ? 0.4 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
+      }}
+      onClick={onClick}
+    >
+      {showImage ? (
+        <img src={image} alt="" draggable={false} onError={() => setImageFailed(true)} style={iconImageStyle} />
+      ) : (
+        <div title={title}>{icon}</div>
+      )}
+    </button>
+  );
+}
 
 export const GameMenu = observer(function GameMenu() {
   const game = useGameStore();
@@ -147,33 +199,23 @@ export const GameMenu = observer(function GameMenu() {
       }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 40px)", gridAutoRows: "40px", gap: 4 }}>
-        {visibleGridItems.map(({ id, icon, image, titleKey }) => {
-          // party-char-info collapses to nothing (windows-root.tsx) whenever
-          // there's no party -- disable the button rather than let a tap
-          // silently do nothing.
-          const disabled = id === "party-char-info" && game.party.length === 0;
-          const title = t(titleKey);
-          return (
-            <button
-              key={id}
-              type="button"
-              title={title}
-              disabled={disabled}
-              style={{
-                ...(image ? { ...imageButtonStyle, backgroundImage: `url(${image})` } : iconButtonStyle),
-                opacity: disabled ? 0.4 : 1,
-                cursor: disabled ? "not-allowed" : "pointer",
-              }}
-              onClick={() => windowManager.toggle(id)}
-            >
-              {!image && <div title={title}>{icon}</div>}
-            </button>
-          );
-        })}
-        <button
-          type="button"
+        {visibleGridItems.map(({ id, icon, image, titleKey }) => (
+          <MenuIconButton
+            key={id}
+            image={image}
+            icon={icon}
+            title={t(titleKey)}
+            // party-char-info collapses to nothing (windows-root.tsx)
+            // whenever there's no party -- disable the button rather than
+            // let a tap silently do nothing.
+            disabled={id === "party-char-info" && game.party.length === 0}
+            onClick={() => windowManager.toggle(id)}
+          />
+        ))}
+        <MenuIconButton
+          image={menuIcon}
+          icon="⚙️"
           title={t("game.menuButtonTitle")}
-          style={{ ...imageButtonStyle, backgroundImage: `url(${menuIcon})` }}
           onClick={() => setIsMenuOpen((open) => !open)}
         />
       </div>
