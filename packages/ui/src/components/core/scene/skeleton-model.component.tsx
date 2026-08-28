@@ -3,6 +3,7 @@ import { DoubleSide, Quaternion, Vector3 } from "three";
 import { NicknameLabel } from "./nickname-label.component";
 import {
   HEAD_RADIUS,
+  HEAD_SCALE,
   HUMANOID_IDLE_POSE,
   humanoidChildren,
   type HumanoidBone,
@@ -34,39 +35,58 @@ export interface SkeletonModelProps {
   pose?: HumanoidPose;
 }
 
-/** Capsule geometry runs along +Y; every limb segment is rotated off that. */
-const CAPSULE_AXIS = new Vector3(0, 1, 0);
+/** Cylinder geometry runs along +Y; every limb segment is rotated off that. */
+const LIMB_AXIS = new Vector3(0, 1, 0);
 
 interface LimbSegmentProps {
   /** The child bone's offset -- the segment spans from this bone's origin to there. */
   offset: [number, number, number];
-  thickness: number;
+  /** Body radius at this bone (the segment's parent end). */
+  radiusStart: number;
+  /** Body radius at the child bone (the far end). */
+  radiusEnd: number;
   color: string;
 }
 
 /**
- * The stand-in limb for one bone: a capsule spanning from the bone's own
- * origin to the child it leads to. Drawn *inside* the parent bone on
- * purpose, so it swings with that bone's rotation -- rotating `upperArm.L`
- * has to move the upper arm, not just everything below the elbow.
+ * The stand-in limb for one bone: a cone frustum from the bone's own origin
+ * to the child it leads to, widening or narrowing to meet the radius declared
+ * at each end.
+ *
+ * Frustums rather than capsules, because a capsule caps both ends with a
+ * hemisphere: chain them and every joint carries two overlapping domes, which
+ * is what made the first pass read as a string of beads. An open-ended
+ * frustum meets its neighbour flush, and the joint sphere below fills the
+ * corner without adding bulk.
+ *
+ * Drawn *inside* the parent bone on purpose, so it swings with that bone's
+ * rotation -- rotating `upperArm.L` has to move the upper arm, not just
+ * everything below the elbow.
  */
-function LimbSegment({ offset, thickness, color }: LimbSegmentProps) {
-  const { position, quaternion, cylinderLength } = useMemo(() => {
+function LimbSegment({ offset, radiusStart, radiusEnd, color }: LimbSegmentProps) {
+  const { position, quaternion, length } = useMemo(() => {
     const vector = new Vector3(...offset);
-    const length = vector.length();
     return {
       position: vector.clone().multiplyScalar(0.5),
-      quaternion: new Quaternion().setFromUnitVectors(CAPSULE_AXIS, vector.clone().normalize()),
-      // CapsuleGeometry's first two args are radius and the *cylinder*
-      // length, with a hemisphere on each end -- so the straight part has to
-      // give back what the caps add, or every limb overshoots its joint.
-      cylinderLength: Math.max(0, length - thickness * 2),
+      quaternion: new Quaternion().setFromUnitVectors(LIMB_AXIS, vector.clone().normalize()),
+      length: vector.length(),
     };
-  }, [offset, thickness]);
+  }, [offset]);
 
   return (
     <mesh position={position} quaternion={quaternion} raycast={() => null}>
-      <capsuleGeometry args={[thickness, cylinderLength, 4, 8]} />
+      {/* radiusTop is the +Y end, which the rotation above put at the child. */}
+      <cylinderGeometry args={[radiusEnd, radiusStart, length, 12, 1, true]} />
+      <meshStandardMaterial color={color} roughness={0.7} />
+    </mesh>
+  );
+}
+
+/** Fills the corner where two frustums meet, at exactly their shared radius so it never reads as a bulge. */
+function Joint({ radius, color }: { radius: number; color: string }) {
+  return (
+    <mesh raycast={() => null}>
+      <sphereGeometry args={[radius, 12, 8]} />
       <meshStandardMaterial color={color} roughness={0.7} />
     </mesh>
   );
@@ -91,17 +111,26 @@ interface BoneNodeProps {
 function BoneNode({ bone, pose, color, skinColor, inverseScale }: BoneNodeProps) {
   const rotation = pose[bone.name] ?? [0, 0, 0];
   const children = humanoidChildren(bone.name);
+  // Hands and head read as skin, everything else as the outfit's tint --
+  // enough to tell a body from its extremities without any real art.
+  const boneColor = bone.name.startsWith("hand.") || bone.name.startsWith("fingers.") ? skinColor : color;
 
   return (
     <bone position={bone.offset} rotation={rotation}>
+      <Joint radius={bone.radius} color={boneColor} />
+
       {bone.name === "head" && (
-        <mesh position={[0, HEAD_RADIUS, 0]} scale={inverseScale} raycast={() => null}>
-          <sphereGeometry args={[HEAD_RADIUS, 16, 16]} />
+        <mesh
+          position={[0, HEAD_RADIUS * HEAD_SCALE[1], 0]}
+          scale={[inverseScale[0] * HEAD_SCALE[0], inverseScale[1] * HEAD_SCALE[1], inverseScale[2] * HEAD_SCALE[2]]}
+          raycast={() => null}
+        >
+          <sphereGeometry args={[HEAD_RADIUS, 20, 16]} />
           <meshStandardMaterial color={skinColor} roughness={0.8} />
           {/* Keeps the placeholder's one directional cue: which way the
               character is actually facing. */}
-          <mesh position={[0, 0, HEAD_RADIUS * 0.95]}>
-            <sphereGeometry args={[0.028, 8, 8]} />
+          <mesh position={[0, 0.02, HEAD_RADIUS * 0.94]} scale={[1, 1, 0.7]}>
+            <sphereGeometry args={[0.026, 8, 8]} />
             <meshBasicMaterial color="#1a1a1a" />
           </mesh>
         </mesh>
@@ -109,13 +138,12 @@ function BoneNode({ bone, pose, color, skinColor, inverseScale }: BoneNodeProps)
 
       {children.map((child) => (
         <Fragment key={child.name}>
-          {child.thickness !== undefined && (
+          {!child.noSegment && (
             <LimbSegment
               offset={child.offset}
-              thickness={child.thickness}
-              // Hands read as skin, everything else as the outfit's tint --
-              // enough to tell a body from its extremities without any real art.
-              color={child.name.startsWith("hand.") ? skinColor : color}
+              radiusStart={bone.radius}
+              radiusEnd={child.radius}
+              color={child.name.startsWith("hand.") || child.name.startsWith("fingers.") ? skinColor : color}
             />
           )}
           <BoneNode bone={child} pose={pose} color={color} skinColor={skinColor} inverseScale={inverseScale} />
