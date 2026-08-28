@@ -1,14 +1,12 @@
-import { Fragment, useMemo } from "react";
-import { DoubleSide, Quaternion, Vector3 } from "three";
+import { useEffect, useMemo } from "react";
+import { DoubleSide, MeshStandardMaterial, SkinnedMesh, type BufferGeometry } from "three";
 import { NicknameLabel } from "./nickname-label.component";
+import { HUMANOID_IDLE_POSE, type HumanoidPose } from "../../../utils/skeleton/humanoid-rig";
 import {
-  HEAD_RADIUS,
-  HEAD_SCALE,
-  HUMANOID_IDLE_POSE,
-  humanoidChildren,
-  type HumanoidBone,
-  type HumanoidPose,
-} from "../../../utils/skeleton/humanoid-rig";
+  buildHumanoidGeometry,
+  buildHumanoidSkeleton,
+  buildSkeletonBinding,
+} from "../../../utils/skeleton/humanoid-mesh";
 
 export interface SkeletonModelProps {
   x: number;
@@ -35,139 +33,36 @@ export interface SkeletonModelProps {
   pose?: HumanoidPose;
 }
 
-/** Cylinder geometry runs along +Y; every limb segment is rotated off that. */
-const LIMB_AXIS = new Vector3(0, 1, 0);
-
-interface LimbSegmentProps {
-  /** The child bone's offset -- the segment spans from this bone's origin to there. */
-  offset: [number, number, number];
-  /** Body radius at this bone (the segment's parent end). */
-  radiusStart: number;
-  /** Body radius at the child bone (the far end). */
-  radiusEnd: number;
-  color: string;
-}
-
 /**
- * The stand-in limb for one bone: a cone frustum from the bone's own origin
- * to the child it leads to, widening or narrowing to meet the radius declared
- * at each end.
- *
- * Frustums rather than capsules, because a capsule caps both ends with a
- * hemisphere: chain them and every joint carries two overlapping domes, which
- * is what made the first pass read as a string of beads. An open-ended
- * frustum meets its neighbour flush, and the joint sphere below fills the
- * corner without adding bulk.
- *
- * Drawn *inside* the parent bone on purpose, so it swings with that bone's
- * rotation -- rotating `upperArm.L` has to move the upper arm, not just
- * everything below the elbow.
+ * Body geometry is identical for everyone wearing the same two colours, and
+ * costs about a thousand vertices to generate, so it's built once per colour
+ * pair and shared. Skeletons are not shared -- every character poses its own.
  */
-function LimbSegment({ offset, radiusStart, radiusEnd, color }: LimbSegmentProps) {
-  const { position, quaternion, length } = useMemo(() => {
-    const vector = new Vector3(...offset);
-    return {
-      position: vector.clone().multiplyScalar(0.5),
-      quaternion: new Quaternion().setFromUnitVectors(LIMB_AXIS, vector.clone().normalize()),
-      length: vector.length(),
-    };
-  }, [offset]);
+const geometryCache = new Map<string, BufferGeometry>();
 
-  return (
-    <mesh position={position} quaternion={quaternion} raycast={() => null}>
-      {/* radiusTop is the +Y end, which the rotation above put at the child. */}
-      <cylinderGeometry args={[radiusEnd, radiusStart, length, 12, 1, true]} />
-      <meshStandardMaterial color={color} roughness={0.7} />
-    </mesh>
-  );
-}
-
-/** Fills the corner where two frustums meet, at exactly their shared radius so it never reads as a bulge. */
-function Joint({ radius, color }: { radius: number; color: string }) {
-  return (
-    <mesh raycast={() => null}>
-      <sphereGeometry args={[radius, 12, 8]} />
-      <meshStandardMaterial color={color} roughness={0.7} />
-    </mesh>
-  );
-}
-
-interface BoneNodeProps {
-  bone: HumanoidBone;
-  pose: HumanoidPose;
-  color: string;
-  skinColor: string;
-  /** Undone on the head so it stays a sphere under a non-uniform body scale. */
-  inverseScale: [number, number, number];
+function sharedGeometry(color: string, skinColor: string): BufferGeometry {
+  const key = `${color}|${skinColor}`;
+  let geometry = geometryCache.get(key);
+  if (!geometry) {
+    geometry = buildHumanoidGeometry(buildHumanoidSkeleton(), color, skinColor);
+    geometryCache.set(key, geometry);
+  }
+  return geometry;
 }
 
 /**
- * One real THREE.Bone plus the placeholder geometry hanging off it, recursing
- * into its children. `<bone>` is r3f's element for THREE.Bone, so this builds
- * an actual bone hierarchy -- the thing an animation clip, an equipment
- * attachment point or a skinned mesh would later bind to -- rather than a
- * pile of nested groups that merely looks like one.
- */
-function BoneNode({ bone, pose, color, skinColor, inverseScale }: BoneNodeProps) {
-  const rotation = pose[bone.name] ?? [0, 0, 0];
-  const children = humanoidChildren(bone.name);
-  // Hands and head read as skin, everything else as the outfit's tint --
-  // enough to tell a body from its extremities without any real art.
-  const boneColor = bone.name.startsWith("hand.") || bone.name.startsWith("fingers.") ? skinColor : color;
-
-  return (
-    <bone position={bone.offset} rotation={rotation}>
-      <Joint radius={bone.radius} color={boneColor} />
-
-      {bone.name === "head" && (
-        <mesh
-          position={[0, HEAD_RADIUS * HEAD_SCALE[1], 0]}
-          scale={[inverseScale[0] * HEAD_SCALE[0], inverseScale[1] * HEAD_SCALE[1], inverseScale[2] * HEAD_SCALE[2]]}
-          raycast={() => null}
-        >
-          <sphereGeometry args={[HEAD_RADIUS, 20, 16]} />
-          <meshStandardMaterial color={skinColor} roughness={0.8} />
-          {/* Keeps the placeholder's one directional cue: which way the
-              character is actually facing. */}
-          <mesh position={[0, 0.02, HEAD_RADIUS * 0.94]} scale={[1, 1, 0.7]}>
-            <sphereGeometry args={[0.026, 8, 8]} />
-            <meshBasicMaterial color="#1a1a1a" />
-          </mesh>
-        </mesh>
-      )}
-
-      {children.map((child) => (
-        <Fragment key={child.name}>
-          {!child.noSegment && (
-            <LimbSegment
-              offset={child.offset}
-              radiusStart={bone.radius}
-              radiusEnd={child.radius}
-              color={child.name.startsWith("hand.") || child.name.startsWith("fingers.") ? skinColor : color}
-            />
-          )}
-          <BoneNode bone={child} pose={pose} color={color} skinColor={skinColor} inverseScale={inverseScale} />
-        </Fragment>
-      ))}
-    </bone>
-  );
-}
-
-/**
- * Procedural humanoid built on a real bone hierarchy (see
- * utils/skeleton/humanoid-rig.ts) -- used for players and NPCs. Mobs still
- * render the older capsule placeholder, see CreatureModel.
+ * Procedural humanoid: one skinned mesh over a real bone hierarchy (see
+ * utils/skeleton/humanoid-rig.ts and humanoid-mesh.ts). Used for players and
+ * NPCs; mobs still render the older capsule placeholder, see CreatureModel.
  *
- * Same props and the same outward behaviour as CharacterModel, which it
- * replaces for those two kinds: position/facing, race scaling, cape,
- * selection ring, nickname, the dead pose, and the click/cursor handling.
- * The difference is underneath -- a rig that survives the day real geometry
- * shows up, instead of a capsule that gets deleted.
+ * Same props and the same outward behaviour as the capsule it replaces:
+ * position/facing, race scaling, cape, selection ring, nickname, the dead
+ * pose, and the click/cursor handling.
  *
- * Picking is one invisible capsule around the body rather than handlers on
- * twenty limbs: the hit volume should be the character, not whichever forearm
- * happened to be under the cursor, and it keeps selection working the same
- * whatever pose the rig is in.
+ * Picking is one invisible capsule around the body rather than the body mesh
+ * itself: the hit volume should be the character, not whichever forearm
+ * happened to be under the cursor, and it stays the same size whatever pose
+ * the rig is in.
  */
 export function SkeletonModel({
   x,
@@ -186,8 +81,31 @@ export function SkeletonModel({
   isDead = false,
   pose = HUMANOID_IDLE_POSE,
 }: SkeletonModelProps) {
-  const root = useMemo(() => humanoidChildren(null)[0], []);
-  const inverseScale: [number, number, number] = [1 / widthScale, 1 / heightScale, 1 / widthScale];
+  const body = useMemo(() => {
+    const rig = buildHumanoidSkeleton();
+    const mesh = new SkinnedMesh(
+      sharedGeometry(color, skinColor),
+      new MeshStandardMaterial({ vertexColors: true, roughness: 0.75 })
+    );
+    // The root bone has to live in the scene graph for the skeleton to be
+    // updated each frame; hanging it off the mesh keeps the pair together.
+    mesh.add(rig.root);
+    mesh.bind(buildSkeletonBinding(rig));
+    // Picking goes through the invisible capsule below -- see the doc comment.
+    mesh.raycast = () => null;
+    return { mesh, rig };
+  }, [color, skinColor]);
+
+  useEffect(() => () => (body.mesh.material as MeshStandardMaterial).dispose(), [body]);
+
+  // Rest rotations first, then whatever the pose asks for, so a pose only has
+  // to name the bones it actually moves.
+  useMemo(() => {
+    for (const bone of body.rig.bones) {
+      const rotation = pose[bone.name];
+      bone.rotation.set(rotation?.[0] ?? 0, rotation?.[1] ?? 0, rotation?.[2] ?? 0);
+    }
+  }, [body, pose]);
 
   return (
     <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
@@ -197,7 +115,7 @@ export function SkeletonModel({
           placeholder did -- the outer group has already applied the facing. */}
       <group rotation={isDead ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
         <group scale={[widthScale, heightScale, widthScale]}>
-          <BoneNode bone={root} pose={pose} color={color} skinColor={skinColor} inverseScale={inverseScale} />
+          <primitive object={body.mesh} />
 
           {/* Invisible pick volume -- see this component's own doc comment. */}
           <mesh
@@ -213,8 +131,7 @@ export function SkeletonModel({
             // Ground-click acts on "pointerdown" (geo-terrain-tile.component.tsx)
             // and only stops propagation once its own handler runs, so without
             // this a pointerdown on a creature still falls through to the ground
-            // behind it and fires a move order. Stopping it here keeps a click on
-            // a creature from ever reaching the terrain underneath.
+            // behind it and fires a move order.
             onPointerDown={
               onSelect &&
               ((event) => {
