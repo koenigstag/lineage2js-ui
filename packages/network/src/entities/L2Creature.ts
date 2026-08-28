@@ -623,18 +623,41 @@ export default abstract class L2Creature extends L2Object {
     this._moveFromZ = z;
     this._moveStartedAt = Date.now();
 
-    if (!heading) {
-      this.Heading = headingBetween(x, y, dx, dy);
-    } else {
-      this.Heading = heading;
-    }
-
-    this.IsMoving = true;
-
     const movingVector: Vector = new Vector(dx - this.X, dy - this.Y);
     this._movingDistance = movingVector.length();
 
     let ticks = Math.ceil(this._movingDistance / (this.CurrentSpeed / 10));
+
+    if (heading) {
+      this.Heading = heading;
+    } else if (this._movingDistance > 0) {
+      // Only derivable when there is a direction to derive it from; a
+      // zero-length hop would otherwise overwrite a perfectly good heading
+      // with whichever way headingBetween() points for two identical points.
+      this.Heading = headingBetween(x, y, dx, dy);
+    }
+
+    // Being told to move to where we already stand is not a move. The server
+    // sends exactly that when a pick-up (or any pawn-targeted action) is
+    // attempted from on top of the object: MoveToPawn arrives with the
+    // destination we are already at. Starting a move for it left the
+    // creature "moving" with a zero-length step, which the UI drew as a walk
+    // cycle on the spot -- and a repeat of the same order kept restarting it,
+    // so the walk never ended even after the item was in the bag.
+    //
+    // Also covers a speed of zero, where ticks would be Infinity or NaN and
+    // the interval below would never reach its `ticks <= 0` exit at all.
+    if (!Number.isFinite(ticks) || ticks <= 0) {
+      this.X = dx;
+      this.Y = dy;
+      this.Z = dz;
+      this._movingDistance = 0;
+      this.IsMoving = false;
+      return;
+    }
+
+    this.IsMoving = true;
+
     movingVector.normalize();
 
     // Z was never stepped here at all (X/Y were, every 100ms, but Z stayed
@@ -648,7 +671,7 @@ export default abstract class L2Creature extends L2Object {
     // threshold, movement silently stopped working entirely. Interpolating
     // Z the same way X/Y already are (and snapping it to Dz on arrival,
     // same as X/Y snap to Dx/Dy) keeps it from drifting in the first place.
-    const zStep = ticks > 0 ? (dz - z) / ticks : 0;
+    const zStep = (dz - z) / ticks;
 
     // TODO: Improve this as it will drift for larger movements
     this._moveInterval = setInterval(() => {

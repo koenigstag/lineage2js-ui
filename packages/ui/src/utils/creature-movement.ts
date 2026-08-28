@@ -28,6 +28,35 @@ export interface CreatureMoveState {
 }
 
 /**
+ * Whether a creature is still travelling, as opposed to merely carrying a
+ * move segment that is over. Two ways a segment can be over without anyone
+ * having said so:
+ *
+ * - It has no length. The server issues those for a pawn-targeted action
+ *   started from on top of the target (a pick-up while standing on the item
+ *   is the everyday case), and a move to where you already are is not a
+ *   move -- the position math below already treats it as none.
+ * - Its time is up. A segment ends when distance / speed seconds have
+ *   passed, and the position math clamps there; nothing guarantees a packet
+ *   arrives to say so, and while a creature keeps travelling the server
+ *   refreshes the segment long before this matters.
+ *
+ * Without this the walk cycle keeps playing for a creature standing
+ * perfectly still, since the animation reads the raw flag.
+ */
+export function isStillMoving(creature: CreatureMoveState, now: number = Date.now()): boolean {
+  const { moveFrom, moveTo, moveStartedAt, speed } = creature;
+  if (!creature.isMoving || !moveFrom || !moveTo || moveStartedAt === undefined || !speed) {
+    return false;
+  }
+  const distance = Math.hypot(moveTo.x - moveFrom.x, moveTo.y - moveFrom.y);
+  if (distance === 0) {
+    return false;
+  }
+  return (now - moveStartedAt) / 1000 < distance / speed;
+}
+
+/**
  * Analytic L2 world position for "now" along the creature's current move
  * segment (moveFrom -> moveTo at `speed` world units/sec, started at
  * moveStartedAt) -- smooth at any frame rate, unlike snapping to wherever

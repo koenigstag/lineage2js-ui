@@ -51,7 +51,7 @@ import {
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
 import { canMoveStraight } from "../utils/geodata/geo-path";
 import { loadedGeoTiles } from "../utils/geodata/geo-tile-index";
-import { interpolatedCreaturePosition, type CreatureMoveState } from "../utils/creature-movement";
+import { interpolatedCreaturePosition, isStillMoving, type CreatureMoveState } from "../utils/creature-movement";
 import type { BaseClass, SexNames } from "../config/character-races";
 
 /**
@@ -754,7 +754,7 @@ function worldCreatureSnapshotFromCreature(
  */
 function creatureMoveState(creature: L2Creature): CreatureMoveState {
   const isMoving = creature.IsMoving && creature.MoveStartedAt !== undefined;
-  return {
+  const state: CreatureMoveState = {
     x: creature.X,
     y: creature.Y,
     z: creature.Z,
@@ -764,6 +764,10 @@ function creatureMoveState(creature: L2Creature): CreatureMoveState {
     moveStartedAt: isMoving ? creature.MoveStartedAt : undefined,
     speed: isMoving ? creature.CurrentSpeed : undefined,
   };
+  // The flag on its own says a move was started, not that it is still
+  // running -- see isStillMoving. The segment is kept either way, since the
+  // position math clamps to its end and that end is where the creature is.
+  return { ...state, isMoving: isStillMoving(state) };
 }
 
 /**
