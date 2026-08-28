@@ -149,6 +149,14 @@ const NOISY_SYSTEM_MESSAGE_IDS = new Set<number>([
   6063,
 ]);
 
+/**
+ * "You cannot move while sitting." The one id this client ever raises by
+ * itself: it withholds the move order rather than letting the server refuse
+ * it (see GameStore.refuseMoveWhileSitting), so it has to supply the reply
+ * that would otherwise have come back.
+ */
+export const CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID = 31;
+
 export function isNoisySystemMessage(messageId: number): boolean {
   return NOISY_SYSTEM_MESSAGE_IDS.has(messageId);
 }

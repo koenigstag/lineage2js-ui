@@ -36,7 +36,11 @@ import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
 import { getNpcName, tryGetNpcName } from "../config/npc-name-mapping";
-import { formatSystemMessage, isNoisySystemMessage } from "../config/system-message-mapping";
+import {
+  CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID,
+  formatSystemMessage,
+  isNoisySystemMessage,
+} from "../config/system-message-mapping";
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
 import { canMoveStraight } from "../utils/geodata/geo-path";
 import { loadedGeoTiles } from "../utils/geodata/geo-tile-index";
@@ -1092,12 +1096,16 @@ export class GameStore {
    * so our own entry in `creatures` picks this up the same way once the
    * server's reply arrives -- no special-casing needed here.
    *
-   * Withheld entirely when geodata says the straight line there is blocked
-   * (see isStraightPathClear) -- the server would only refuse it, or drag us
-   * along the wall, and either way our own prediction inside CommandMoveTo
-   * would already have started walking.
+   * Withheld entirely when we're sitting (see refuseMoveWhileSitting) or when
+   * geodata says the straight line there is blocked (see isStraightPathClear)
+   * -- the server would only refuse it, or drag us along the wall, and either
+   * way our own prediction inside CommandMoveTo would already have started
+   * walking.
    */
   moveTo(x: number, y: number, z: number) {
+    if (this.refuseMoveWhileSitting()) {
+      return;
+    }
     const me = this.client?.Me;
     if (me) {
       // Before both the path check below (which starts from where we are) and
@@ -1141,6 +1149,28 @@ export class GameStore {
       );
     }
     return result.canMove;
+  }
+
+  /**
+   * Movement veto while sitting, and the reason the click still gets an
+   * answer. The server refuses a move order outright here ("You cannot move
+   * while sitting"), so the order is withheld for the same reason the geodata
+   * gate withholds one -- but with an extra bite: CommandMoveTo predicts the
+   * walk locally the moment it sends the request, and a refusal is not a
+   * position correction. The server has no reason to tell us where we are for
+   * a move it never accepted, so the predicted walk would run its full course
+   * with the character sitting, which is exactly the symptom.
+   *
+   * Unlike the geodata gate this one speaks up, because the server would
+   * have: the same message it sends is recorded locally, so a click that does
+   * nothing says why instead of being silently swallowed.
+   */
+  private refuseMoveWhileSitting(): boolean {
+    if (!this.client?.Me?.IsSitting) {
+      return false;
+    }
+    this.recordSystemMessage(CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID, [], []);
+    return true;
   }
 
   /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
@@ -1270,6 +1300,13 @@ export class GameStore {
     if (Math.hypot(target.X - me.X, target.Y - me.Y) <= pending.range) {
       this.pendingAction = undefined;
       pending.onArrive();
+      return;
+    }
+
+    if (this.refuseMoveWhileSitting()) {
+      // Same dead end as a blocked path below -- no move order goes out, so
+      // no StopMoving will ever arrive to re-enter this.
+      this.pendingAction = undefined;
       return;
     }
 
