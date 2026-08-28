@@ -11,6 +11,12 @@ const SKY_Z = -25;
 const CIRCLE_RADIUS = 2.6;
 const ARC_SPREAD = Math.PI * 0.85;
 
+// Kept as constants rather than inline in the Canvas props because the
+// characters' facing is derived from the camera position below -- the two
+// can't be allowed to drift apart.
+const CAMERA_POSITION: [x: number, y: number, z: number] = [0, 4.2, 7.5];
+const CAMERA_TARGET: [x: number, y: number, z: number] = [0, 3, 0];
+
 export interface CharSelectSceneProps {
   characters: Array<{ id: number; nickname: string; race: string; baseClass: string; sex: string }>;
   selectedCharacterId?: number;
@@ -28,8 +34,8 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
     >
       <Canvas
         gl={{ alpha: true, antialias: true }}
-        camera={{ position: [0, 4.2, 7.5], fov: 42, near: 0.1, far: 60 }}
-        onCreated={({ camera }) => camera.lookAt(0, 3, 0)}
+        camera={{ position: CAMERA_POSITION, fov: 42, near: 0.1, far: 60 }}
+        onCreated={({ camera }) => camera.lookAt(...CAMERA_TARGET)}
       >
         <ambientLight intensity={0.45} color="#5a6a8a" />
         <directionalLight position={[3, 6, 2]} intensity={0.35} color="#a8c0ff" />
@@ -54,6 +60,16 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
           const x = Math.cos(angle) * CIRCLE_RADIUS;
           const z = Math.sin(angle) * CIRCLE_RADIUS;
 
+          // Everyone turns towards the viewer rather than towards the fire
+          // they're standing around: on a select screen the point is to see
+          // the characters' faces. Aimed at the camera's own (x, z) instead
+          // of just flat +Z, so the ones out at the ends of the arc read as
+          // looking at the viewer too rather than past them -- at the middle
+          // of the arc it comes out as 0 anyway, same as char-create's lone
+          // centred model. A model's local forward is +Z, so a yaw of
+          // atan2(dx, dz) points it along (dx, dz).
+          const faceCamera = Math.atan2(CAMERA_POSITION[0] - x, CAMERA_POSITION[2] - z);
+
           const race = character.race as RaceNames;
           const baseClass = character.baseClass as BaseClass;
           const sex = character.sex as SexNames;
@@ -63,7 +79,7 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
               key={character.id}
               x={x}
               z={z}
-              angleToCenter={angle + Math.PI / 2}
+              angleToCenter={faceCamera}
               variant={{ race, baseClass, sex }}
               nickname={character.nickname}
               selected={character.id === selectedCharacterId}
