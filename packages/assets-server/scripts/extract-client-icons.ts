@@ -1,6 +1,6 @@
 /**
  * Extracts icon art out of an installed Lineage 2 client into this server's
- * own icon folders (assets/highfive/icons/{skills,items}), so the UI can
+ * own icon folders (assets/highfive/icons/{skills,items,actions}), so the UI can
  * serve real icons without any of that art ever entering the repo -- the
  * output folders are covered by assets/.gitignore, same rule as the geodata
  * tiles (see convert-l2j-geodata.ts) and for the same reason.
@@ -18,7 +18,7 @@
  *
  * Both can also come from the L2_CLIENT_DIR / UMODEL env vars. Add
  * --dry-run to see the routing without writing anything, and
- * --skills-map/--items-map to also build the index.json files the UI
+ * --skills-map/--items-map/--actions-map to also build the index.json files the UI
  * resolves icons through (see below).
  */
 import { spawnSync } from "node:child_process";
@@ -31,7 +31,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const OUT_DIR = path.join(__dirname, "../assets/highfive/icons");
 
-type Bucket = "skills" | "items";
+type Bucket = "skills" | "items" | "actions";
 
 /**
  * Source packages, in priority order (a name held by two of them is taken
@@ -51,26 +51,27 @@ const PACKAGES = ["SysTextures/Icon.utx", "SysTextures/BranchSys2.utx", "SysText
 const SKIP: RegExp[] = [
   /^item_(normal|canuse|system)\d+$/i, // inventory slot frames
   /^magic\d+$/i, // "magic type" markers on skill tooltips
-  /^action\d+$/i, // social actions -- their own icon kind, see icons/actions
   /^icon\d+$/i,
   /^\$+/, // placeholder textures shipped with the client
 ];
 
 /**
- * Only the skills side needs rules -- whatever survives SKIP and doesn't
- * match here is item art (equipment, consumables, quest items, the
- * "time_*" rental duplicates of weapons, the whole item-mall set), which
- * is far too varied to enumerate: the retail Icon.utx alone names items
- * "belt_i00", "adena", "yogi_stick_i00", "xmas_present_i00" and so on with
- * no shared prefix.
+ * First match wins; anything that survives SKIP without matching here is
+ * item art. Only the other two kinds need rules -- items are far too varied
+ * to enumerate, with the retail Icon.utx naming them "belt_i00", "adena",
+ * "yogi_stick_i00", "xmas_present_i00" and so on with no shared prefix.
  */
-const SKILL_ICONS: RegExp[] = [
+const ROUTES: { bucket: Bucket; test: RegExp }[] = [
+  // action001..action117 (plus a stray action5016 over in BranchSys2), the
+  // social/pet/pair action icons -- their own kind, resolved by
+  // getActionIconUrl rather than as a skill.
+  { bucket: "actions", test: /^action\d+$/i },
   // skill0001..skill4295, plus the per-variant suffixes (skill5076_a/_b/_c).
-  /^skill\d/i,
+  { bucket: "skills", test: /^skill\d/i },
   // Herbs cast a buff on pickup, so their icon belongs with the buffs
   // (etc_crt_force_herb_i01, br_herb_rose_red_i00, ...) rather than with
   // the consumables -- this has to be checked before the item default.
-  /herb/i,
+  { bucket: "skills", test: /herb/i },
 ];
 
 interface Options {
@@ -104,6 +105,7 @@ function parseArgs(argv: string[]): Options {
   const idMaps: Options["idMaps"] = {};
   if (flags.has("skills-map")) idMaps.skills = flags.get("skills-map");
   if (flags.has("items-map")) idMaps.items = flags.get("items-map");
+  if (flags.has("actions-map")) idMaps.actions = flags.get("actions-map");
 
   return { clientDir, umodel, dryRun: flags.get("dry-run") === "true", keepRaw: flags.get("keep-raw") === "true", idMaps };
 }
@@ -131,7 +133,7 @@ function bucketFor(name: string): Bucket | null {
   if (SKIP.some((rule) => rule.test(name))) {
     return null;
   }
-  return SKILL_ICONS.some((rule) => rule.test(name)) ? "skills" : "items";
+  return ROUTES.find(({ test }) => test.test(name))?.bucket ?? "items";
 }
 
 /** Every *.png under a directory tree, with its bare file name. */
@@ -245,7 +247,7 @@ async function main(): Promise<void> {
       }
     }
 
-    const counts: Record<Bucket, number> = { skills: 0, items: 0 };
+    const counts: Record<Bucket, number> = { skills: 0, items: 0, actions: 0 };
     for (const [key, { bucket, file }] of routed) {
       counts[bucket]++;
       if (options.dryRun) {
@@ -257,7 +259,8 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      `\n${options.dryRun ? "[dry run] " : ""}skills: ${counts.skills} icon(s), items: ${counts.items} icon(s)` +
+      `\n${options.dryRun ? "[dry run] " : ""}` +
+        (Object.entries(counts) as [Bucket, number][]).map(([bucket, n]) => `${bucket}: ${n} icon(s)`).join(", ") +
         `${options.dryRun ? "" : ` -> ${OUT_DIR}`}`
     );
     if (collisions.length > 0) {
