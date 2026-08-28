@@ -62,6 +62,25 @@ export interface GltfCharacterModelProps {
 
 const CROSSFADE_SECONDS = 0.15;
 
+/**
+ * Every mounted body, for the console inspector below. A blend between two
+ * clips is invisible from the store -- the state can say "idle" while a run
+ * cycle is still driving the legs -- and the r3f scene isn't reachable from
+ * a production bundle's React tree, so without this there is no way to ask a
+ * deployed client what it is actually playing.
+ */
+const liveBodies = new Set<{ nickname?: string; actions: Map<string, AnimationAction>; wanted: () => string }>();
+
+/** window.__animations() -> what each visible body is playing right now, and at what weight. */
+(window as unknown as { __animations: () => unknown }).__animations = () =>
+  [...liveBodies].map((body) => ({
+    nickname: body.nickname,
+    asked: body.wanted(),
+    playing: [...body.actions]
+      .filter(([, action]) => action.isRunning() || action.getEffectiveWeight() > 0)
+      .map(([name, action]) => `${name}=${action.getEffectiveWeight().toFixed(2)}${action.paused ? " (paused)" : ""}`),
+  }));
+
 /** The clip a model actually has for what was asked for, walking FALLS_BACK_TO until something exists. */
 function resolveAction(
   actions: Map<string, AnimationAction>,
@@ -193,6 +212,17 @@ export function GltfCharacterModel({
     [model]
   );
 
+  // Registration for the console inspector -- see liveBodies.
+  const wantedRef = useRef<string>(animation);
+  wantedRef.current = animation;
+  useEffect(() => {
+    const entry = { nickname, actions: model.actions, wanted: () => wantedRef.current };
+    liveBodies.add(entry);
+    return () => {
+      liveBodies.delete(entry);
+    };
+  }, [model, nickname]);
+
   // Whether this is the first state the model has ever been in, so a corpse
   // that was already dead when it came into view holds the end of the fall
   // instead of dropping again in front of the player.
@@ -225,9 +255,24 @@ export function GltfCharacterModel({
     // No settled pose to skip to, so hold the end of the transition instead.
     if (!started.current && ONE_SHOT.has(wanted) && !settled) next.time = next.getClip().duration;
 
-    const previous = [...model.actions.values()].find((action) => action !== next && action.isRunning());
-    if (previous && started.current) next.crossFadeFrom(previous, CROSSFADE_SECONDS, false);
-    else for (const action of model.actions.values()) if (action !== next) action.stop();
+    // Every other action that is still live, not just the first one found.
+    // More than one can be: the settle handler below starts the resting pose
+    // on its own while the transition it came from is still fading, so a
+    // state change landing in that window leaves two running. Fading out one
+    // of them left the other at full weight for good -- a seated character
+    // whose legs kept running, or an idle one running on the spot, depending
+    // on which of the two the search happened to reach first.
+    //
+    // Fading out N and fading in the newcomer is exactly what
+    // crossFadeFrom(one) does, just without the assumption that there is
+    // only one.
+    const previous = [...model.actions.values()].filter((action) => action !== next && action.isRunning());
+    if (previous.length > 0 && started.current) {
+      for (const action of previous) action.fadeOut(CROSSFADE_SECONDS);
+      next.fadeIn(CROSSFADE_SECONDS);
+    } else {
+      for (const action of model.actions.values()) if (action !== next) action.stop();
+    }
     next.play();
     started.current = true;
     // animationStartedAt is in here to restart a one-shot on a repeat of the
