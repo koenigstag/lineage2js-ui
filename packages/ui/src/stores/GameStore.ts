@@ -224,6 +224,7 @@ export interface CharInfoSnapshot {
   className: string;
   /** 0 when clanless -- resolve the name via GameStore.pledgeCache, same as targetSnapshotFromCreature. */
   clanId: number;
+  /** Progress through the current level, 0-100 -- already scaled up from L2User.ExpFraction's 0..1 wire value. */
   expPercent: number;
   load: number;
   maxLoad: number;
@@ -2129,7 +2130,11 @@ export class GameStore {
         pledgeClass: me.PledgeClass,
         className: getClassLabel(me.ClassId),
         clanId: me.ClanId,
-        expPercent: me.ExpPercent,
+        // The wire carries a 0..1 fraction (L2User.ExpFraction); the bar
+        // and its "96.00%" readout want 0-100. `|| 0` covers the gap
+        // before the first UserInfo arrives, same as vitalityPercent's
+        // inputs -- NaN would render as an empty bar labelled "NaN%".
+        expPercent: (me.ExpFraction || 0) * 100,
         load: me.Load,
         maxLoad: me.MaxLoad,
         recommHave: me.RecommHave,

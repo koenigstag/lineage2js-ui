@@ -44,7 +44,8 @@ export default class CharSelectionInfo extends GameClientPacket {
 
       char.Sp = this.readD();
       char.Exp = this.readQ();
-      char.ExpPercent = this.readF();
+      // 0..1 fraction, same as UserInfo's -- see L2User.ExpFraction.
+      char.ExpFraction = this.readF();
 
       char.Level = this.readD();
       char.Karma = this.readD();

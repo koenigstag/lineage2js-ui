@@ -138,7 +138,7 @@ function Divider() {
 
 // CharSelected (the first packet to trigger syncCharInfo, see GameStore.ts)
 // only parses name/objectId/title/sex/race/classId/position/hp/mp -- fields
-// like ExpPercent/Load stay undefined until the follow-up UserInfo packet
+// like ExpFraction/Load stay undefined until the follow-up UserInfo packet
 // arrives a moment later. `value || 0` tolerates that gap instead of
 // crashing on undefined.toFixed().
 function formatPercent(value: number) {

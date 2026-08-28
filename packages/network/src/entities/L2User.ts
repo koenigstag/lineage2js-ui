@@ -25,7 +25,7 @@ export default class L2User extends L2Character {
   private _isLastUsed!: boolean;
   private _deleteSecondsLeft = 0;
   private _exp!: number;
-  private _expPercent!: number;
+  private _expFraction!: number;
   private _sp!: number;
   private _load!: number;
   private _maxLoad!: number;
@@ -214,12 +214,18 @@ export default class L2User extends L2Character {
   public set Exp(value: number) {
     this._exp = value;
   }
-  public get ExpPercent(): number {
-    return this._expPercent;
+  /**
+   * Progress through the current level as a 0..1 fraction, not a percentage
+   * -- the wire value UserInfo/CharSelectionInfo carry (both servers write
+   * `(exp - expForLevel) / (expForNextLevel - expForLevel)`, see
+   * README.md's protocol references). Multiply by 100 before showing it.
+   */
+  public get ExpFraction(): number {
+    return this._expFraction;
   }
 
-  public set ExpPercent(value: number) {
-    this._expPercent = value;
+  public set ExpFraction(value: number) {
+    this._expFraction = value;
   }
 
   public get Sp(): number {
