@@ -36,6 +36,14 @@ export interface GltfCharacterModelProps {
   angleToCenter: number;
   animation?: CharacterAnimation;
   /**
+   * When the gesture currently being animated last started (see
+   * WorldCreatureSnapshot.gestureStartedAt). A one-shot restarts whenever
+   * this changes, which is what makes a second blow swing again instead of
+   * the body standing still through the rest of a fight -- `animation` alone
+   * reads "attack" from the first hit to the last and never changes.
+   */
+  animationStartedAt?: number;
+  /**
    * World units/second the creature is actually moving at, used to keep the
    * stride in step with the movement instead of sliding. Ignored when idle.
    */
@@ -113,6 +121,7 @@ export function GltfCharacterModel({
   z,
   angleToCenter,
   animation = "idle",
+  animationStartedAt,
   speed,
   nickname,
   selected = false,
@@ -177,7 +186,10 @@ export function GltfCharacterModel({
     else for (const action of model.actions.values()) if (action !== next) action.stop();
     next.play();
     started.current = true;
-  }, [model, animation]);
+    // animationStartedAt is in here to restart a one-shot on a repeat of the
+    // same gesture; a looping cycle is unaffected, since the guard above
+    // returns before touching an already-running loop.
+  }, [model, animation, animationStartedAt]);
 
   // Hands a finished transition over to the pose it settles into -- without
   // this, sitting down would freeze on the last frame of standing up out of

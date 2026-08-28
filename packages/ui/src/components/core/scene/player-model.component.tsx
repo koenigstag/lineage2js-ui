@@ -10,6 +10,8 @@ interface PlayerModelProps {
   z: number;
   angleToCenter: number;
   animation?: CharacterAnimation;
+  /** When the gesture being animated last started, so a repeat replays it -- see GltfCharacterModel. */
+  animationStartedAt?: number;
   /** World units/second while moving, so the walk/run cycle keeps pace. */
   speed?: number;
   nickname?: string;
@@ -19,7 +21,17 @@ interface PlayerModelProps {
 }
 
 /** Player variant (race/baseClass/sex) -> that race's converted body, or the placeholder for the races without one. Used by char-select/char-create directly, and by CreatureModel's player branch. */
-export function PlayerModel({ variant, nickname, selected, onSelect, isDead, animation, speed, ...position }: PlayerModelProps) {
+export function PlayerModel({
+  variant,
+  nickname,
+  selected,
+  onSelect,
+  isDead,
+  animation,
+  animationStartedAt,
+  speed,
+  ...position
+}: PlayerModelProps) {
   const visual = getPlayerVisualFromVariant(variant);
   return (
     <CharacterBody
@@ -27,6 +39,7 @@ export function PlayerModel({ variant, nickname, selected, onSelect, isDead, ani
       {...visual}
       modelUrl={getCharacterModelUrl(variant)}
       animation={animation}
+      animationStartedAt={animationStartedAt}
       speed={speed}
       nickname={nickname}
       selected={selected}

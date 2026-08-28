@@ -10,6 +10,8 @@ export interface CharacterBodyProps {
    */
   modelUrl?: string;
   animation?: CharacterAnimation;
+  /** When the gesture being animated last started, so a repeat replays it -- see GltfCharacterModel. */
+  animationStartedAt?: number;
   /** World units/second while moving, so the walk/run cycle keeps pace. */
   speed?: number;
   x: number;
@@ -50,7 +52,7 @@ const HAIR_COLOR = "#3a2a20";
  * path rather than a broken-image state, and the real body simply swaps in
  * once it arrives.
  */
-export function CharacterBody({ modelUrl, animation, speed, isDead, ...body }: CharacterBodyProps) {
+export function CharacterBody({ modelUrl, animation, animationStartedAt, speed, isDead, ...body }: CharacterBodyProps) {
   const asset = useCharacterModel(modelUrl);
 
   if (!asset) {
@@ -68,6 +70,7 @@ export function CharacterBody({ modelUrl, animation, speed, isDead, ...body }: C
       z={body.z}
       angleToCenter={body.angleToCenter}
       animation={isDead ? "death" : animation}
+      animationStartedAt={animationStartedAt}
       speed={speed}
       nickname={body.nickname}
       selected={body.selected}

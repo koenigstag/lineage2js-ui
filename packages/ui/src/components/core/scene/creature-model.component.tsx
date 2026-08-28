@@ -90,6 +90,7 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
         variant={{ race: creature.race as RaceNames, baseClass: creature.baseClass, sex: creature.sex }}
         nickname={creature.name}
         animation={animationFor(creature)}
+        animationStartedAt={creature.gestureStartedAt}
         speed={creature.speed}
         isDead={creature.isDead}
       />
@@ -106,6 +107,7 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
       // male fighter body; mobs and summons have no model to ask for.
       modelUrl={creature.kind === "npc" ? getNpcModelUrl(creature.race) : undefined}
       animation={animationFor(creature)}
+      animationStartedAt={creature.gestureStartedAt}
       speed={creature.speed}
       color={color}
       nickname={creature.name}

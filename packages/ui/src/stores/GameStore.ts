@@ -93,6 +93,13 @@ export interface WorldCreatureSnapshot {
   /** Mid swing, for the length of the attack clip -- see GameStore.noteAttack. */
   isAttacking: boolean;
   /**
+   * Date.now() of the latest of the gestures above, so a repeat can be told
+   * from a continuation. The flags alone can't: a creature trading blows is
+   * isAttacking the whole time, and the body would swing once and then keep
+   * hitting from a standstill (see GameStore.gestureStartedAt).
+   */
+  gestureStartedAt?: number;
+  /**
    * Walking vs running (CharInfo/NpcInfo/UserInfo, kept current by
    * ChangeMoveType), which is also what L2Creature.CurrentSpeed picks its
    * speed off -- so it decides both how fast the move segment below advances
@@ -693,6 +700,7 @@ interface CreatureGestures {
   isCasting: boolean;
   isStandingUp: boolean;
   isAttacking: boolean;
+  gestureStartedAt?: number;
 }
 
 function worldCreatureSnapshotFromCreature(
@@ -1045,6 +1053,17 @@ export class GameStore {
   // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
   attackingUntil = new Map<number, number>();
 
+  /**
+   * creature objectId -> Date.now() of its latest one-shot gesture, whichever
+   * it was. The windows above say *that* a creature is swinging or casting;
+   * this says *when it last started*, which is the only thing that can tell
+   * one blow from the next while the animation stays "attack" throughout --
+   * without it a creature in a sustained fight swung once and then landed the
+   * rest of its hits standing still.
+   */
+  // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
+  gestureStartedAt = new Map<number, number>();
+
   constructor() {
     makeAutoObservable(this, {
       client: false,
@@ -1053,6 +1072,7 @@ export class GameStore {
       castingUntil: false,
       standingUpUntil: false,
       attackingUntil: false,
+      gestureStartedAt: false,
       moveHeartbeatInterval: false,
       moveHeartbeatChar: false,
       netPingInterval: false,
@@ -1305,6 +1325,7 @@ export class GameStore {
       if (until <= now) this.pickingUpUntil.delete(id);
     }
     this.pickingUpUntil.set(creatureId, now + PICKUP_ANIMATION_MS);
+    this.gestureStartedAt.set(creatureId, now);
   }
 
   private isPickingUp(creatureId: number): boolean {
@@ -1336,6 +1357,7 @@ export class GameStore {
       if (until <= now) this.castingUntil.delete(id);
     }
     this.castingUntil.set(creatureId, now + hitTime);
+    this.gestureStartedAt.set(creatureId, now);
   }
 
   /** Ends it early, on the server's own "the skill went off" (MagicSkillLaunched). */
@@ -1364,6 +1386,7 @@ export class GameStore {
       if (until <= now) this.standingUpUntil.delete(id);
     }
     this.standingUpUntil.set(creatureId, now + STAND_UP_ANIMATION_MS);
+    this.gestureStartedAt.set(creatureId, now);
   }
 
   private isStandingUp(creatureId: number): boolean {
@@ -1383,6 +1406,7 @@ export class GameStore {
       if (until <= now) this.attackingUntil.delete(id);
     }
     this.attackingUntil.set(creatureId, now + ATTACK_ANIMATION_MS);
+    this.gestureStartedAt.set(creatureId, now);
   }
 
   private isAttacking(creatureId: number): boolean {
@@ -2157,6 +2181,7 @@ export class GameStore {
             isCasting: this.isCasting(creature.ObjectId),
             isStandingUp: this.isStandingUp(creature.ObjectId),
             isAttacking: this.isAttacking(creature.ObjectId),
+            gestureStartedAt: this.gestureStartedAt.get(creature.ObjectId),
           })
         );
       }
