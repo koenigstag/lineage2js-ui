@@ -71,6 +71,7 @@ const MAX_TIME_SCALE = 2;
 /** Plays once and holds its last frame instead of looping. */
 const ONE_SHOT: ReadonlySet<CharacterAnimation> = new Set<CharacterAnimation>([
   "sit",
+  "stand",
   "pickup",
   "attack",
   "cast",
