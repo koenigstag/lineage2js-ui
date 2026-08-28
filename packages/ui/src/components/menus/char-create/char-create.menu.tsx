@@ -9,6 +9,12 @@ import { MENU_Z_INDEX } from "../../../config/z-index";
 import { buildNewCharacter, getAvailableBaseClassesFromTemplates, getAvailableRacesFromTemplates } from "../../../config/network-mapping";
 import { getRaceLabel, getBaseClassLabel, type RaceNames, type BaseClass, type SexNames } from "../../../config/character-races";
 import {
+  faceOptions,
+  hairColorOptions,
+  hairOptions,
+  type CharacterAppearance,
+} from "../../../config/character-appearance";
+import {
   MAX_CHARACTER_NAME_LENGTH,
   validateCharacterName,
   type CharacterNameError,
@@ -26,44 +32,27 @@ const SEX_OPTIONS: Array<{ value: SexNames; labelKey: string }> = [
   { value: "FEMALE", labelKey: "charCreate.sexFemale" },
 ];
 
-// Values are 0-based to match Face/HairStyle/HairColor's own enum indices directly.
-const FACE_OPTIONS: Array<{ value: string; labelKey: string }> = [
-  { value: "0", labelKey: "charCreate.face1" },
-  { value: "1", labelKey: "charCreate.face2" },
-  { value: "2", labelKey: "charCreate.face3" },
-];
-
-const HAIR_OPTIONS: Array<{ value: string; labelKey: string }> = [
-  { value: "0", labelKey: "charCreate.hair1" },
-  { value: "1", labelKey: "charCreate.hair2" },
-  { value: "2", labelKey: "charCreate.hair3" },
-  { value: "3", labelKey: "charCreate.hair4" },
-  { value: "4", labelKey: "charCreate.hair5" },
-];
-
-const HAIR_COLOR_OPTIONS: Array<{ value: string; labelKey: string }> = [
-  { value: "0", labelKey: "charCreate.color1" },
-  { value: "1", labelKey: "charCreate.color2" },
-  { value: "2", labelKey: "charCreate.color3" },
-  { value: "3", labelKey: "charCreate.color4" },
-];
-
 interface CharCreateMenuProps {
   race: RaceNames;
-  baseClass: BaseClass;
-  sex: SexNames;
+  /** Null until chosen -- see CreateCharScreen for why nothing but the race starts settled. */
+  baseClass: BaseClass | null;
+  sex: SexNames | null;
+  appearance: CharacterAppearance;
   onRaceChange: (race: RaceNames) => void;
   onBaseClassChange: (baseClass: BaseClass) => void;
   onSexChange: (sex: SexNames) => void;
+  onAppearanceChange: (appearance: CharacterAppearance) => void;
 }
 
 export const CharCreateMenu = observer(function CharCreateMenu({
   race,
   baseClass,
   sex,
+  appearance,
   onRaceChange,
   onBaseClassChange,
   onSexChange,
+  onAppearanceChange,
 }: CharCreateMenuProps) {
   const game = useGameStore();
   const session = useSessionStore();
@@ -71,9 +60,6 @@ export const CharCreateMenu = observer(function CharCreateMenu({
   const { alert, modal: alertModal } = useAlert();
 
   const [nickname, setNickname] = useState("");
-  const [face, setFace] = useState(FACE_OPTIONS[0].value);
-  const [hair, setHair] = useState(HAIR_OPTIONS[0].value);
-  const [hairColor, setHairColor] = useState(HAIR_COLOR_OPTIONS[0].value);
 
   const raceOptions: SelectOption[] = getAvailableRacesFromTemplates(session.characterTemplates).map((value) => ({
     value,
@@ -86,11 +72,15 @@ export const CharCreateMenu = observer(function CharCreateMenu({
     })
   );
   const sexOptions: SelectOption[] = SEX_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }));
-  const faceOptions: SelectOption[] = FACE_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }));
-  const hairOptions: SelectOption[] = HAIR_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }));
-  const hairColorOptions: SelectOption[] = HAIR_COLOR_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }));
+
+  // Each step opens the next: the scene moves in on the class's two bodies,
+  // then on one face, and the appearance choices are only worth making once
+  // there is a face to see them on.
+  const bodyChosen = baseClass !== null && sex !== null;
 
   async function handleCreateCharacter() {
+    if (baseClass === null || sex === null) return;
+
     // Catch what the server would reject anyway, so the player gets a specific
     // reason instead of a round-trip ending in a generic CharCreateFail.
     const nameError = validateCharacterName(
@@ -108,9 +98,9 @@ export const CharCreateMenu = observer(function CharCreateMenu({
         race,
         baseClass,
         sex,
-        face: Number(face),
-        hair: Number(hair),
-        hairColor: Number(hairColor),
+        face: appearance.face,
+        hair: appearance.hair,
+        hairColor: appearance.hairColor,
       },
       session.characterTemplates
     );
@@ -154,19 +144,51 @@ export const CharCreateMenu = observer(function CharCreateMenu({
         maxLength={MAX_CHARACTER_NAME_LENGTH}
         onChange={setNickname}
       />
-      <SelectInput options={raceOptions} value={race} onChange={(value) => onRaceChange(value as RaceNames)} />
+      <SelectInput
+        options={raceOptions}
+        value={race}
+        placeholder={t("charCreate.racePlaceholder")}
+        onChange={(value) => onRaceChange(value as RaceNames)}
+      />
       <SelectInput
         options={baseClassOptions}
-        value={baseClass}
+        value={baseClass ?? ""}
+        placeholder={t("charCreate.classPlaceholder")}
         onChange={(value) => onBaseClassChange(value as BaseClass)}
       />
-      <SelectInput options={sexOptions} value={sex} onChange={(value) => onSexChange(value as SexNames)} />
-      <SelectInput options={faceOptions} value={face} onChange={setFace} />
-      <SelectInput options={hairOptions} value={hair} onChange={setHair} />
-      <SelectInput options={hairColorOptions} value={hairColor} onChange={setHairColor} />
+      <SelectInput
+        options={sexOptions}
+        value={sex ?? ""}
+        placeholder={t("charCreate.sexPlaceholder")}
+        disabled={baseClass === null}
+        onChange={(value) => onSexChange(value as SexNames)}
+      />
+      <SelectInput
+        options={faceOptions()}
+        value={String(appearance.face)}
+        placeholder={t("charCreate.facePlaceholder")}
+        disabled={!bodyChosen}
+        onChange={(value) => onAppearanceChange({ ...appearance, face: Number(value) })}
+      />
+      <SelectInput
+        options={hairOptions()}
+        value={String(appearance.hair)}
+        placeholder={t("charCreate.hairPlaceholder")}
+        disabled={!bodyChosen}
+        onChange={(value) => onAppearanceChange({ ...appearance, hair: Number(value) })}
+      />
+      <SelectInput
+        options={hairColorOptions()}
+        value={String(appearance.hairColor)}
+        placeholder={t("charCreate.hairColorPlaceholder")}
+        disabled={!bodyChosen}
+        onChange={(value) => onAppearanceChange({ ...appearance, hairColor: Number(value) })}
+      />
       <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-        {/* Deliberately not disabled on an empty name -- validation explains why it's rejected. */}
-        <BaseButton onClick={handleCreateCharacter} disabled={session.isConnecting}>
+        {/* Deliberately not disabled on an empty name -- validation explains why it's rejected. An
+            unchosen class or sex is different: there is no mistake to explain, the character simply
+            isn't described yet. */}
+        <BaseButton onClick={handleCreateCharacter} disabled={session.isConnecting || !bodyChosen}>
           {session.isConnecting ? t("charCreate.creating") : t("charCreate.createButton")}
         </BaseButton>
         <BaseButton onClick={handleBack} disabled={session.isConnecting}>

@@ -25,7 +25,7 @@ THREE.TextureLoader.prototype.load = function load() {
 };
 
 /** Which tint each body part is drawn with, since no textures are converted yet. */
-export type MaterialSlot = "skin" | "outfit" | "hair";
+export type MaterialSlot = "skin" | "outfit" | "hair" | "wing";
 
 export interface BodyPart {
   /** Absolute path of the part's .fbx. */
@@ -48,7 +48,9 @@ export interface AssembledBody {
 }
 
 /** Order matters only for readability: the merged groups are re-sorted by slot. */
-export const MATERIAL_SLOTS: MaterialSlot[] = ["skin", "outfit", "hair"];
+// "wing" only ever comes up for the Kamael, whose wings are a piece of their
+// own; a rig with nothing in a slot simply gets no primitive for it.
+export const MATERIAL_SLOTS: MaterialSlot[] = ["skin", "outfit", "hair", "wing"];
 
 interface LoadedPiece {
   part: BodyPart;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { AnimationClip, Group, Mesh, MeshStandardMaterial } from "three";
+import { Box3 } from "three";
+import type { AnimationClip, Bone, Group, Mesh, MeshStandardMaterial } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinnedScene } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { versionedModelUrl } from "../../config/character-models";
@@ -18,11 +19,51 @@ export interface CharacterModelAsset {
  */
 export const CHARACTER_MODEL_SCALE = 1.7 / 44.6;
 
+/**
+ * World height of the middle of a converted body's head, for anything that
+ * has to aim at a face -- the creation screen's close-up shot, mainly.
+ *
+ * Measured off the model rather than assumed, because the rigs are nowhere
+ * near a common height: a dwarf's head sits at 1.19 and an orc's at 1.89, and
+ * the two ends of that are three quarters of a portrait shot apart. Midway
+ * between the head joint and the top of the body lands on the face for every
+ * rig in the set, retail-converted and Unity-converted alike.
+ *
+ * Cached per asset: the bodies are shared and immutable, and this walks the
+ * whole tree.
+ */
+const headHeights = new WeakMap<CharacterModelAsset, number>();
+
+export function getHeadHeight(asset: CharacterModelAsset): number {
+  const cached = headHeights.get(asset);
+  if (cached !== undefined) return cached;
+
+  asset.scene.updateMatrixWorld(true);
+  const top = new Box3().setFromObject(asset.scene).max.y;
+
+  let joint = 0;
+  asset.scene.traverse((object) => {
+    // The joint itself, not the HeadNub tip above it, which every one of
+    // these rigs also carries.
+    if ((object as Bone).isBone && /head$/i.test(object.name)) {
+      joint = Math.max(joint, object.matrixWorld.elements[13]);
+    }
+  });
+
+  // No head joint at all would mean a rig unlike any in the set; aiming just
+  // under the crown is still a face rather than the middle of a chest.
+  const height = (joint > 0 ? (joint + top) / 2 : top * 0.94) * CHARACTER_MODEL_SCALE;
+  headHeights.set(asset, height);
+  return height;
+}
+
 /** Per-slot colors standing in for the textures the pipeline doesn't convert yet. */
 export interface CharacterModelTint {
   skin: string;
   outfit: string;
   hair: string;
+  /** Kamael only -- every other rig comes out of the converter without the slot. */
+  wing: string;
 }
 
 // One in-flight load per URL, kept for the session: ten rigs at ~800KB each,

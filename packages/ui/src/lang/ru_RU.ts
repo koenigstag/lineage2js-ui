@@ -51,6 +51,12 @@ export const LANG_RU_RU: LangDictionary = {
     sortTooltip: "Сортировка серверов",
   },
   charCreate: {
+    racePlaceholder: "Раса",
+    classPlaceholder: "Класс",
+    sexPlaceholder: "Пол",
+    facePlaceholder: "Лицо",
+    hairPlaceholder: "Причёска",
+    hairColorPlaceholder: "Цвет волос",
     sexMale: "Мужской",
     sexFemale: "Женский",
     face1: "Лицо 1",

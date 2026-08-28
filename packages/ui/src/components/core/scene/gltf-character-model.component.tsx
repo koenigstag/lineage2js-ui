@@ -35,6 +35,8 @@ export interface GltfCharacterModelProps {
   skinColor: string;
   outfitColor: string;
   hairColor: string;
+  /** The Kamael wing, which no other rig has a piece for. */
+  wingColor: string;
   x: number;
   /** World-up (three.js Y) foot position. Defaults to 0 (flat-floor scenes). */
   y?: number;
@@ -184,6 +186,7 @@ export function GltfCharacterModel({
   skinColor,
   outfitColor,
   hairColor,
+  wingColor,
   x,
   y = 0,
   z,
@@ -197,7 +200,12 @@ export function GltfCharacterModel({
   cursor,
 }: GltfCharacterModelProps) {
   const model = useMemo(() => {
-    const root = instantiateCharacterModel(asset, { skin: skinColor, outfit: outfitColor, hair: hairColor });
+    const root = instantiateCharacterModel(asset, {
+      skin: skinColor,
+      outfit: outfitColor,
+      hair: hairColor,
+      wing: wingColor,
+    });
     root.traverse((object) => {
       // Everything about this model is a raycast target by default; picking
       // belongs to the capsule below.
@@ -208,7 +216,7 @@ export function GltfCharacterModel({
     const actions = new Map<string, AnimationAction>();
     for (const clip of asset.animations) actions.set(clip.name, mixer.clipAction(clip));
     return { root: root as Group, mixer, actions };
-  }, [asset, skinColor, outfitColor, hairColor]);
+  }, [asset, skinColor, outfitColor, hairColor, wingColor]);
 
   useEffect(
     () => () => {

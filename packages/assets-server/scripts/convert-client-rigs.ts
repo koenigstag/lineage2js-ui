@@ -63,6 +63,21 @@ const ROOT_BONE = "bip01";
  */
 const UNIT_SCALE = 100;
 
+/** Nearest joint to a point, for placing a piece that arrived without one of its own. */
+function nearestBone(bones: THREE.Bone[], point: THREE.Vector3): THREE.Bone {
+  const position = new THREE.Vector3();
+  let nearest = bones[0];
+  let shortest = Infinity;
+  for (const bone of bones) {
+    const distance = position.setFromMatrixPosition(bone.matrixWorld).distanceTo(point);
+    if (distance < shortest) {
+      shortest = distance;
+      nearest = bone;
+    }
+  }
+  return nearest;
+}
+
 interface PieceSource {
   /** Suffix after the rig name, e.g. "m000_u". */
   suffix: string;
@@ -87,8 +102,10 @@ interface ClientRig {
   pkg: string;
   /** MeshAnimation object with its sequences. */
   animObject: string;
-  /** Extra pieces beyond BODY_PIECES, or overrides of where one comes from. */
+  /** Replaces BODY_PIECES outright, for a body assembled from more than one package -- see FShaman. */
   pieces?: PieceSource[];
+  /** Added on top of whichever list applies, for a part only this rig has. */
+  extraPieces?: PieceSource[];
 }
 
 /** The pieces a body is made of, in the same slots the Unity path uses. */
@@ -101,6 +118,17 @@ const BODY_PIECES: PieceSource[] = [
   { suffix: "m000_m00_bh", slot: "hair", variant: "hair" },
   { suffix: "m000_m00_ah", slot: "hair", variant: "hair" },
 ];
+
+/**
+ * The Kamael wing -- one of them, which is not an export that lost half of
+ * itself. Every vertex of the mesh sits to one side of centre while the torso
+ * beside it is symmetric, because a Kamael has a single wing; the second one
+ * seen on later characters is cloth and comes with an armour set, not with
+ * the body. So this is never mirrored.
+ *
+ * m000 is the starting set, which is the only one this pipeline converts.
+ */
+const WING: PieceSource[] = [{ suffix: "m000_w_ad00", slot: "wing" }];
 
 const RIGS: ClientRig[] = [
   { rig: "MOrc", pkg: "Orc", animObject: "MOrc_anim" },
@@ -124,8 +152,12 @@ const RIGS: ClientRig[] = [
       { suffix: "m000_m00_ah", slot: "hair" },
     ],
   },
-  { rig: "MKamael", pkg: "Kamael", animObject: "MKamael_anim" },
-  { rig: "FKamael", pkg: "Kamael", animObject: "FKamael_anim" },
+  // Wings are a Kamael part and nothing else has one. They come as a mesh
+  // with an eighteen-joint skeleton of its own (Main_wing and Bone13..Bone46,
+  // sharing no name with the body), which is why assemble() has to work out
+  // where a foreign skeleton attaches -- see adoptBone.
+  { rig: "MKamael", pkg: "Kamael", animObject: "MKamael_anim", extraPieces: WING },
+  { rig: "FKamael", pkg: "Kamael", animObject: "FKamael_anim", extraPieces: WING },
 ];
 
 /**
@@ -262,18 +294,7 @@ function rigidAttachment(mesh: THREE.SkinnedMesh): { root: number; bone: THREE.B
   mesh.geometry.computeBoundingBox();
   const centre = mesh.geometry.boundingBox!.getCenter(new THREE.Vector3());
   mesh.localToWorld(centre);
-
-  const position = new THREE.Vector3();
-  let nearest = bones[root];
-  let shortest = Infinity;
-  for (const bone of bones) {
-    const distance = position.setFromMatrixPosition(bone.matrixWorld).distanceTo(centre);
-    if (distance < shortest) {
-      shortest = distance;
-      nearest = bone;
-    }
-  }
-  return { root, bone: nearest };
+  return { root, bone: nearestBone(bones, centre) };
 }
 
 /**
@@ -311,7 +332,6 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
   // normalised.
   const boneKey = (name: string) => THREE.PropertyBinding.sanitizeNodeName(name).toLowerCase();
   const boneIndexByName = new Map(bones.map((bone, index) => [boneKey(bone.name), index]));
-  const rootBone = bones.find((bone) => !(bone.parent as THREE.Bone | null)?.isBone) ?? bones[0];
   const adopted: string[] = [];
   const reattached: string[] = [];
 
@@ -322,7 +342,14 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
     if (existing !== undefined) return existing;
 
     const pieceParent = pieceBone.parent as THREE.Bone | null;
-    const parent = pieceParent?.isBone ? bones[adoptBone(pieceParent)] : rootBone;
+    // A piece rigged on a skeleton of its own -- the Kamael wings -- has a
+    // root joint whose parent is the mesh rather than another joint. Hanging
+    // that off the body's own root would strap the wings to the pelvis; the
+    // joint they belong to is the one they rest against, which for the wings
+    // is the top of the spine they are modelled onto.
+    const parent = pieceParent?.isBone
+      ? bones[adoptBone(pieceParent)]
+      : nearestBone(bones, new THREE.Vector3().setFromMatrixPosition(pieceBone.matrixWorld));
     const clone = pieceBone.clone(false);
     clone.name = name;
     parent.add(clone);
@@ -385,7 +412,18 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
   // Rebind: adopting joints changed the array the skin indices point into.
   primary.bind(new THREE.Skeleton(bones, boneInverses), primary.bindMatrix);
   primary.material = MATERIAL_SLOTS.filter((slot) => slots.includes(slot)).map(
-    (slot) => new THREE.MeshStandardMaterial({ name: slot, color: 0xffffff, roughness: 0.75 })
+    (slot) =>
+      new THREE.MeshStandardMaterial({
+        name: slot,
+        color: 0xffffff,
+        roughness: 0.75,
+        // A wing is a single sheet of triangles, not a closed volume, and the
+        // side of it that faces a viewer standing in front of the character
+        // is its back -- drawn one-sided it disappears except for a sliver at
+        // the shoulder. Everything else on a body is closed and keeps the
+        // cheaper single-sided draw.
+        side: slot === "wing" ? THREE.DoubleSide : THREE.FrontSide,
+      })
   );
   primary.name = "body";
 
@@ -403,7 +441,7 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
 }
 
 async function convertRig(umodel: string, client: string, workDir: string, source: ClientRig): Promise<void> {
-  const pieceSources: PieceSource[] = source.pieces ?? BODY_PIECES;
+  const pieceSources: PieceSource[] = [...(source.pieces ?? BODY_PIECES), ...(source.extraPieces ?? [])];
   const exported: { file: string; slot: MaterialSlot; own: boolean }[] = [];
 
   const filled = new Set<string>();

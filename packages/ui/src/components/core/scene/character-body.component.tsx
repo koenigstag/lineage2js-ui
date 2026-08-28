@@ -1,6 +1,17 @@
 import { CharacterModel, DEFAULT_SKIN_COLOR } from "./character-model.component";
 import { GltfCharacterModel, type CharacterAnimation } from "./gltf-character-model.component";
 import { useCharacterModel } from "../../../utils/models/character-model";
+import { getHairColor } from "../../../config/character-appearance";
+
+/**
+ * The Kamael wing -- singular, and the one body part no choice of the
+ * character's own governs.
+ *
+ * @deprecated Invented placeholder tone, like the rest of the flat tints --
+ * the converted bodies carry no textures yet. Light grey with a touch of
+ * pink, which is what the wing reads as in the client.
+ */
+const WING_COLOR = "#d6c8ca";
 
 export interface CharacterBodyProps {
   /**
@@ -27,6 +38,12 @@ export interface CharacterBodyProps {
   widthScale?: number;
   /** Draped cloak hanging from the shoulder (Kamael, which has no converted body). Defaults to false. */
   hasCape?: boolean;
+  /**
+   * Tint for the converted body's hair slot. Defaults to the first palette
+   * entry, which every body was tinted with before hair colour became
+   * selectable; the placeholder body has no hair to tint.
+   */
+  hairColor?: string;
   nickname?: string;
   selected?: boolean;
   onSelect?: () => void;
@@ -34,13 +51,6 @@ export interface CharacterBodyProps {
   cursor?: string;
   isDead?: boolean;
 }
-
-/**
- * @deprecated Invented placeholder tone, not ported from any real art source
- * -- the converted bodies have no textures yet, so hair is tinted flat like
- * skin and outfit are (see character-races.ts's own colour tables).
- */
-const HAIR_COLOR = "#3a2a20";
 
 /**
  * One creature body: the converted retail model when there is one and it has
@@ -64,7 +74,8 @@ export function CharacterBody({ modelUrl, animation, animationStartedAt, speed, 
       asset={asset}
       skinColor={body.skinColor ?? DEFAULT_SKIN_COLOR}
       outfitColor={body.color}
-      hairColor={HAIR_COLOR}
+      hairColor={body.hairColor ?? getHairColor(0)}
+      wingColor={WING_COLOR}
       x={body.x}
       y={body.y}
       z={body.z}

@@ -51,6 +51,12 @@ export const LANG_EN_US: LangDictionary = {
     sortTooltip: "Sort servers",
   },
   charCreate: {
+    racePlaceholder: "Race",
+    classPlaceholder: "Class",
+    sexPlaceholder: "Sex",
+    facePlaceholder: "Face",
+    hairPlaceholder: "Hair",
+    hairColorPlaceholder: "Hair color",
     sexMale: "Male",
     sexFemale: "Female",
     face1: "Face 1",

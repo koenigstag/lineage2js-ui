@@ -4,9 +4,12 @@ import { Object3D } from "three";
 import { PlayerModel } from "../../../core/scene/player-model.component";
 import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
 import { StarField } from "../../login/atmosphere/star-field.component";
-import { RACES, type RaceNames, type BaseClass, type SexNames } from "../../../../config/character-races";
+import { RACES, getBodyScale, type RaceNames, type BaseClass, type SexNames } from "../../../../config/character-races";
+import type { CharacterAppearance } from "../../../../config/character-appearance";
+import { getCharacterModelUrl } from "../../../../config/character-models";
+import { getHeadHeight, useCharacterModel } from "../../../../utils/models/character-model";
 import { RACE_GALLERY, type GalleryVariant } from "./race-gallery.utils";
-import { CameraRig } from "./camera-rig.component";
+import { CameraRig, type CameraFocus } from "./camera-rig.component";
 
 const SKY_SIZE: [number, number] = [300, 100];
 const SKY_Z = -50;
@@ -16,6 +19,18 @@ const CLASS_GAP_EXTRA = 0.9;
 // Wide enough that a group's close-up camera shot never shows a
 // neighboring group (see CameraRig).
 const GROUP_SPACING = 10;
+
+/**
+ * The three shots creation narrows down through. Each choice moves in one
+ * step: the race's whole line-up, then the chosen class's two bodies, then
+ * the face -- which is where the remaining choices (face, hair, hair colour)
+ * are made, so it is framed close enough to judge them.
+ */
+const GROUP_SHOT = { height: 2.4, distance: 7, lookHeight: 1.6 };
+const CLASS_SHOT = { height: 2, distance: 4.4, lookHeight: 1.25 };
+const FACE_SHOT = { distance: 0.95, above: 0.02 };
+/** Where the placeholder body's head sits, for the races and setups with no converted model to measure. */
+const PLACEHOLDER_HEAD_HEIGHT = 1.64;
 
 function groupXForRace(race: RaceNames): number {
   return RACES.indexOf(race) * GROUP_SPACING;
@@ -56,21 +71,69 @@ function MoonLight({ groupX }: MoonLightProps) {
 
 export interface CharCreateSceneProps {
   race: RaceNames;
-  baseClass: BaseClass;
-  sex: SexNames;
+  /** Unset until chosen -- the camera stays on the whole group while it is. */
+  baseClass: BaseClass | null;
+  /** Unset until chosen, by a select or by clicking one of the bodies. */
+  sex: SexNames | null;
+  appearance: CharacterAppearance;
   onSelectVariant: (race: RaceNames, baseClass: BaseClass, sex: SexNames) => void;
 }
 
-/** Character-creation backdrop: camera focuses on the selected race's group of class/sex placeholders. */
-export function CharCreateScene({ race, baseClass, sex, onSelectVariant }: CharCreateSceneProps) {
+/** Character-creation backdrop: the camera closes in on the selected race, then class, then face as the choices are made. */
+export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVariant }: CharCreateSceneProps) {
+  const initialX = groupXForRace(RACES[0]);
+
+  // The body the face shot aims at, loaded here only to find out where its
+  // head is. Same cached asset the model itself renders from, so this is a
+  // map lookup rather than a second download, and null until it arrives --
+  // or for good, when no model server is configured.
+  const focusedBody = useCharacterModel(
+    baseClass !== null && sex !== null ? getCharacterModelUrl({ race, baseClass, sex }) : undefined
+  );
+
+  const focus: CameraFocus = useMemo(() => {
+    const groupX = groupXForRace(race);
+    const group = RACE_GALLERY.find((candidate) => candidate.race === race);
+    if (!group || baseClass === null) {
+      return { position: [groupX, GROUP_SHOT.height, GROUP_SHOT.distance], lookAt: [groupX, GROUP_SHOT.lookHeight, 0] };
+    }
+
+    const offsets = variantOffsets(group.variants);
+    const inClass = group.variants
+      .map((variant, index) => ({ variant, x: groupX + offsets[index] }))
+      .filter((entry) => entry.variant.baseClass === baseClass);
+    // A race whose templates dropped the chosen class out from under the
+    // selection: fall back to the group shot rather than aiming at nothing.
+    if (inClass.length === 0) {
+      return { position: [groupX, GROUP_SHOT.height, GROUP_SHOT.distance], lookAt: [groupX, GROUP_SHOT.lookHeight, 0] };
+    }
+
+    if (sex === null) {
+      const centre = inClass.reduce((sum, entry) => sum + entry.x, 0) / inClass.length;
+      return { position: [centre, CLASS_SHOT.height, CLASS_SHOT.distance], lookAt: [centre, CLASS_SHOT.lookHeight, 0] };
+    }
+
+    const chosen = inClass.find((entry) => entry.variant.sex === sex) ?? inClass[0];
+    // Bodies differ in height by race and build -- a dwarf's face sits at
+    // 1.19 and an orc's at 1.89 -- so the shot is framed off this body's own
+    // head rather than one fixed height. The placeholder's proportions stand
+    // in until the model has loaded, and for good where there is no model.
+    const headHeight = focusedBody
+      ? getHeadHeight(focusedBody)
+      : PLACEHOLDER_HEAD_HEIGHT * getBodyScale(race, baseClass, chosen.variant.sex).height;
+    return {
+      position: [chosen.x, headHeight + FACE_SHOT.above, FACE_SHOT.distance],
+      lookAt: [chosen.x, headHeight, 0],
+    };
+  }, [race, baseClass, sex, focusedBody]);
+
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <Canvas
         gl={{ alpha: true, antialias: true }}
-        camera={{ position: [groupXForRace(RACES[0]), 2.4, 7], fov: 45, near: 0.1, far: 150 }}
-        onCreated={({ camera }) => camera.lookAt(groupXForRace(RACES[0]), 1.6, 0)}
+        camera={{ position: [initialX, GROUP_SHOT.height, GROUP_SHOT.distance], fov: 45, near: 0.1, far: 150 }}
       >
-        <CameraRig targetX={groupXForRace(race)} />
+        <CameraRig focus={focus} />
 
         <ambientLight intensity={0.7} color="#5a6a8a" />
         <MoonLight groupX={groupXForRace(race)} />
@@ -86,20 +149,27 @@ export function CharCreateScene({ race, baseClass, sex, onSelectVariant }: CharC
         {RACE_GALLERY.map((group) => {
           const groupX = groupXForRace(group.race);
           const offsets = variantOffsets(group.variants);
+          const focused = group.race === race;
 
           return (
             <group key={group.race}>
               {group.variants.map((variant, variantIndex) => {
-                const x = groupX + offsets[variantIndex];
+                const selected = focused && variant.baseClass === baseClass && variant.sex === sex;
+                // Once the shot is a face, the neighbouring body stands close
+                // enough to intrude on it. Nothing is lost by dropping it:
+                // there is no picking a different one from this distance, and
+                // it comes back the moment the choice is widened again.
+                if (focused && sex !== null && baseClass !== null && !selected) return null;
 
                 return (
                   <PlayerModel
                     key={`${variant.race}-${variant.baseClass}-${variant.sex}`}
-                    x={x}
+                    x={groupX + offsets[variantIndex]}
                     z={0}
                     angleToCenter={0}
                     variant={variant}
-                    selected={variant.race === race && variant.baseClass === baseClass && variant.sex === sex}
+                    appearance={focused ? appearance : undefined}
+                    selected={selected}
                     onSelect={() => onSelectVariant(variant.race, variant.baseClass, variant.sex)}
                   />
                 );
