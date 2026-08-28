@@ -98,12 +98,13 @@ interface ClipSource {
 }
 
 // Adding one here is enough to export it; the client plays whichever of them
-// it has state for (see CreatureModel's animationFor). idle/walk/run/death,
-// sit and pickup are driven today -- attack and cast are ahead of that state,
-// since nothing tells the client a creature is swinging or casting yet.
+// it has state for (see CreatureModel's animationFor), and every one below is
+// driven today.
 //
-// The unarmed ("Hand") variants throughout: no weapon is rendered yet, and the
-// armed variants pose the hands around a weapon that isn't there.
+// Locomotion and idle stay on the unarmed ("Hand") variants -- the armed ones
+// pose the hands around a weapon nothing renders yet, and a character walking
+// empty-handed reads fine. The swing is the exception: hitting with a sword
+// while throwing a punch does not.
 const CLIPS: ClipSource[] = [
   { name: "idle", candidates: ["wait_hand", "wait_1hs"] },
   { name: "walk", candidates: ["walk_hand", "walk_1hs"], inPlace: true },
@@ -113,7 +114,18 @@ const CLIPS: ClipSource[] = [
   { name: "sit", candidates: ["sit"] },
   { name: "sitIdle", candidates: ["sitwait"] },
   { name: "stand", candidates: ["stand"] },
+  // One swing per weapon class the client can tell apart from a creature's
+  // right-hand item (see the UI's weapon-class mapping): a character hitting
+  // with a sword shouldn't be throwing a punch. Two-handed is deliberately
+  // absent -- the rigs have Atk01_2HS, but the item datapack carries no
+  // one- vs two-handed flag to pick it with, and an unselectable clip is
+  // just weight in a file every player fetches.
   { name: "attack", candidates: ["atk01_hand", "atk01_1hs"] },
+  { name: "attack1hs", candidates: ["atk01_1hs"] },
+  { name: "attackDual", candidates: ["atk01_dual"] },
+  { name: "attackDualDagger", candidates: ["atk01_dual_dagger"] },
+  { name: "attackBow", candidates: ["atk01_bow"] },
+  { name: "attackPole", candidates: ["atk01_pole"] },
   { name: "pickup", candidates: ["picitem"] },
   // The casting motion itself, not the release: CastMid is the wind-up every
   // rig that casts at all ships, CastEnd the follow-through some also do.
@@ -146,20 +158,34 @@ const CLIPS: ClipSource[] = [
  * timing and the run says so; all ten rigs ship all nine sequences, so there
  * are no rows missing at the moment.
  */
+/**
+ * Every rig authors all five armed swings identically, 46f@30 -- measured,
+ * not assumed: the ten rigs agree on this one to the frame, while their
+ * unarmed swing splits 1.4333/1.5333 between them. Spread into the rows
+ * below rather than repeated five times each.
+ */
+const ARMED_SWING = {
+  attack1hs: 1.5333,
+  attackDual: 1.5333,
+  attackDualDagger: 1.5333,
+  attackBow: 1.5333,
+  attackPole: 1.5333,
+};
+
 const AUTHORED_SECONDS: Record<string, Record<string, number>> = {
   // Trailing comment on each row is that rig's own NumRawFrames@AnimRate, in
   // the same order as the durations, so a number can be traced back to the
   // sequence it came from without re-exporting anything.
-  MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, sit: 3.4167, sitIdle: 2.3333, stand: 2.7333, attack: 1.4333, pickup: 0.5833, cast: 1.8333, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 41f@12, 7f@3, 41f@15, 43f@30, 7f@12, 55f@30, 51f@15
-  FFighter: { idle: 3.3333, walk: 0.7333, run: 0.8, sit: 4.3333, sitIdle: 2.6667, stand: 3.4, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5625 }, // 10f@3, 11f@15, 12f@15, 52f@12, 8f@3, 51f@15, 46f@30, 10f@20, 55f@30, 41f@16
-  MMagic: { idle: 3.3333, walk: 0.8, run: 0.8333, sit: 3.8333, sitIdle: 1.6, stand: 2.75, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.8333 }, // 10f@3, 12f@15, 10f@12, 23f@6, 8f@5, 33f@12, 43f@30, 5f@10, 55f@30, 34f@12
-  FMagic: { idle: 3.3333, walk: 0.7333, run: 0.8333, sit: 3.3333, sitIdle: 2.0, stand: 3.0, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.9167 }, // 10f@3, 11f@15, 10f@12, 40f@12, 10f@5, 36f@12, 43f@30, 5f@10, 55f@30, 35f@12
-  MElf: { idle: 3.3333, walk: 0.8, run: 0.8, sit: 4.0, sitIdle: 2.3333, stand: 2.6667, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 3.0 }, // 10f@3, 12f@15, 12f@15, 60f@15, 14f@6, 32f@12, 43f@30, 5f@10, 55f@30, 36f@12
-  FElf: { idle: 3.3333, walk: 0.7333, run: 0.9, sit: 4.3, sitIdle: 2.0, stand: 3.4, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5333 }, // 10f@3, 11f@15, 18f@20, 43f@10, 10f@5, 51f@15, 46f@30, 3f@6, 55f@30, 38f@15
-  MDarkElf: { idle: 3.3333, walk: 0.8333, run: 0.6667, sit: 2.8333, sitIdle: 2.3333, stand: 1.75, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.0 }, // 10f@3, 10f@12, 16f@24, 17f@6, 7f@3, 21f@12, 46f@30, 3f@6, 55f@30, 30f@15
-  FDarkElf: { idle: 2.6667, walk: 0.7917, run: 0.6667, sit: 3.3333, sitIdle: 3.0, stand: 3.3333, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.6667 }, // 16f@6, 19f@24, 16f@24, 40f@12, 15f@5, 50f@15, 46f@30, 3f@6, 55f@30, 32f@12
-  MDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 4.75, sitIdle: 3.0, stand: 2.6667, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 5.6667 }, // 16f@6, 7f@10, 11f@15, 57f@12, 15f@5, 32f@12, 46f@30, 5f@10, 55f@30, 68f@12
-  FDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 3.3333, sitIdle: 2.0, stand: 3.3333, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 3.8333 }, // 16f@6, 14f@20, 11f@15, 40f@12, 10f@5, 40f@12, 46f@30, 3f@6, 55f@30, 46f@12
+  MFighter: { idle: 3.3333, walk: 0.8, run: 0.8667, sit: 3.4167, sitIdle: 2.3333, stand: 2.7333, ...ARMED_SWING, attack: 1.4333, pickup: 0.5833, cast: 1.8333, death: 3.4 }, // 10f@3, 12f@15, 13f@15, 41f@12, 7f@3, 41f@15, 43f@30, 7f@12, 55f@30, 51f@15
+  FFighter: { idle: 3.3333, walk: 0.7333, run: 0.8, sit: 4.3333, sitIdle: 2.6667, stand: 3.4, ...ARMED_SWING, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5625 }, // 10f@3, 11f@15, 12f@15, 52f@12, 8f@3, 51f@15, 46f@30, 10f@20, 55f@30, 41f@16
+  MMagic: { idle: 3.3333, walk: 0.8, run: 0.8333, sit: 3.8333, sitIdle: 1.6, stand: 2.75, ...ARMED_SWING, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.8333 }, // 10f@3, 12f@15, 10f@12, 23f@6, 8f@5, 33f@12, 43f@30, 5f@10, 55f@30, 34f@12
+  FMagic: { idle: 3.3333, walk: 0.7333, run: 0.8333, sit: 3.3333, sitIdle: 2.0, stand: 3.0, ...ARMED_SWING, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 2.9167 }, // 10f@3, 11f@15, 10f@12, 40f@12, 10f@5, 36f@12, 43f@30, 5f@10, 55f@30, 35f@12
+  MElf: { idle: 3.3333, walk: 0.8, run: 0.8, sit: 4.0, sitIdle: 2.3333, stand: 2.6667, ...ARMED_SWING, attack: 1.4333, pickup: 0.5, cast: 1.8333, death: 3.0 }, // 10f@3, 12f@15, 12f@15, 60f@15, 14f@6, 32f@12, 43f@30, 5f@10, 55f@30, 36f@12
+  FElf: { idle: 3.3333, walk: 0.7333, run: 0.9, sit: 4.3, sitIdle: 2.0, stand: 3.4, ...ARMED_SWING, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.5333 }, // 10f@3, 11f@15, 18f@20, 43f@10, 10f@5, 51f@15, 46f@30, 3f@6, 55f@30, 38f@15
+  MDarkElf: { idle: 3.3333, walk: 0.8333, run: 0.6667, sit: 2.8333, sitIdle: 2.3333, stand: 1.75, ...ARMED_SWING, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.0 }, // 10f@3, 10f@12, 16f@24, 17f@6, 7f@3, 21f@12, 46f@30, 3f@6, 55f@30, 30f@15
+  FDarkElf: { idle: 2.6667, walk: 0.7917, run: 0.6667, sit: 3.3333, sitIdle: 3.0, stand: 3.3333, ...ARMED_SWING, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 2.6667 }, // 16f@6, 19f@24, 16f@24, 40f@12, 15f@5, 50f@15, 46f@30, 3f@6, 55f@30, 32f@12
+  MDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 4.75, sitIdle: 3.0, stand: 2.6667, ...ARMED_SWING, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 5.6667 }, // 16f@6, 7f@10, 11f@15, 57f@12, 15f@5, 32f@12, 46f@30, 5f@10, 55f@30, 68f@12
+  FDwarf: { idle: 2.6667, walk: 0.7, run: 0.7333, sit: 3.3333, sitIdle: 2.0, stand: 3.3333, ...ARMED_SWING, attack: 1.5333, pickup: 0.5, cast: 1.8333, death: 3.8333 }, // 16f@6, 14f@20, 11f@15, 40f@12, 10f@5, 40f@12, 46f@30, 3f@6, 55f@30, 46f@12
 };
 
 /** m000 is the bare default set every rig ships; higher numbers are armor. */

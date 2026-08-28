@@ -18,6 +18,11 @@ export type CharacterAnimation =
   | "stand"
   | "pickup"
   | "attack"
+  | "attack1hs"
+  | "attackDual"
+  | "attackDualDagger"
+  | "attackBow"
+  | "attackPole"
   | "cast"
   | "death";
 
@@ -57,6 +62,20 @@ export interface GltfCharacterModelProps {
 
 const CROSSFADE_SECONDS = 0.15;
 
+/** The clip a model actually has for what was asked for, walking FALLS_BACK_TO until something exists. */
+function resolveAction(
+  actions: Map<string, AnimationAction>,
+  wanted: CharacterAnimation
+): AnimationAction | undefined {
+  let name: CharacterAnimation | undefined = wanted;
+  while (name) {
+    const action = actions.get(name);
+    if (action) return action;
+    name = FALLS_BACK_TO[name];
+  }
+  return actions.get("idle");
+}
+
 /**
  * L2 world units/second at which a cycle looks right played at its own
  * length -- i.e. roughly a character's default walk and run speed, since
@@ -82,9 +101,29 @@ const ONE_SHOT: ReadonlySet<CharacterAnimation> = new Set<CharacterAnimation>([
   "stand",
   "pickup",
   "attack",
+  "attack1hs",
+  "attackDual",
+  "attackDualDagger",
+  "attackBow",
+  "attackPole",
   "cast",
   "death",
 ]);
+
+/**
+ * Where to look when a rig doesn't ship the clip that was asked for. Only
+ * the armed swings need it: four of the ten rigs have no dual-dagger
+ * sequence of their own, and while the donor chain covers that during
+ * conversion, a body converted before these clips existed would otherwise
+ * fall all the way through to idle and stand still through a fight.
+ */
+const FALLS_BACK_TO: Partial<Record<CharacterAnimation, CharacterAnimation>> = {
+  attack1hs: "attack",
+  attackDual: "attack",
+  attackDualDagger: "attackDual",
+  attackBow: "attack",
+  attackPole: "attack",
+};
 
 /**
  * Where each one-shot leaves the body. Sitting down leads into the seated
@@ -98,6 +137,11 @@ const SETTLES_INTO: Partial<Record<CharacterAnimation, CharacterAnimation>> = {
   stand: "idle",
   pickup: "idle",
   attack: "idle",
+  attack1hs: "idle",
+  attackDual: "idle",
+  attackDualDagger: "idle",
+  attackBow: "idle",
+  attackPole: "idle",
   cast: "idle",
 };
 
@@ -162,7 +206,7 @@ export function GltfCharacterModel({
     const settled = SETTLES_INTO[animation];
     const wanted = !started.current && settled ? settled : animation;
 
-    const next = model.actions.get(wanted) ?? model.actions.get("idle");
+    const next = resolveAction(model.actions, wanted);
     if (!next) return;
 
     // Already looping this exact cycle -- which happens when a one-shot has

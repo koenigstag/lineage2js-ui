@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import {
+  GameServerPacket,
   L2Item,
   L2Skill,
   L2Buff,
@@ -40,6 +41,7 @@ import { IS_DEMO_MODE } from "../config/env";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
 import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
+import { getWeaponClass, type WeaponClass } from "../config/weapon-class-mapping";
 import { getNpcName, tryGetNpcName } from "../config/npc-name-mapping";
 import {
   CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID,
@@ -92,6 +94,13 @@ export interface WorldCreatureSnapshot {
   isStandingUp: boolean;
   /** Mid swing, for the length of the attack clip -- see GameStore.noteAttack. */
   isAttacking: boolean;
+  /**
+   * What the creature is holding, resolved from its right-hand paperdoll
+   * item, so the swing matches the weapon instead of always throwing a
+   * punch. Every creature kind has it: NpcInfo fills that same slot for
+   * mobs and NPCs.
+   */
+  weaponClass: WeaponClass;
   /**
    * Date.now() of the latest of the gestures above, so a repeat can be told
    * from a continuation. The flags alone can't: a creature trading blows is
@@ -730,6 +739,7 @@ function worldCreatureSnapshotFromCreature(
     isSitting: creature.IsSitting,
     isRunning: creature.IsRunning,
     ...gestures,
+    weaponClass: getWeaponClass(creature.Paperdoll[GameServerPacket.PAPERDOLL_RHAND]),
     race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,

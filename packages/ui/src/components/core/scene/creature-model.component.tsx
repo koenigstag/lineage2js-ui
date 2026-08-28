@@ -4,6 +4,7 @@ import { PlayerModel } from "./player-model.component";
 import { getNpcModelUrl } from "../../../config/character-models";
 import { getNpcRaceColor } from "../../../config/npc-race-mapping";
 import type { RaceNames } from "../../../config/character-races";
+import type { WeaponClass } from "../../../config/weapon-class-mapping";
 import type { WorldCreatureSnapshot } from "../../../stores/GameStore";
 
 interface CreatureModelProps {
@@ -38,6 +39,20 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
 };
 
 /**
+ * Swing to play per weapon class. A rig that doesn't ship the exact clip
+ * falls back on its own (see GltfCharacterModel's FALLS_BACK_TO); this only
+ * decides what to ask for.
+ */
+const ATTACK_BY_WEAPON: Record<WeaponClass, CharacterAnimation> = {
+  hand: "attack",
+  "1hs": "attack1hs",
+  dual: "attackDual",
+  dualDagger: "attackDualDagger",
+  bow: "attackBow",
+  pole: "attackPole",
+};
+
+/**
  * Dead creatures hold the end of the fall and seated ones the seated pose;
  * casting, swinging, stooping over a drop and getting back up each hold
  * their own motion; and the rest idle unless they're on a move segment --
@@ -55,7 +70,7 @@ function animationFor(creature: WorldCreatureSnapshot): CharacterAnimation {
   // Cast before pick-up: its window is the server's own cast time
   // (MagicSkillUse), the stoop's is the client's guess.
   if (creature.isCasting) return "cast";
-  if (creature.isAttacking) return "attack";
+  if (creature.isAttacking) return ATTACK_BY_WEAPON[creature.weaponClass];
   if (creature.isPickingUp) return "pickup";
   // Last of the gestures on purpose: the stand-up window is deliberately
   // longer than any rig's clip, so it is still open once the body has
