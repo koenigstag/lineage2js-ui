@@ -40,10 +40,19 @@ export interface GltfCharacterModelProps {
 const CROSSFADE_SECONDS = 0.15;
 
 /**
- * L2 world units/second the walk and run cycles were authored at. The clip
+ * L2 world units/second at which a cycle looks right played at its own
+ * length -- i.e. roughly a character's default walk and run speed, since
+ * that's what the retail animators timed the sequences against. The clip
  * plays faster or slower in proportion to the creature's real speed so its
  * feet stay planted; the clamp keeps a haste buff or a crawling NPC from
  * turning that into a blur or a freeze-frame.
+ *
+ * This only means anything as long as the clips carry their retail length:
+ * the Unity project the bodies are converted from had every sequence on a
+ * flat 24fps timeline, and until convert-unity-models.ts started retiming
+ * them (see its AUTHORED_SECONDS) the cycles ran up to nine times too fast
+ * no matter what this said. Unlike those durations, the two numbers here
+ * are still estimates rather than something measured out of the client.
  */
 const REFERENCE_SPEED: Record<CharacterAnimation, number> = { idle: 0, walk: 55, run: 120, death: 0 };
 const MIN_TIME_SCALE = 0.5;
@@ -131,9 +140,16 @@ export function GltfCharacterModel({
 
   useEffect(() => {
     const action = model.actions.get(animation);
+    if (!action) return;
     const reference = REFERENCE_SPEED[animation];
-    if (!action || !reference || !speed) return;
-    action.timeScale = Math.min(MAX_TIME_SCALE, Math.max(MIN_TIME_SCALE, speed / reference));
+    // Explicitly back to 1 whenever there's nothing to match the clip
+    // against -- an idle or death has no reference speed, and a creature
+    // that isn't moving reports no speed at all. Leaving the branch early
+    // instead (as this used to) leaves the scale the last run set: three's
+    // AnimationAction.reset() doesn't clear timeScale, so a character that
+    // stopped after sprinting went on breathing at double speed.
+    action.timeScale =
+      reference && speed ? Math.min(MAX_TIME_SCALE, Math.max(MIN_TIME_SCALE, speed / reference)) : 1;
   }, [model, animation, speed]);
 
   useFrame((_, delta) => model.mixer.update(delta));
