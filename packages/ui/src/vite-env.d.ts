@@ -20,6 +20,8 @@ interface ImportMetaEnv {
   readonly VITE_GEODATA_TILE_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/models/" -- folder of converted character bodies (see assets-server/scripts/convert-unity-models.ts), one `<rig>.glb` per race/sex. Unset (or a body that fails to load) leaves that character on the placeholder capsule, see config/character-models.ts. */
   readonly VITE_CHARACTER_MODEL_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/textures/" -- folder of converted character textures (see assets-server/scripts/convert-client-rigs.ts), laid out as `<rig>/<part>-<variant>.png` beside an index.json saying how many variants each rig ships. Unset leaves every body on the flat per-part tints, see config/character-textures.ts. */
+  readonly VITE_CHARACTER_TEXTURE_BASE_URL: string;
   /** @lineage2js/network Logger verbosity bitmask (NONE=0, INFO=1, WARNING=2, ERROR=4, DEBUG=8). Defaults to INFO. */
   readonly VITE_L2JSC_LOG_LEVEL: string;
   /**

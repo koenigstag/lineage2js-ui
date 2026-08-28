@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { AnimationMixer, LoopOnce, type AnimationAction, type Group } from "three";
 import { NicknameLabel } from "./nickname-label.component";
+import { applyCharacterTextures } from "../../../utils/models/character-textures";
+import type { CharacterAppearance } from "../../../config/character-appearance";
 import {
   CHARACTER_MODEL_SCALE,
   instantiateCharacterModel,
@@ -37,6 +39,10 @@ export interface GltfCharacterModelProps {
   hairColor: string;
   /** The Kamael wing, which no other rig has a piece for. */
   wingColor: string;
+  /** Which rig's textures to dress this body in, e.g. "morc". Unset leaves it on the flat tints. */
+  rig?: string;
+  /** Picks the face and hair-colour textures, see applyCharacterTextures. */
+  appearance: CharacterAppearance;
   x: number;
   /** World-up (three.js Y) foot position. Defaults to 0 (flat-floor scenes). */
   y?: number;
@@ -187,6 +193,8 @@ export function GltfCharacterModel({
   outfitColor,
   hairColor,
   wingColor,
+  rig,
+  appearance,
   x,
   y = 0,
   z,
@@ -224,6 +232,18 @@ export function GltfCharacterModel({
     },
     [model]
   );
+
+  // The client's own art over the flat tints, once it arrives. Re-run on a
+  // face or hair-colour change, which are texture swaps rather than new
+  // geometry, so the same body simply changes what it is wearing.
+  useEffect(() => {
+    if (!rig) return;
+    let current = true;
+    void applyCharacterTextures(model.root, rig, appearance, () => current);
+    return () => {
+      current = false;
+    };
+  }, [model, rig, appearance]);
 
   // Registration for the console inspector -- see liveBodies.
   const wantedRef = useRef<string>(animation);

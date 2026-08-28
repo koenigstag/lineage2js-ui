@@ -2,18 +2,14 @@ import { CharacterBody } from "./character-body.component";
 import type { CharacterAnimation } from "./gltf-character-model.component";
 import { getCharacterModelUrl } from "../../../config/character-models";
 import { getPlayerVisualFromVariant, type PlayerVariant } from "../../../config/character-races";
-import { getHairColor, type CharacterAppearance } from "../../../config/character-appearance";
+import type { CharacterAppearance } from "../../../config/character-appearance";
 
 interface PlayerModelProps {
   variant: PlayerVariant;
   /**
-   * Face/hair/hair-colour choices, when the caller has them. Only the colour
-   * reaches the body today: retail varies face and hair style by swapping the
-   * texture on one head mesh, and the converted rigs carry no textures yet
-   * (see assets-server/scripts/convert-client-rigs.ts). Left undefined --
-   * which is every caller working from a character list, since the packet
-   * carries the indices but nothing renders them -- the body keeps the
-   * default tone.
+   * Face/hair/hair-colour choices, when the caller has them. Face and hair
+   * colour are texture swaps in the client, so both reach the body through
+   * applyCharacterTextures; left undefined the body wears the first of each.
    */
   appearance?: CharacterAppearance;
   x: number;
@@ -50,7 +46,7 @@ export function PlayerModel({
       {...position}
       {...visual}
       modelUrl={getCharacterModelUrl(variant)}
-      hairColor={appearance && getHairColor(appearance.hairColor)}
+      appearance={appearance}
       animation={animation}
       animationStartedAt={animationStartedAt}
       speed={speed}

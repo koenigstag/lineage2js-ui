@@ -66,6 +66,12 @@ jobs:
           # character on the procedural placeholder.
           VITE_CHARACTER_MODEL_BASE_URL: ${{ vars.VITE_CHARACTER_MODEL_BASE_URL }}
 
+          # Character textures, from the same converter as the bodies. Unset
+          # leaves every body on its flat per-part tints -- and the face and
+          # hair-colour choices with nothing to show, since both are texture
+          # swaps rather than different meshes.
+          VITE_CHARACTER_TEXTURE_BASE_URL: ${{ vars.VITE_CHARACTER_TEXTURE_BASE_URL }}
+
           # Pre-baked geodata tiles, plus the opt-in stitching mode (unset is
           # the default, which matches the real G3D editor -- see
           # config/env.ts's IS_GEODATA_TERRAIN_SMOOTH).

@@ -57,7 +57,29 @@ export function getHeadHeight(asset: CharacterModelAsset): number {
   return height;
 }
 
-/** Per-slot colors standing in for the textures the pipeline doesn't convert yet. */
+/**
+ * Which tint stands in for a part's texture, by the material name the
+ * converter gave it.
+ *
+ * Two vocabularies on purpose: the retail-converted rigs name a material
+ * after the body part it is, because that is how the client textures them
+ * (see convert-client-rigs.ts), while the Unity-converted ten still name
+ * theirs after the tint itself. Both have to resolve for as long as bodies
+ * come from both pipelines.
+ */
+const TINT_FOR_MATERIAL: Record<string, keyof CharacterModelTint> = {
+  skin: "skin",
+  face: "skin",
+  gloves: "skin",
+  outfit: "outfit",
+  upper: "outfit",
+  lower: "outfit",
+  boots: "outfit",
+  hair: "hair",
+  wing: "wing",
+};
+
+/** Per-part colors standing in for a texture that isn't served, see applyCharacterTextures. */
 export interface CharacterModelTint {
   skin: string;
   outfit: string;
@@ -133,7 +155,7 @@ export function instantiateCharacterModel(asset: CharacterModelAsset, tint: Char
     // Materials survive the clone by reference, so tinting one character would
     // otherwise repaint every character sharing the rig.
     const material = (mesh.material as MeshStandardMaterial).clone();
-    const color = tint[material.name as keyof CharacterModelTint];
+    const color = tint[TINT_FOR_MATERIAL[material.name]];
     if (color) material.color.set(color);
     mesh.material = material;
   });

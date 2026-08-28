@@ -1,7 +1,7 @@
 import { CharacterModel, DEFAULT_SKIN_COLOR } from "./character-model.component";
 import { GltfCharacterModel, type CharacterAnimation } from "./gltf-character-model.component";
 import { useCharacterModel } from "../../../utils/models/character-model";
-import { getHairColor } from "../../../config/character-appearance";
+import { DEFAULT_APPEARANCE, getHairColor, type CharacterAppearance } from "../../../config/character-appearance";
 
 /**
  * The Kamael wing -- singular, and the one body part no choice of the
@@ -39,11 +39,10 @@ export interface CharacterBodyProps {
   /** Draped cloak hanging from the shoulder (Kamael, which has no converted body). Defaults to false. */
   hasCape?: boolean;
   /**
-   * Tint for the converted body's hair slot. Defaults to the first palette
-   * entry, which every body was tinted with before hair colour became
-   * selectable; the placeholder body has no hair to tint.
+   * Face/hair/hair-colour choices. Drives which textures the body wears, and
+   * the hair tint underneath them; the placeholder body ignores it entirely.
    */
-  hairColor?: string;
+  appearance?: CharacterAppearance;
   nickname?: string;
   selected?: boolean;
   onSelect?: () => void;
@@ -64,6 +63,10 @@ export interface CharacterBodyProps {
  */
 export function CharacterBody({ modelUrl, animation, animationStartedAt, speed, isDead, ...body }: CharacterBodyProps) {
   const asset = useCharacterModel(modelUrl);
+  const appearance = body.appearance ?? DEFAULT_APPEARANCE;
+  // The rig a body's textures are filed under is the name of the file it came
+  // from -- morc.glb is textured out of textures/morc/.
+  const rig = modelUrl?.split("/").pop()?.replace(/.glb$/i, "");
 
   if (!asset) {
     return <CharacterModel {...body} isDead={isDead} />;
@@ -74,8 +77,10 @@ export function CharacterBody({ modelUrl, animation, animationStartedAt, speed, 
       asset={asset}
       skinColor={body.skinColor ?? DEFAULT_SKIN_COLOR}
       outfitColor={body.color}
-      hairColor={body.hairColor ?? getHairColor(0)}
+      hairColor={getHairColor(appearance.hairColor)}
       wingColor={WING_COLOR}
+      rig={rig}
+      appearance={appearance}
       x={body.x}
       y={body.y}
       z={body.z}

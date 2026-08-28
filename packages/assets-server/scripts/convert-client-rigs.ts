@@ -32,11 +32,11 @@ import * as THREE from "three";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { MATERIAL_SLOTS, type MaterialSlot } from "./models/fbx-body";
 import { readPsa, toThreeClip, type PsaFile, type PsaSequence } from "./models/psa-anim";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, "../assets/highfive/models");
+const OUT_TEXTURE_DIR = path.join(__dirname, "../assets/highfive/textures");
 
 // See convert-unity-models.ts for why the exporter needs this in node.
 (globalThis as { FileReader?: unknown }).FileReader ??= class {
@@ -63,6 +63,30 @@ const ROOT_BONE = "bip01";
  */
 const UNIT_SCALE = 100;
 
+/** The joint carrying most of a piece's weight -- what it hangs from, for a piece that is skinned rather than rigid. */
+function dominantBone(mesh: THREE.SkinnedMesh): number {
+  const skinIndex = mesh.geometry.getAttribute("skinIndex") as THREE.BufferAttribute;
+  const skinWeight = mesh.geometry.getAttribute("skinWeight") as THREE.BufferAttribute;
+  const total = new Map<number, number>();
+  for (let vertex = 0; vertex < skinIndex.count; vertex++) {
+    for (let influence = 0; influence < 4; influence++) {
+      const weight = skinWeight.getComponent(vertex, influence);
+      if (weight <= 0) continue;
+      const bone = skinIndex.getComponent(vertex, influence);
+      total.set(bone, (total.get(bone) ?? 0) + weight);
+    }
+  }
+  let best = -1;
+  let heaviest = 0;
+  for (const [bone, weight] of total) {
+    if (weight > heaviest) {
+      heaviest = weight;
+      best = bone;
+    }
+  }
+  return best;
+}
+
 /** Nearest joint to a point, for placing a piece that arrived without one of its own. */
 function nearestBone(bones: THREE.Bone[], point: THREE.Vector3): THREE.Bone {
   const position = new THREE.Vector3();
@@ -78,11 +102,23 @@ function nearestBone(bones: THREE.Bone[], point: THREE.Vector3): THREE.Bone {
   return nearest;
 }
 
+/**
+ * The parts a body is built from, which is also how the client textures it:
+ * one texture per part per rig. That is why each part stays its own primitive
+ * with a material of its own, instead of the handful of tint groups this used
+ * to merge down to -- a part cannot share a draw call with one that has a
+ * different texture.
+ */
+type BodyPart = "face" | "hair" | "upper" | "lower" | "boots" | "gloves" | "wing";
+
+/** Merge order, nothing more; a rig with no piece for a part gets no primitive for it. */
+const BODY_PARTS: BodyPart[] = ["face", "hair", "upper", "lower", "boots", "gloves", "wing"];
+
 interface PieceSource {
   /** Suffix after the rig name, e.g. "m000_u". */
   suffix: string;
-  /** Which tint the runtime paints it with -- the merged mesh gets one material per slot. */
-  slot: MaterialSlot;
+  /** What it is, which decides both its material and the texture that goes on it. */
+  part: BodyPart;
   /**
    * Alternatives, not additions: pieces sharing a variant name fill the same
    * spot on the body different ways, and only the first one a rig actually
@@ -91,6 +127,13 @@ interface PieceSource {
    * models yet, and merging every candidate puts two haircuts on one head.
    */
   variant?: string;
+  /**
+   * Build the body on this piece's skeleton. Defaults to the rig's own first
+   * piece, which is right whenever the rig has a body of its own; a body
+   * borrowed from another rig has to lead instead, because it is the one part
+   * whose skinning has to stay exact -- see FShaman.
+   */
+  primary?: boolean;
   /** Package and rig to take it from -- not always this rig's own, see FShaman. */
   from?: { pkg: string; rig: string };
 }
@@ -102,6 +145,13 @@ interface ClientRig {
   pkg: string;
   /** MeshAnimation object with its sequences. */
   animObject: string;
+  /**
+   * Further MeshAnimation objects covering pieces that move on a skeleton of
+   * their own, whose sequences are named exactly like the body's -- the
+   * client plays them alongside it, and so does this, by merging their tracks
+   * into the clip of the same name.
+   */
+  extraAnimObjects?: string[];
   /** Replaces BODY_PIECES outright, for a body assembled from more than one package -- see FShaman. */
   pieces?: PieceSource[];
   /** Added on top of whichever list applies, for a part only this rig has. */
@@ -110,13 +160,13 @@ interface ClientRig {
 
 /** The pieces a body is made of, in the same slots the Unity path uses. */
 const BODY_PIECES: PieceSource[] = [
-  { suffix: "m000_u", slot: "outfit" },
-  { suffix: "m000_l", slot: "outfit" },
-  { suffix: "m000_b", slot: "outfit" },
-  { suffix: "m000_g", slot: "skin" },
-  { suffix: "m000_f", slot: "skin" },
-  { suffix: "m000_m00_bh", slot: "hair", variant: "hair" },
-  { suffix: "m000_m00_ah", slot: "hair", variant: "hair" },
+  { suffix: "m000_u", part: "upper" },
+  { suffix: "m000_l", part: "lower" },
+  { suffix: "m000_b", part: "boots" },
+  { suffix: "m000_g", part: "gloves" },
+  { suffix: "m000_f", part: "face" },
+  { suffix: "m000_m00_bh", part: "hair", variant: "hair" },
+  { suffix: "m000_m00_ah", part: "hair", variant: "hair" },
 ];
 
 /**
@@ -128,7 +178,7 @@ const BODY_PIECES: PieceSource[] = [
  *
  * m000 is the starting set, which is the only one this pipeline converts.
  */
-const WING: PieceSource[] = [{ suffix: "m000_w_ad00", slot: "wing" }];
+const WING: PieceSource[] = [{ suffix: "m000_w_ad00", part: "wing" }];
 
 const RIGS: ClientRig[] = [
   { rig: "MOrc", pkg: "Orc", animObject: "MOrc_anim" },
@@ -136,28 +186,51 @@ const RIGS: ClientRig[] = [
   { rig: "MShaman", pkg: "Shaman", animObject: "MShaman_anim" },
   // The female orc mystic is the female orc from the neck down -- the Shaman
   // package ships her face and hair and nothing else, so the body comes from
-  // FOrc. Measured rather than assumed: her face and hair meshes differ from
-  // FOrc's (234 vs 236 and 212 vs 100 vertices, different geometry), so they
-  // are hers and the rest is not.
+  // FOrc, and leads, so that the skinning of the part with the most of it
+  // keeps the rest pose it was weighted against.
+  //
+  // Her face is hers: a different mesh from FOrc's (234 vs 236 vertices), and
+  // the package has the three textures to go with it. Her hairstyle is not,
+  // though it is also a mesh of her own -- the package ships no texture for
+  // it, and there is nothing to fall back on, since the _bh textures beside
+  // it are cut for a different mesh and would land on hers with the wrong
+  // UVs. FOrc's hair comes with FOrc's, and a hairstyle is not what tells a
+  // mystic apart.
   {
     rig: "FShaman",
     pkg: "Shaman",
     animObject: "FShaman_anim",
     pieces: [
-      { suffix: "m000_u", slot: "outfit", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_l", slot: "outfit", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_b", slot: "outfit", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_g", slot: "skin", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_f", slot: "skin" },
-      { suffix: "m000_m00_ah", slot: "hair" },
+      { suffix: "m000_u", part: "upper", from: { pkg: "Orc", rig: "FOrc" }, primary: true },
+      { suffix: "m000_l", part: "lower", from: { pkg: "Orc", rig: "FOrc" } },
+      { suffix: "m000_b", part: "boots", from: { pkg: "Orc", rig: "FOrc" } },
+      { suffix: "m000_g", part: "gloves", from: { pkg: "Orc", rig: "FOrc" } },
+      { suffix: "m000_f", part: "face" },
+      { suffix: "m000_m00_bh", part: "hair", from: { pkg: "Orc", rig: "FOrc" } },
     ],
   },
   // Wings are a Kamael part and nothing else has one. They come as a mesh
   // with an eighteen-joint skeleton of its own (Main_wing and Bone13..Bone46,
   // sharing no name with the body), which is why assemble() has to work out
   // where a foreign skeleton attaches -- see adoptBone.
-  { rig: "MKamael", pkg: "Kamael", animObject: "MKamael_anim", extraPieces: WING },
-  { rig: "FKamael", pkg: "Kamael", animObject: "FKamael_anim", extraPieces: WING },
+  // The wing has both a skeleton and an animation set of its own, sequence
+  // for sequence with the body's. Without them it stays in its reference
+  // pose, which is spread wide open -- in the game a Kamael standing still
+  // wears it folded down the back.
+  {
+    rig: "MKamael",
+    pkg: "Kamael",
+    animObject: "MKamael_anim",
+    extraAnimObjects: ["Wing_MKamael"],
+    extraPieces: WING,
+  },
+  {
+    rig: "FKamael",
+    pkg: "Kamael",
+    animObject: "FKamael_anim",
+    extraAnimObjects: ["Wing_FKamael"],
+    extraPieces: WING,
+  },
 ];
 
 /**
@@ -256,6 +329,8 @@ interface AssembledBody {
   adopted: string[];
   /** Pieces that arrived unskinned and were bound to a joint, as "piece -> bone". */
   reattached: string[];
+  /** Pieces moved onto this skeleton from another rig's, as "piece by distance". */
+  aligned: string[];
 }
 
 /**
@@ -304,7 +379,7 @@ function rigidAttachment(mesh: THREE.SkinnedMesh): { root: number; bone: THREE.B
  * pieces before this pipeline was written), so the first piece's skeleton is
  * the rig's and the rest contribute only their meshes.
  */
-function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string }[]): AssembledBody {
+function assemble(pieces: { group: THREE.Group; part: BodyPart; name: string }[]): AssembledBody {
   // All of them, not just the first: a piece whose mesh has more than one
   // material arrives from GLTFLoader as a group of that many skinned meshes
   // (the Kamael torso is two), and taking one would leave the rest in the
@@ -333,7 +408,13 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
   const boneKey = (name: string) => THREE.PropertyBinding.sanitizeNodeName(name).toLowerCase();
   const boneIndexByName = new Map(bones.map((bone, index) => [boneKey(bone.name), index]));
   const adopted: string[] = [];
+  /** Indices of the joints above, which unlike matched ones sit wherever their new parent put them. */
+  const adoptedIndices = new Set<number>();
+  // Whatever holds the body's own root joint, which is the frame every
+  // skeleton in the file is expressed in.
+  const bodySpace = (bones.find((bone) => !(bone.parent as THREE.Bone | null)?.isBone) ?? bones[0]).parent as THREE.Object3D;
   const reattached: string[] = [];
+  const aligned: string[] = [];
 
   /** A joint the primary skeleton doesn't have -- hair strands, and the weapon attachment points a hairstyle piece drags along. */
   function adoptBone(pieceBone: THREE.Bone): number {
@@ -342,14 +423,17 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
     if (existing !== undefined) return existing;
 
     const pieceParent = pieceBone.parent as THREE.Bone | null;
-    // A piece rigged on a skeleton of its own -- the Kamael wings -- has a
-    // root joint whose parent is the mesh rather than another joint. Hanging
-    // that off the body's own root would strap the wings to the pelvis; the
-    // joint they belong to is the one they rest against, which for the wings
-    // is the top of the spine they are modelled onto.
-    const parent = pieceParent?.isBone
-      ? bones[adoptBone(pieceParent)]
-      : nearestBone(bones, new THREE.Vector3().setFromMatrixPosition(pieceBone.matrixWorld));
+    // A piece rigged on a skeleton of its own -- the Kamael wing -- has a
+    // root joint whose parent is the mesh rather than another joint, and its
+    // transforms are in the body's own space: the wing's animation puts that
+    // joint 36 units up, which is a height above the character's feet, not an
+    // offset from anything. So it goes beside the body's root joint rather
+    // than under a joint, and its own animation moves it from there, the way
+    // the client attaches it. Hanging it off a joint instead adds that
+    // joint's transform to every frame -- invisible in the reference pose,
+    // where the bind matrices cancel it out, and a wing thrown wide open the
+    // moment anything plays.
+    const parent = pieceParent?.isBone ? bones[adoptBone(pieceParent)] : bodySpace;
     const clone = pieceBone.clone(false);
     clone.name = name;
     parent.add(clone);
@@ -359,11 +443,12 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
     boneInverses.push(new THREE.Matrix4().copy(clone.matrixWorld).invert());
     boneIndexByName.set(boneKey(name), bones.length - 1);
     adopted.push(name);
+    adoptedIndices.add(bones.length - 1);
     return bones.length - 1;
   }
 
   const geometries: THREE.BufferGeometry[] = [];
-  const slots: MaterialSlot[] = [];
+  const parts: BodyPart[] = [];
   for (const piece of pieces) {
     piece.group.updateMatrixWorld(true);
     for (const mesh of meshesOf(piece.group)) {
@@ -380,6 +465,28 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
       remap[rigid.root] = adoptBone(rigid.bone);
       reattached.push(`${piece.name} -> ${THREE.PropertyBinding.sanitizeNodeName(rigid.bone.name)}`);
     }
+    // A piece off another rig's skeleton sits where that skeleton put it,
+    // which is not where this one's joints are: the female orc mystic wears a
+    // female orc body but her head is the shaman's, and the shaman's head
+    // joint rests 0.1 units lower, which is exactly how far her face sank
+    // into her shoulders. Move it by the difference at the joint it hangs
+    // from -- zero for every piece that shares the skeleton, which is most.
+    const held = rigid ? mesh.skeleton.bones.indexOf(rigid.bone) : dominantBone(mesh);
+    const anchor = held < 0 ? -1 : rigid ? adoptBone(rigid.bone) : remap[held];
+    // Only against a joint this skeleton already had. An adopted one is a
+    // copy of the piece's own, re-parented onto whatever it rests against, so
+    // it sits wherever that put it -- measuring the piece against that would
+    // be measuring it against itself and moving it by the error.
+    if (anchor >= 0 && !adoptedIndices.has(anchor)) {
+      const shift = new THREE.Vector3()
+        .setFromMatrixPosition(bones[anchor].matrixWorld)
+        .sub(new THREE.Vector3().setFromMatrixPosition(mesh.skeleton.bones[held].matrixWorld));
+      if (shift.length() > 0.001) {
+        geometry.translate(shift.x, shift.y, shift.z);
+        aligned.push(`${piece.name} by ${(shift.length() * UNIT_SCALE).toFixed(1)}`);
+      }
+    }
+
     const skinIndex = (geometry.getAttribute("skinIndex") as THREE.BufferAttribute).array;
     for (let i = 0; i < skinIndex.length; i++) skinIndex[i] = remap[skinIndex[i]];
 
@@ -391,30 +498,30 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
       }
     }
       geometries.push(geometry);
-      slots.push(piece.slot);
+      parts.push(piece.part);
     }
   }
 
-  // Per tint slot first, then the slots together with groups -- glTF turns
-  // every group into its own primitive, so this is the difference between one
-  // draw call per body and one per body part. It is also what gives the
-  // runtime the three materials it paints a character by (see
-  // instantiateCharacterModel, which looks them up by name).
-  const slotGeometries = MATERIAL_SLOTS.map((slot) => {
-    const forSlot = geometries.filter((_, index) => slots[index] === slot);
-    return forSlot.length > 0 ? mergeGeometries(forSlot, false) : null;
+  // Per part first, then the parts together with groups -- glTF turns every
+  // group into its own primitive, so a body comes out as one draw call per
+  // part. That is the floor: a part carries its own texture, so it cannot
+  // share a material with another. The names are what the runtime finds them
+  // by (see instantiateCharacterModel).
+  const partGeometries = BODY_PARTS.map((part) => {
+    const forPart = geometries.filter((_, index) => parts[index] === part);
+    return forPart.length > 0 ? mergeGeometries(forPart, false) : null;
   }).filter((geometry): geometry is THREE.BufferGeometry => geometry !== null);
 
-  const merged = mergeGeometries(slotGeometries, true);
+  const merged = mergeGeometries(partGeometries, true);
   if (!merged) throw new Error("Body pieces have incompatible geometry attributes");
 
   primary.geometry = merged;
   // Rebind: adopting joints changed the array the skin indices point into.
   primary.bind(new THREE.Skeleton(bones, boneInverses), primary.bindMatrix);
-  primary.material = MATERIAL_SLOTS.filter((slot) => slots.includes(slot)).map(
-    (slot) =>
+  primary.material = BODY_PARTS.filter((part) => parts.includes(part)).map(
+    (part) =>
       new THREE.MeshStandardMaterial({
-        name: slot,
+        name: part,
         color: 0xffffff,
         roughness: 0.75,
         // A wing is a single sheet of triangles, not a closed volume, and the
@@ -422,7 +529,7 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
         // is its back -- drawn one-sided it disappears except for a sliver at
         // the shoulder. Everything else on a body is closed and keeps the
         // cheaper single-sided draw.
-        side: slot === "wing" ? THREE.DoubleSide : THREE.FrontSide,
+        side: part === "wing" ? THREE.DoubleSide : THREE.FrontSide,
       })
   );
   primary.name = "body";
@@ -437,12 +544,129 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot; name: string
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   const boneNames = new Set(bones.map((bone) => THREE.PropertyBinding.sanitizeNodeName(bone.name)));
-  return { root, boneNames, height: (box.max.y - box.min.y) * UNIT_SCALE, adopted, reattached };
+  return { root, boneNames, height: (box.max.y - box.min.y) * UNIT_SCALE, adopted, reattached, aligned };
 }
 
-async function convertRig(umodel: string, client: string, workDir: string, source: ClientRig): Promise<void> {
+/**
+ * Where a part's texture lives in the rig's own SysTextures package, and how
+ * many of it there are.
+ *
+ * The client names them <rig>_m000_t<variant>_<part>, and the variant counts
+ * are not arbitrary: three faces and four hair colours is exactly what
+ * character creation offers, because in retail both of those choices are a
+ * texture swap on one mesh rather than a different mesh. Parts that do not
+ * vary carry the t1000 id, which is the starting body's own. Some are
+ * published as _ori beside an _sp specular map this pipeline has no use for,
+ * so each part lists what to try.
+ */
+/**
+ * A texture's name, built from the mesh's own: the client puts the texture id
+ * where the set id sits in the mesh name, so MOrc_m000_m00_bh is dressed by
+ * MOrc_m000_t00_m00_bh. Deriving it rather than spelling out a pattern per
+ * part is what keeps a piece and its texture in step -- the female orc mystic
+ * wears the _ah hairstyle, and the _bh texture would land on it with the
+ * wrong UVs.
+ */
+function textureName(rig: string, suffix: string, id: string): string {
+  const cut = suffix.indexOf("_");
+  return `${rig}_${suffix.slice(0, cut)}_t${id}_${suffix.slice(cut + 1)}`;
+}
+
+/** The starting body's own texture id, for the parts that come in one flavour. */
+const PLAIN = "1000";
+
+const PART_TEXTURES: Record<
+  BodyPart,
+  { variants: number; candidates: (rig: string, variant: number, suffix: string) => string[] }
+> = {
+  face: { variants: 3, candidates: (rig, v, suffix) => [textureName(rig, suffix, `0${v}`)] },
+  hair: {
+    variants: 4,
+    candidates: (rig, v, suffix) => [textureName(rig, suffix, `0${v}`), `${textureName(rig, suffix, `0${v}`)}_ori`],
+  },
+  upper: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
+  lower: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
+  boots: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
+  gloves: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
+  // The wing is the exception: its mesh is an "ad00" attachment while its
+  // texture is filed plainly under w.
+  wing: { variants: 1, candidates: (rig) => [`${rig}_m000_t00_w_ori`, `${rig}_m000_t00_w`] },
+};
+
+/** How many variants of each part a rig actually ships, which is what the runtime reads to build its URLs. */
+export type TextureManifest = Record<string, Partial<Record<BodyPart, number>>>;
+
+/**
+ * Pulls every texture a body needs out of the client, as PNG.
+ *
+ * A part is taken from the package of the rig the *piece* came from, not the
+ * rig being built: the female orc mystic wears a female orc body, and it has
+ * to be textured like one.
+ */
+async function exportTextures(
+  umodel: string,
+  client: string,
+  workDir: string,
+  rig: string,
+  pieces: { part: BodyPart; rig: string; suffix: string }[]
+): Promise<Partial<Record<BodyPart, number>>> {
+  const outDir = path.join(OUT_TEXTURE_DIR, rig.toLowerCase());
+  await fs.promises.mkdir(outDir, { recursive: true });
+  const counts: Partial<Record<BodyPart, number>> = {};
+
+  for (const piece of new Map(pieces.map((piece) => [piece.part, piece])).values()) {
+    const { variants, candidates } = PART_TEXTURES[piece.part];
+    let written = 0;
+    for (let variant = 0; variant < variants; variant++) {
+      let source: string | undefined;
+      for (const name of candidates(piece.rig, variant, piece.suffix)) {
+        const file = path.join(workDir, "textures", piece.rig, "Texture", `${name}.png`);
+        if (!fs.existsSync(file)) {
+          try {
+            runUmodel(umodel, client, [
+              "-export",
+              "-png",
+              `-out=${path.join(workDir, "textures")}`,
+              `SysTextures\\${piece.rig}.utx`,
+              name,
+            ]);
+          } catch {
+            continue; // a name this rig does not use
+          }
+        }
+        if (fs.existsSync(file)) {
+          source = file;
+          break;
+        }
+      }
+      // Variants run out rather than skip: a rig with two faces has t00 and
+      // t01, never t00 and t02, so the first gap is the end of the list.
+      if (!source) break;
+      await fs.promises.copyFile(source, path.join(outDir, `${piece.part}-${variant}.png`));
+      written++;
+    }
+    if (written > 0) counts[piece.part] = written;
+  }
+
+  return counts;
+}
+
+async function convertRig(
+  umodel: string,
+  client: string,
+  workDir: string,
+  source: ClientRig
+): Promise<Partial<Record<BodyPart, number>>> {
   const pieceSources: PieceSource[] = [...(source.pieces ?? BODY_PIECES), ...(source.extraPieces ?? [])];
-  const exported: { file: string; slot: MaterialSlot; own: boolean }[] = [];
+  const exported: {
+    file: string;
+    part: BodyPart;
+    own: boolean;
+    rig: string;
+    pkg: string;
+    suffix: string;
+    primary?: boolean;
+  }[] = [];
 
   const filled = new Set<string>();
   for (const piece of pieceSources) {
@@ -459,23 +683,33 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
       }
     }
     if (!fs.existsSync(file)) continue;
-    exported.push({ file, slot: piece.slot, own: from.pkg === source.pkg });
+    exported.push({
+      file,
+      part: piece.part,
+      own: from.pkg === source.pkg,
+      rig: from.rig,
+      pkg: from.pkg,
+      suffix: piece.suffix,
+      primary: piece.primary,
+    });
     if (piece.variant) filled.add(piece.variant);
   }
   if (exported.length === 0) throw new Error(`No body pieces found for ${source.rig}`);
 
   // The rig's own pieces first, so the skeleton everything else is merged
-  // onto is the one its animations were authored against. It matters for a
-  // body assembled from two packages: the shaman rigs carry 109 bones where
-  // the orc body they borrow has 78, and leading with the borrowed one would
-  // make the animated skeleton the smaller, wrong one -- every joint the
-  // clips know but the body doesn't would arrive as a duplicate nothing
-  // drives.
-  const ordered = [...exported].sort((a, b) => Number(b.own) - Number(a.own));
+  // onto is the one its animations were authored against -- unless a piece
+  // asks to lead. A body borrowed from another rig has to: it is the largest
+  // and most finely skinned part, and every joint of it has to keep the rest
+  // position it was weighted against, while the head pieces riding on it are
+  // held by one joint each and can be moved onto whatever that joint turns
+  // out to be (see the alignment in assemble).
+  const ordered = [...exported].sort(
+    (a, b) => Number(b.primary ?? false) - Number(a.primary ?? false) || Number(b.own) - Number(a.own)
+  );
   const pieces = await Promise.all(
     ordered.map(async (piece) => ({
       group: await loadPiece(piece.file),
-      slot: piece.slot,
+      part: piece.part,
       name: path.basename(piece.file, ".gltf"),
     }))
   );
@@ -489,26 +723,44 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
   const psa: PsaFile = readPsa(psaFile);
   const bySequence = new Map(psa.sequences.map((sequence) => [sequence.name.toLowerCase(), sequence]));
 
+  const extraAnims = (source.extraAnimObjects ?? []).map((object) => {
+    const file = path.join(psaDir, source.pkg, "MeshAnimation", `${object}.psa`);
+    if (!fs.existsSync(file)) {
+      runUmodel(umodel, client, ["-export", `-out=${psaDir}`, `Animations\\${source.pkg}.ukx`, object]);
+    }
+    const loaded = readPsa(file);
+    return { psa: loaded, bySequence: new Map(loaded.sequences.map((s) => [s.name.toLowerCase(), s])) };
+  });
+
   const clips: THREE.AnimationClip[] = [];
   const missing: string[] = [];
   for (const wanted of CLIPS) {
     let sequence: PsaSequence | undefined;
+    let taken: string | undefined;
     for (const candidate of wanted.candidates) {
       sequence = bySequence.get(`${candidate}_${source.rig}`.toLowerCase());
-      if (sequence && sequence.rate > 0) break;
+      if (sequence && sequence.rate > 0) {
+        taken = candidate;
+        break;
+      }
       sequence = undefined;
     }
-    if (!sequence) {
+    if (!sequence || !taken) {
       missing.push(wanted.name);
       continue;
     }
-    clips.push(
-      toThreeClip(psa, sequence, wanted.name, {
-        boneNames: body.boneNames,
-        rootBone: ROOT_BONE,
-        inPlace: wanted.inPlace,
-      })
-    );
+
+    const options = { boneNames: body.boneNames, rootBone: ROOT_BONE, inPlace: wanted.inPlace };
+    const clip = toThreeClip(psa, sequence, wanted.name, options);
+    // The same sequence off the other skeletons, appended to the same clip:
+    // three plays one clip per state over the whole body, so a piece with an
+    // animation of its own has to ride inside it.
+    for (const extra of extraAnims) {
+      const alongside = extra.bySequence.get(`${taken}_${source.rig}`.toLowerCase());
+      if (!alongside || alongside.rate <= 0) continue;
+      clip.tracks.push(...toThreeClip(extra.psa, alongside, wanted.name, options).tracks);
+    }
+    clips.push(clip);
   }
 
   // On the node rather than baked into the vertices, so it reaches the bones
@@ -523,13 +775,23 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
 
   const outFile = path.join(OUT_DIR, `${source.rig.toLowerCase()}.glb`);
   await fs.promises.writeFile(outFile, Buffer.from(glb));
+
+  const textures = await exportTextures(umodel, client, workDir, source.rig, exported);
+  const untextured = BODY_PARTS.filter((part) => exported.some((piece) => piece.part === part) && !textures[part]);
   console.log(
     `  ${source.rig}: ${exported.length} pieces, ${clips.length} clips, ` +
       `${Math.round(body.height)} units tall, ${Math.round(glb.byteLength / 1024)} KB -> ${path.basename(outFile)}` +
       (body.adopted.length ? `  (+${body.adopted.length} joints from other pieces)` : "") +
       (body.reattached.length ? `  (attached: ${body.reattached.join(", ")})` : "") +
-      (missing.length ? `  (no sequence for ${missing.join("/")})` : "")
+      (body.aligned.length ? `  (aligned: ${body.aligned.join(", ")})` : "") +
+      (missing.length ? `  (no sequence for ${missing.join("/")})` : "") +
+      `  (textures: ${BODY_PARTS.filter((part) => textures[part])
+        .map((part) => `${part}x${textures[part]}`)
+        .join(" ")})` +
+      (untextured.length ? `  (no texture for ${untextured.join("/")})` : "")
   );
+
+  return textures;
 }
 
 async function main(): Promise<void> {
@@ -556,9 +818,23 @@ async function main(): Promise<void> {
   const workDir = readArg("--work") ?? (await fs.promises.mkdtemp(path.join(os.tmpdir(), "l2-rigs-")));
   console.log(`Converting ${rigs.length} rig(s) into ${OUT_DIR}`);
 
-  for (const rig of rigs) {
-    await convertRig(umodel, client, workDir, rig);
+  // Merged into whatever is already there, so converting one rig with --only
+  // does not drop the others out of the index.
+  const indexFile = path.join(OUT_TEXTURE_DIR, "index.json");
+  let manifest: TextureManifest = {};
+  try {
+    manifest = JSON.parse(await fs.promises.readFile(indexFile, "utf8")) as TextureManifest;
+  } catch {
+    manifest = {};
   }
+
+  for (const rig of rigs) {
+    manifest[rig.rig.toLowerCase()] = await convertRig(umodel, client, workDir, rig);
+  }
+
+  await fs.promises.mkdir(OUT_TEXTURE_DIR, { recursive: true });
+  await fs.promises.writeFile(indexFile, JSON.stringify(manifest, null, 2) + "\n");
+  console.log(`Texture index: ${indexFile}`);
 
   if (!readArg("--work")) await fs.promises.rm(workDir, { recursive: true, force: true });
 }
