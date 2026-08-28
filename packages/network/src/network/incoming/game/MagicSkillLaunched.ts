@@ -1,12 +1,15 @@
 import GameClientPacket from "./GameClientPacket";
 
 export default class MagicSkillLaunched extends GameClientPacket {
+  ActiveCharObjId!: number;
+  SkillId!: number;
+
   // @Override
   readImpl(): boolean {
     const _id = this.readC();
 
-    const _charObjId = this.readD();
-    const _skillId = this.readD();
+    this.ActiveCharObjId = this.readD();
+    this.SkillId = this.readD();
     const _skillLevel = this.readD();
 
     const _targetsNum = this.readD();

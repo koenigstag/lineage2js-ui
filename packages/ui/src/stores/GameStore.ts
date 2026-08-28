@@ -22,6 +22,8 @@ import {
   type Client,
   type L2User,
   type EGetItem,
+  type EMagicSkillUse,
+  type EMagicSkillLaunched,
   type ESystemMessage,
   type ECreatureSay,
   type EDie,
@@ -73,6 +75,12 @@ export interface WorldCreatureSnapshot {
    * GameStore.notePickup).
    */
   isPickingUp: boolean;
+  /**
+   * Mid cast, for as long as the server said the cast takes -- MagicSkillUse
+   * carries that duration, so unlike isPickingUp above this window isn't the
+   * client's guess (see GameStore.noteCast).
+   */
+  isCasting: boolean;
   /**
    * Walking vs running (CharInfo/NpcInfo/UserInfo, kept current by
    * ChangeMoveType), which is also what L2Creature.CurrentSpeed picks its
@@ -664,7 +672,11 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
 }
 
 /** Similar to targetSnapshotFromCreature, but for the world scene's WorldCreatureSnapshot (position, not stats) -- name resolution differs, see the `name` field's own comment below. */
-function worldCreatureSnapshotFromCreature(creature: L2Creature, isPickingUp: boolean): WorldCreatureSnapshot {
+function worldCreatureSnapshotFromCreature(
+  creature: L2Creature,
+  isPickingUp: boolean,
+  isCasting: boolean
+): WorldCreatureSnapshot {
   const isAttackable = creature instanceof L2Mob;
   const kind: WorldCreatureSnapshot["kind"] = creature instanceof L2Character
     ? "player"
@@ -688,6 +700,7 @@ function worldCreatureSnapshotFromCreature(creature: L2Creature, isPickingUp: bo
     isSitting: creature.IsSitting,
     isRunning: creature.IsRunning,
     isPickingUp,
+    isCasting,
     race: kind === "player" ? toLocalRace(creature) : getNpcRace(creature.Id),
     baseClass: kind === "player" ? toLocalBaseClass(creature) : undefined,
     sex: kind === "player" ? toLocalSex(creature) : undefined,
@@ -970,11 +983,20 @@ export class GameStore {
   // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
   pickingUpUntil = new Map<number, number>();
 
+  /**
+   * creature objectId -> Date.now() when its cast is due to end. Same shape
+   * as pickingUpUntil and non-reactive for the same reason, but the deadline
+   * isn't invented here: MagicSkillUse carries the server's own cast time.
+   */
+  // Not private only so makeAutoObservable below can opt it out; nothing outside reads it.
+  castingUntil = new Map<number, number>();
+
   constructor() {
     makeAutoObservable(this, {
       client: false,
       pendingHotbarDeletes: false,
       pickingUpUntil: false,
+      castingUntil: false,
       moveHeartbeatInterval: false,
       moveHeartbeatChar: false,
       netPingInterval: false,
@@ -1231,6 +1253,42 @@ export class GameStore {
 
   private isPickingUp(creatureId: number): boolean {
     return (this.pickingUpUntil.get(creatureId) ?? 0) > Date.now();
+  }
+
+  /**
+   * Starts the casting window for a creature, off the server's own "X is
+   * casting Y" broadcast (MagicSkillUse), so other players' casts animate
+   * too.
+   *
+   * Unlike the pick-up stoop this deadline is the server's: the packet's
+   * HitTime is how long the cast takes, so the body holds the pose for
+   * exactly as long as the character is actually casting -- a slower caster
+   * lingers, a hasted one snaps out of it, and neither needs a number
+   * invented here. An instant skill (HitTime 0) opens no window at all.
+   *
+   * MagicSkillUse covers physical skills as well as spells, so a sword
+   * technique plays the cast motion too. That's the retail client's own
+   * behaviour for the cast bar, and telling the two apart needs the skill's
+   * own datapack entry, which nothing reads here yet.
+   */
+  private noteCast(creatureId: number, hitTime: number) {
+    if (hitTime <= 0) {
+      return;
+    }
+    const now = Date.now();
+    for (const [id, until] of this.castingUntil) {
+      if (until <= now) this.castingUntil.delete(id);
+    }
+    this.castingUntil.set(creatureId, now + hitTime);
+  }
+
+  /** Ends it early, on the server's own "the skill went off" (MagicSkillLaunched). */
+  private noteCastFinished(creatureId: number) {
+    this.castingUntil.delete(creatureId);
+  }
+
+  private isCasting(creatureId: number): boolean {
+    return (this.castingUntil.get(creatureId) ?? 0) > Date.now();
   }
 
   /** Only "Town" is offered -- clan hall/castle/fixed points require ownership data this client doesn't model yet. */
@@ -1994,7 +2052,14 @@ export class GameStore {
       // as everyone else. Find it back via GameStore.me as the map key.
       const next = new Map<number, WorldCreatureSnapshot>();
       for (const creature of client.CreaturesList) {
-        next.set(creature.ObjectId, worldCreatureSnapshotFromCreature(creature, this.isPickingUp(creature.ObjectId)));
+        next.set(
+          creature.ObjectId,
+          worldCreatureSnapshotFromCreature(
+            creature,
+            this.isPickingUp(creature.ObjectId),
+            this.isCasting(creature.ObjectId)
+          )
+        );
       }
       this.creatures = next;
     });
@@ -2031,6 +2096,18 @@ export class GameStore {
     // would be the visible part.
     client.on("GetItem", (e: EGetItem) => {
       runInAction(() => this.notePickup(e.data.creatureId));
+      syncCreatures();
+    });
+
+    // Same immediacy for casting: waiting on the poll would eat the first
+    // frames of a cast that can be under a second to begin with.
+    client.on("MagicSkillUse", (e: EMagicSkillUse) => {
+      runInAction(() => this.noteCast(e.data.creatureId, e.data.hitTime));
+      syncCreatures();
+    });
+
+    client.on("MagicSkillLaunched", (e: EMagicSkillLaunched) => {
+      runInAction(() => this.noteCastFinished(e.data.creatureId));
       syncCreatures();
     });
 

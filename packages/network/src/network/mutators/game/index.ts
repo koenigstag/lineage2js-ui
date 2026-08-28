@@ -55,6 +55,8 @@ import ItemListMutator from "./ItemListMutator";
 import ItemList from "../../incoming/game/ItemList";
 import KeyPacketMutator from "./KeyPacketMutator";
 import KeyPacket from "../../incoming/game/KeyPacket";
+import MagicSkillLaunchedMutator from "./MagicSkillLaunchedMutator";
+import MagicSkillLaunched from "../../incoming/game/MagicSkillLaunched";
 import MagicSkillUseMutator from "./MagicSkillUseMutator";
 import MagicSkillUse from "../../incoming/game/MagicSkillUse";
 import MoveToLocationMutator from "./MoveToLocationMutator";
@@ -161,6 +163,7 @@ export default [
   [InventoryUpdateMutator.prototype, InventoryUpdate],
   [ItemListMutator.prototype, ItemList],
   [KeyPacketMutator.prototype, KeyPacket],
+  [MagicSkillLaunchedMutator.prototype, MagicSkillLaunched],
   [MagicSkillUseMutator.prototype, MagicSkillUse],
   [MoveToLocationMutator.prototype, MoveToLocation],
   [MoveToPawnMutator.prototype, MoveToPawn],

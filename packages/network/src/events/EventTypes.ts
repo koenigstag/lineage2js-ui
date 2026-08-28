@@ -110,6 +110,17 @@ export declare type EGetItem = {
   data: { creatureId: number; itemId: number };
   once: boolean;
 };
+export declare type EMagicSkillUse = {
+  type: string;
+  /** hitTime is the server's own cast duration in ms, straight off the packet. */
+  data: { creatureId: number; skillId: number; hitTime: number };
+  once: boolean;
+};
+export declare type EMagicSkillLaunched = {
+  type: string;
+  data: { creatureId: number; skillId: number };
+  once: boolean;
+};
 export declare type ERevive = {
   type: string;
   data: { creature: L2Creature };
@@ -230,6 +241,14 @@ export declare type OnPartyMemberPosition = [
 ];
 export declare type OnCharInfo = ["CharInfo", (e: ECharInfo) => void];
 export declare type OnGetItem = ["GetItem", (e: EGetItem) => void];
+export declare type OnMagicSkillUse = [
+  "MagicSkillUse",
+  (e: EMagicSkillUse) => void
+];
+export declare type OnMagicSkillLaunched = [
+  "MagicSkillLaunched",
+  (e: EMagicSkillLaunched) => void
+];
 export declare type OnRevive = ["Revive", (e: ERevive) => void];
 export declare type OnServerClose = [
   "ServerClose",
@@ -276,6 +295,8 @@ export declare type EventHandlerType =
   | OnPartyMemberPosition
   | OnCharInfo
   | OnGetItem
+  | OnMagicSkillUse
+  | OnMagicSkillLaunched
   | OnRevive
   | OnServerClose
   | OnConfirmDlg

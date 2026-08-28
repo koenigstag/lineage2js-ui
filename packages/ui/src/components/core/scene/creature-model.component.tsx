@@ -39,19 +39,22 @@ const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
 
 /**
  * Dead creatures hold the end of the fall, seated ones the seated pose,
- * whoever just picked something up stoops for it, and the rest idle unless
- * they're on a move segment -- where walk vs run comes
- * from the creature's own move type (CharInfo/NpcInfo/UserInfo, kept current
- * by ChangeMoveType), the same flag the server picks its speed off, rather
- * than from guessing at that speed.
+ * whoever is casting holds the cast, whoever just picked something up stoops
+ * for it, and the rest idle unless they're on a move segment -- where walk vs
+ * run comes from the creature's own move type (CharInfo/NpcInfo/UserInfo,
+ * kept current by ChangeMoveType), the same flag the server picks its speed
+ * off, rather than from guessing at that speed.
  */
 function animationFor(creature: WorldCreatureSnapshot): CharacterAnimation {
   if (creature.isDead) return "death";
   if (creature.isSitting) return "sit";
-  // Movement outranks the pick-up stoop: the server is authoritative about
-  // where a creature is going, while the stoop is a client-side window that
-  // can overlap the next move order.
+  // Movement outranks both gestures below: the server is authoritative about
+  // where a creature is going, and a creature that has started moving has
+  // stopped casting or stooping whatever its window still says.
   if (creature.isMoving) return creature.isRunning ? "run" : "walk";
+  // Cast before pick-up: its window is the server's own cast time
+  // (MagicSkillUse), the stoop's is the client's guess.
+  if (creature.isCasting) return "cast";
   if (creature.isPickingUp) return "pickup";
   return "idle";
 }
