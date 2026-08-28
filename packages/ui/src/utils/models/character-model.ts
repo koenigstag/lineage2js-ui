@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { AnimationClip, Group, Mesh, MeshStandardMaterial } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinnedScene } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { versionedModelUrl } from "../../config/character-models";
 
 export interface CharacterModelAsset {
   scene: Group;
@@ -60,9 +61,14 @@ export function useCharacterModel(url: string | undefined): CharacterModelAsset 
       return;
     }
     let current = true;
-    void loadCharacterModel(url).then((loaded) => {
-      if (current) setAsset(loaded);
-    });
+    // Through the version map first (see versionedModelUrl): the URL a body
+    // is actually fetched from carries the token of the file behind it, so a
+    // re-converted model is never served from a stale cache entry.
+    void versionedModelUrl(url)
+      .then(loadCharacterModel)
+      .then((loaded) => {
+        if (current) setAsset(loaded);
+      });
     return () => {
       current = false;
     };

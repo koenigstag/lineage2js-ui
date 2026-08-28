@@ -79,6 +79,41 @@ export function getCharacterModelUrl(variant: PlayerVariant): string | undefined
 }
 
 /**
+ * file name -> a token the assets server derives from that file's size and
+ * mtime, fetched once per session. Hanging it off a model's URL is what lets
+ * the bodies be cached properly: a re-converted one arrives under a URL the
+ * browser has never seen, instead of the old one being served from cache for
+ * as long as its max-age says.
+ *
+ * Resolves to null when the server is older than the endpoint, or isn't
+ * there at all -- in which case URLs stay bare and caching behaves as it did
+ * before.
+ */
+let versionsRequest: Promise<Record<string, string> | null> | undefined;
+
+function modelVersions(): Promise<Record<string, string> | null> {
+  versionsRequest ??= (async () => {
+    if (!CHARACTER_MODEL_BASE_URL) return null;
+    const base = CHARACTER_MODEL_BASE_URL.endsWith("/") ? CHARACTER_MODEL_BASE_URL : `${CHARACTER_MODEL_BASE_URL}/`;
+    try {
+      const response = await fetch(`${base}versions.json`);
+      if (!response.ok) return null;
+      return (await response.json()) as Record<string, string>;
+    } catch {
+      return null;
+    }
+  })();
+  return versionsRequest;
+}
+
+/** The same model URL with its version attached, once that's known. */
+export async function versionedModelUrl(url: string): Promise<string> {
+  const versions = await modelVersions();
+  const version = versions?.[url.split("/").pop() ?? ""];
+  return version ? `${url}?v=${version}` : url;
+}
+
+/**
  * Converted body for a non-player humanoid. NpcInfo carries no sex and no
  * class, only a race resolved from the npc template id -- so an NPC of a
  * playable race borrows that race's male fighter body, and everything else
