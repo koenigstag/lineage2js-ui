@@ -50,6 +50,7 @@ const ATTACK_BY_WEAPON: Record<WeaponClass, CharacterAnimation> = {
   dualDagger: "attackDualDagger",
   bow: "attackBow",
   pole: "attackPole",
+  rapier: "attackRapier",
 };
 
 /**

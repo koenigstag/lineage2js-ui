@@ -10,6 +10,7 @@
     "start": "node --env-file-if-exists=.env dist/index.js",
     "convert:geodata": "tsx scripts/convert-l2j-geodata.ts",
     "convert:models": "tsx scripts/convert-unity-models.ts",
+    "convert:client-rigs": "tsx scripts/convert-client-rigs.ts",
     "extract:icons": "tsx scripts/extract-client-icons.ts",
     "lint": "eslint src/**",
     "clean": "rm -rf dist"

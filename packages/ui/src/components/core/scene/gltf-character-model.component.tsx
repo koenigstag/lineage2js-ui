@@ -23,6 +23,7 @@ export type CharacterAnimation =
   | "attackDualDagger"
   | "attackBow"
   | "attackPole"
+  | "attackRapier"
   | "cast"
   | "death";
 
@@ -125,6 +126,7 @@ const ONE_SHOT: ReadonlySet<CharacterAnimation> = new Set<CharacterAnimation>([
   "attackDualDagger",
   "attackBow",
   "attackPole",
+  "attackRapier",
   "cast",
   "death",
 ]);
@@ -142,6 +144,8 @@ const FALLS_BACK_TO: Partial<Record<CharacterAnimation, CharacterAnimation>> = {
   attackDualDagger: "attackDual",
   attackBow: "attack",
   attackPole: "attack",
+  // Only the Kamael bodies know this one; everyone else swings plainly.
+  attackRapier: "attack",
 };
 
 /**
@@ -161,6 +165,7 @@ const SETTLES_INTO: Partial<Record<CharacterAnimation, CharacterAnimation>> = {
   attackDualDagger: "idle",
   attackBow: "idle",
   attackPole: "idle",
+  attackRapier: "idle",
   cast: "idle",
 };
 

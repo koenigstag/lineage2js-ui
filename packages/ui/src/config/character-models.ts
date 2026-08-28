@@ -6,7 +6,10 @@ const CHARACTER_MODEL_BASE_URL = import.meta.env.VITE_CHARACTER_MODEL_BASE_URL;
 /**
  * Rig file names, matching the retail client's own body-mesh naming
  * (`MFighter`, `FDarkElf`, ...) since that's what the converted files are
- * named after -- see assets-server/scripts/convert-unity-models.ts.
+ * named after. The first ten come from the Unity project
+ * (assets-server/scripts/convert-unity-models.ts), the orc and Kamael six
+ * from the client itself (convert-client-rigs.ts) -- indistinguishable once
+ * converted.
  */
 type RigName =
   | "MFighter"
@@ -18,16 +21,23 @@ type RigName =
   | "MDarkElf"
   | "FDarkElf"
   | "MDwarf"
-  | "FDwarf";
+  | "FDwarf"
+  | "MOrc"
+  | "FOrc"
+  | "MShaman"
+  | "FShaman"
+  | "MKamael"
+  | "FKamael";
 
 /**
  * Retail bodies are one mesh per race+sex, with humans the sole exception:
  * fighters and mystics are genuinely different bodies there (MFighter vs
  * MMagic), while an elf mystic wears the same body as an elf fighter.
  *
- * Orcs and Kamael are absent on purpose -- the Unity project this pipeline
- * converts from has no models for either, so they fall through to the
- * placeholder body (see CharacterModel).
+ * Orcs split the same way humans do -- the shaman body is the mystic one --
+ * and Kamael use one body per sex whatever the class. Both races come from
+ * the client directly (assets-server's convert-client-rigs.ts): the Unity
+ * project the other ten are converted from has no models for either.
  */
 const RIG_BY_RACE: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<SexNames, RigName>>>>> = {
   HUMAN: {
@@ -44,6 +54,14 @@ const RIG_BY_RACE: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<Se
   },
   DWARF: {
     fighter: { MALE: "MDwarf", FEMALE: "FDwarf" },
+  },
+  ORC: {
+    fighter: { MALE: "MOrc", FEMALE: "FOrc" },
+    mystic: { MALE: "MShaman", FEMALE: "FShaman" },
+  },
+  KAMAEL: {
+    fighter: { MALE: "MKamael", FEMALE: "FKamael" },
+    mystic: { MALE: "MKamael", FEMALE: "FKamael" },
   },
 };
 

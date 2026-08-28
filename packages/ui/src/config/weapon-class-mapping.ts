@@ -5,7 +5,7 @@ import { rootStore } from "../stores/RootStore";
  * names the sequences Atk01_{Hand,1HS,2HS,Bow,Dual,Dual_Dagger,Pole} and
  * nothing else -- that list is the whole vocabulary here.
  */
-export type WeaponClass = "hand" | "1hs" | "dual" | "dualDagger" | "bow" | "pole";
+export type WeaponClass = "hand" | "1hs" | "dual" | "dualDagger" | "bow" | "pole" | "rapier";
 
 /**
  * Datapack weaponType (see DatapackStore's item-stats table) -> the swing to
@@ -38,6 +38,7 @@ const WEAPON_CLASS_BY_TYPE: Record<string, WeaponClass> = {
   fist: "hand",
   bow: "bow",
   pole: "pole",
+  rapier: "rapier",
 };
 
 /**
