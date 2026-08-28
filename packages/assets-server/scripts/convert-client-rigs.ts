@@ -224,32 +224,40 @@ interface AssembledBody {
  * the rig's and the rest contribute only their meshes.
  */
 function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): AssembledBody {
-  const meshOf = (group: THREE.Group): THREE.SkinnedMesh => {
-    let found: THREE.SkinnedMesh | undefined;
+  // All of them, not just the first: a piece whose mesh has more than one
+  // material arrives from GLTFLoader as a group of that many skinned meshes
+  // (the Kamael torso is two), and taking one would leave the rest in the
+  // tree unmerged -- exported as a second body with its own skeleton and
+  // none of the tint materials.
+  const meshesOf = (group: THREE.Group): THREE.SkinnedMesh[] => {
+    const found: THREE.SkinnedMesh[] = [];
     group.traverse((object) => {
-      if (!found && (object as THREE.SkinnedMesh).isSkinnedMesh) found = object as THREE.SkinnedMesh;
+      if ((object as THREE.SkinnedMesh).isSkinnedMesh) found.push(object as THREE.SkinnedMesh);
     });
-    if (!found) throw new Error("A body piece came out of umodel with no skinned mesh");
+    if (found.length === 0) throw new Error("A body piece came out of umodel with no skinned mesh");
     return found;
   };
 
-  const primary = meshOf(pieces[0].group);
+  const primary = meshesOf(pieces[0].group)[0];
   const bones = [...primary.skeleton.bones];
   const boneInverses = [...primary.skeleton.boneInverses];
-  // Sanitised throughout: the same joint is spelled "Bip01_Pelvis" on a body
-  // piece and "Bip01 Pelvis" on a hair one, and three's own binding
-  // normalises spaces to underscores anyway -- comparing raw names would
-  // rebuild the whole skeleton for every piece that spells it the other way.
-  const boneIndexByName = new Map(
-    bones.map((bone, index) => [THREE.PropertyBinding.sanitizeNodeName(bone.name), index])
-  );
+  // Matched loosely on purpose. The client spells one joint several ways:
+  // "Bip01_Pelvis" on a body piece, "Bip01 Pelvis" on a hair one, and
+  // "bip01_spine" beside "Bip01_Spine1" within a single skeleton. Compared
+  // literally, a piece that merely capitalises differently looks like a rig
+  // of its own and gets adopted whole -- a second skeleton's worth of joints
+  // no animation drives, with the geometry weighted to them left standing
+  // still. The bone keeps whatever name it arrived with; only the lookup is
+  // normalised.
+  const boneKey = (name: string) => THREE.PropertyBinding.sanitizeNodeName(name).toLowerCase();
+  const boneIndexByName = new Map(bones.map((bone, index) => [boneKey(bone.name), index]));
   const rootBone = bones.find((bone) => !(bone.parent as THREE.Bone | null)?.isBone) ?? bones[0];
   const adopted: string[] = [];
 
   /** A joint the primary skeleton doesn't have -- hair strands, and the weapon attachment points a hairstyle piece drags along. */
   function adoptBone(pieceBone: THREE.Bone): number {
     const name = THREE.PropertyBinding.sanitizeNodeName(pieceBone.name);
-    const existing = boneIndexByName.get(name);
+    const existing = boneIndexByName.get(boneKey(pieceBone.name));
     if (existing !== undefined) return existing;
 
     const pieceParent = pieceBone.parent as THREE.Bone | null;
@@ -261,7 +269,7 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
 
     bones.push(clone);
     boneInverses.push(new THREE.Matrix4().copy(clone.matrixWorld).invert());
-    boneIndexByName.set(name, bones.length - 1);
+    boneIndexByName.set(boneKey(name), bones.length - 1);
     adopted.push(name);
     return bones.length - 1;
   }
@@ -269,8 +277,8 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
   const geometries: THREE.BufferGeometry[] = [];
   const slots: MaterialSlot[] = [];
   for (const piece of pieces) {
-    const mesh = meshOf(piece.group);
     piece.group.updateMatrixWorld(true);
+    for (const mesh of meshesOf(piece.group)) {
 
     const geometry = mesh.geometry.clone();
     // Re-point skinIndex at the shared bone array: a piece may reference a
@@ -287,8 +295,9 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
         geometry.deleteAttribute(name);
       }
     }
-    geometries.push(geometry);
-    slots.push(piece.slot);
+      geometries.push(geometry);
+      slots.push(piece.slot);
+    }
   }
 
   // Per tint slot first, then the slots together with groups -- glTF turns
@@ -312,10 +321,12 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
   );
   primary.name = "body";
 
-  // Only the first piece's tree is exported, so the other six skeletons --
-  // identical copies of this one -- never reach the file.
+  // Only the first piece's tree is exported, so the other pieces' skeletons --
+  // copies of this one -- never reach the file. Any skinned mesh left in that
+  // tree besides the merged body goes too, or it would ride along whole.
   const root = pieces[0].group;
   for (const piece of pieces.slice(1)) piece.group.clear();
+  for (const mesh of meshesOf(root)) if (mesh !== primary) mesh.removeFromParent();
 
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
@@ -325,7 +336,7 @@ function assemble(pieces: { group: THREE.Group; slot: MaterialSlot }[]): Assembl
 
 async function convertRig(umodel: string, client: string, workDir: string, source: ClientRig): Promise<void> {
   const pieceSources: PieceSource[] = source.pieces ?? BODY_PIECES;
-  const exported: { file: string; slot: MaterialSlot }[] = [];
+  const exported: { file: string; slot: MaterialSlot; own: boolean }[] = [];
 
   for (const piece of pieceSources) {
     const from = piece.from ?? { pkg: source.pkg, rig: source.rig };
@@ -339,12 +350,20 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
         continue; // a rig that doesn't ship this piece simply has fewer of them
       }
     }
-    if (fs.existsSync(file)) exported.push({ file, slot: piece.slot });
+    if (fs.existsSync(file)) exported.push({ file, slot: piece.slot, own: from.pkg === source.pkg });
   }
   if (exported.length === 0) throw new Error(`No body pieces found for ${source.rig}`);
 
+  // The rig's own pieces first, so the skeleton everything else is merged
+  // onto is the one its animations were authored against. It matters for a
+  // body assembled from two packages: the shaman rigs carry 109 bones where
+  // the orc body they borrow has 78, and leading with the borrowed one would
+  // make the animated skeleton the smaller, wrong one -- every joint the
+  // clips know but the body doesn't would arrive as a duplicate nothing
+  // drives.
+  const ordered = [...exported].sort((a, b) => Number(b.own) - Number(a.own));
   const pieces = await Promise.all(
-    exported.map(async (piece) => ({ group: await loadPiece(piece.file), slot: piece.slot }))
+    ordered.map(async (piece) => ({ group: await loadPiece(piece.file), slot: piece.slot }))
   );
   const body = assemble(pieces);
 
@@ -392,6 +411,7 @@ async function convertRig(umodel: string, client: string, workDir: string, sourc
   console.log(
     `  ${source.rig}: ${exported.length} pieces, ${clips.length} clips, ` +
       `${Math.round(body.height)} units tall, ${Math.round(glb.byteLength / 1024)} KB -> ${path.basename(outFile)}` +
+      (body.adopted.length ? `  (+${body.adopted.length} joints from other pieces)` : "") +
       (missing.length ? `  (no sequence for ${missing.join("/")})` : "")
   );
 }
