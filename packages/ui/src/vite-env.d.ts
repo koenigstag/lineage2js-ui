@@ -14,6 +14,8 @@ interface ImportMetaEnv {
   readonly VITE_GAME_MENU_ICON_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/geodata-tiles/{tileX}_{tileY}.bin" -- pre-baked geodata tile (see assets-server/scripts/convert-l2j-geodata.ts), "{tileX}"/"{tileY}" get replaced with the tile's coordinates. Deserialized directly, see geo-tile-parser.ts. */
   readonly VITE_GEODATA_TILE_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/cursors/" -- folder of real cursor art (.cur files, see assets-server/scripts/extract-cursors.ts and config/cursor-urls.ts's getCursorUrl). Unset/unresolved leaves the browser's native cursor in place. */
+  readonly VITE_CURSOR_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/models/" -- folder of converted character bodies (see assets-server/scripts/convert-client-rigs.ts), one `<rig>.glb` per race/sex. Unset (or a body that fails to load) leaves that character on the placeholder capsule, see config/character-models.ts. */
   readonly VITE_CHARACTER_MODEL_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/textures/" -- folder of converted character textures (see assets-server/scripts/convert-client-rigs.ts), laid out as `<rig>/<part>-<variant>.png` beside an index.json saying how many variants each rig ships. Unset leaves every body on the flat per-part tints, see config/character-textures.ts. */

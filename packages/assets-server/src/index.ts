@@ -117,8 +117,18 @@ app.use(
   express.static(ASSETS_DIR, {
     etag: true, // adds ETag from file size+mtime; enables conditional GETs
     lastModified: true,
-    setHeaders(res) {
+    setHeaders(res, filePath) {
       res.setHeader("Cache-Control", `public, max-age=${MAX_AGE_SECONDS}, must-revalidate`);
+      // .cur isn't in the default mime-db this package's Content-Type
+      // sniffing uses, so it would otherwise fall back to
+      // application/octet-stream. Browsers apply a CSS `cursor: url(...)`
+      // by sniffing the file's own bytes regardless of this header, but
+      // there's no reason to serve the wrong type when the right one is
+      // this cheap -- same de facto type browsers themselves report for a
+      // same-format .ico.
+      if (filePath.toLowerCase().endsWith(".cur")) {
+        res.setHeader("Content-Type", "image/x-icon");
+      }
     },
   })
 );
