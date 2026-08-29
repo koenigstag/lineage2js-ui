@@ -53,7 +53,7 @@ export const NpcDialogueContent = observer(function NpcDialogueContent() {
         width: WIDTH,
         maxHeight: MAX_HEIGHT,
         overflowY: "auto",
-        color: "#c8b997",
+        color: "#d7d7d7",
         fontSize: 12,
         lineHeight: 1.4,
       }}

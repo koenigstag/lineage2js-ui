@@ -72,6 +72,7 @@ class L2LinkElement extends HTMLElement {
     this.style.display = "inline";
     this.style.cursor = "pointer";
     this.style.textDecoration = "underline";
+    this.style.color = "#6496f9";
     this.addEventListener("click", this.handleClick);
   }
 

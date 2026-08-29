@@ -11,6 +11,10 @@ import { createElement, type ReactNode } from "react";
 // cannot appear as a child of table").
 const STRUCTURAL_TAGS = new Set(["table", "tbody", "thead", "tfoot", "tr", "td", "br", "center"]);
 
+// Split the difference between a measured 16px (paragraph-to-paragraph) and
+// 14px (link-to-link) -- see the "br" case in walk() below.
+const PARAGRAPH_SPACING_PX = 15;
+
 // Only elements whose HTML content model is "zero or more of a specific set
 // of element types" -- a whitespace-only text node here (eg. a newline
 // between <table> and <tr>) is invalid content React's DOM validator warns
@@ -87,6 +91,14 @@ function walk(node: ChildNode, key: number): ReactNode {
     const result = walk(child, index);
     return Array.isArray(result) ? result : [result];
   });
+
+  if (tagName === "br") {
+    // <br> is how this dialect marks the end of both a paragraph and a link
+    // line -- measured samples wanted 16px after a paragraph and 14px after
+    // a link, split into one shared value rather than threading "was this
+    // the br after a link" context through the walk for a 2px difference.
+    return createElement("br", { key, style: { display: "block", marginBottom: PARAGRAPH_SPACING_PX } });
+  }
 
   if (STRUCTURAL_TAGS.has(tagName)) {
     return createElement(tagName, { key, ...pickAttributes(element, STRUCTURAL_ATTRIBUTES) }, ...children);
