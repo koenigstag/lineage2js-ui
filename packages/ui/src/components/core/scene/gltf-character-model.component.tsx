@@ -7,6 +7,7 @@ import { DEFAULT_CURSOR } from "../../../config/cursor-urls";
 import type { CharacterAppearance } from "../../../config/character-appearance";
 import {
   CHARACTER_MODEL_SCALE,
+  LEGACY_SCENE_SCALE,
   instantiateCharacterModel,
   type CharacterModelAsset,
 } from "../../../utils/models/character-model";
@@ -351,13 +352,15 @@ export function GltfCharacterModel({
 
   return (
     <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
-      {nickname && <NicknameLabel text={nickname} position={[0, 1.95, 0]} />}
+      {nickname && (
+        <NicknameLabel text={nickname} position={[0, 1.95 * LEGACY_SCENE_SCALE, 0]} height={0.16 * LEGACY_SCENE_SCALE} />
+      )}
 
       <primitive object={model.root} scale={CHARACTER_MODEL_SCALE} />
 
       {/* Invisible pick volume -- see this component's own doc comment. */}
       <mesh
-        position={[0, 0.9, 0]}
+        position={[0, 0.9 * LEGACY_SCENE_SCALE, 0]}
         visible={false}
         onClick={
           onSelect &&
@@ -386,12 +389,12 @@ export function GltfCharacterModel({
         }
         onPointerOut={cursor ? () => (document.body.style.cursor = DEFAULT_CURSOR) : undefined}
       >
-        <capsuleGeometry args={[0.3, 1.1, 4, 8]} />
+        <capsuleGeometry args={[0.3 * LEGACY_SCENE_SCALE, 1.1 * LEGACY_SCENE_SCALE, 4, 8]} />
       </mesh>
 
       {selected && (
-        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => undefined}>
-          <ringGeometry args={[0.34, 0.42, 32]} />
+        <mesh position={[0, 0.02 * LEGACY_SCENE_SCALE, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => undefined}>
+          <ringGeometry args={[0.34 * LEGACY_SCENE_SCALE, 0.42 * LEGACY_SCENE_SCALE, 32]} />
           <meshBasicMaterial color="#ffd27a" transparent opacity={0.85} />
         </mesh>
       )}

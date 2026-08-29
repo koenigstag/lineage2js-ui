@@ -5,15 +5,18 @@ import { useGameStore } from "../../../../stores/StoreContext";
 import { l2ToThree } from "../../../../utils/coords";
 import { getItemName } from "../../../../config/item-mapping";
 import { NicknameLabel } from "../../../core/scene/nickname-label.component";
+import { LEGACY_SCENE_SCALE } from "../../../../utils/models/character-model";
 
 // Half-extent of the box, in three.js meters -- small enough not to block
 // the view of the ground/creatures around it, big enough to actually spot
 // as a loot marker at a glance. No item art pipeline exists yet (same "no
 // asset pipeline" situation as CharacterModel's procedural body), so this is
-// a plain placeholder box rather than per-item icons.
-const BOX_HALF_SIZE = 0.16;
+// a plain placeholder box rather than per-item icons. Scaled down along with
+// everything else pegged to the placeholder capsule's old 1.7 -- see
+// LEGACY_SCENE_SCALE.
+const BOX_HALF_SIZE = 0.16 * LEGACY_SCENE_SCALE;
 // Gap between the box's top face and the hover label, world units.
-const LABEL_GAP = 0.08;
+const LABEL_GAP = 0.08 * LEGACY_SCENE_SCALE;
 
 interface DroppedItemMarkerProps {
   objectId: number;

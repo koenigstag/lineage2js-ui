@@ -1,4 +1,5 @@
 import { RACES, SEXES, getAvailableBaseClasses, type PlayerVariant, type RaceNames } from "../../../../config/character-races";
+import { CLIENT_DATA_CORRECTION } from "../../../../utils/models/character-model";
 
 // Same shape as PlayerVariant -- kept as its own name since it's specifically
 // what RACE_GALLERY enumerates, not every caller with a player variant on
@@ -77,11 +78,19 @@ const CLIENT_SLOTS: Record<RaceNames, GallerySlot[]> = {
 };
 
 /** Even spacing in a line, for a race the client table has no row count for. */
-const FALLBACK_SPACING = 1.3;
+const FALLBACK_SPACING = 1.3 * CLIENT_DATA_CORRECTION;
 
+// CLIENT_SLOTS is transcribed straight from charcreategrp.dat's own numbers
+// (see its own comment) at the OLD CHARACTER_MODEL_SCALE -- corrected here,
+// on the way out, rather than in the table itself, so the table stays a
+// literal record of what the client says instead of a mix of the client's
+// numbers and this app's own scale history. yaw is an angle, not a
+// distance, so it's the one field the correction leaves alone.
 function slotsFor(race: RaceNames, count: number): GallerySlot[] {
   const slots = CLIENT_SLOTS[race];
-  if (slots.length === count) return slots;
+  if (slots.length === count) {
+    return slots.map((slot) => ({ ...slot, x: slot.x * CLIENT_DATA_CORRECTION, z: slot.z * CLIENT_DATA_CORRECTION }));
+  }
   const mid = (count - 1) / 2;
   return Array.from({ length: count }, (_, index) => ({ x: (index - mid) * FALLBACK_SPACING, z: 0, yaw: 0 }));
 }

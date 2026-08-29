@@ -5,6 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinnedScene } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { versionedModelUrl } from "../../config/character-models";
 import { parseSlot } from "../../config/character-textures";
+import { L2_TO_THREE_SCALE } from "../coords";
 
 export interface CharacterModelAsset {
   scene: Group;
@@ -12,13 +13,56 @@ export interface CharacterModelAsset {
 }
 
 /**
- * Converted retail bodies are ~44 units tall in the source rig's own space
- * (see assets-server/scripts/convert-unity-models.ts); the scene wants the
- * ~1.7 three.js units the placeholder body already occupies. One factor for
- * every rig, so a dwarf stays shorter than an elf instead of every race being
- * normalized to the same height.
+ * Converted bodies are baked in real client/Unreal units (see UNIT_SCALE in
+ * assets-server/scripts/convert-client-rigs.ts) -- the same ones world
+ * positions are already in, so this is just L2_TO_THREE_SCALE and nothing
+ * body-specific. One factor for every rig either way, so a dwarf stays
+ * shorter than an elf instead of every race being normalized to the same
+ * height.
+ *
+ * Used to be its own 1.7/44.6 ratio, calibrated to match the placeholder
+ * capsule's arbitrary 1.7-unit height rather than any real client
+ * measurement -- see convert-client-rigs.ts's UNIT_SCALE comment for how
+ * that (and a matching factor-of-2 error in UNIT_SCALE itself) was found.
  */
-export const CHARACTER_MODEL_SCALE = 1.7 / 44.6;
+export const CHARACTER_MODEL_SCALE = L2_TO_THREE_SCALE;
+
+/**
+ * How much CHARACTER_MODEL_SCALE itself changed when it (and UNIT_SCALE) were
+ * corrected -- for retroactively fixing anything that was hand-converted
+ * from real client data using the OLD value and baked in as literal scene
+ * numbers, rather than expressed as `<client units> * CHARACTER_MODEL_SCALE`
+ * the way SELECT_ARC_RADIUS now is (client-scene-lighting.ts), which needs
+ * no correction of its own since it recomputes from the same source every
+ * time. RACE_GALLERY's slot positions (race-gallery.utils.ts) are the other
+ * place real client data was converted this way and baked in as numbers.
+ */
+const OLD_CHARACTER_MODEL_SCALE = 1.7 / 44.6;
+export const CLIENT_DATA_CORRECTION = CHARACTER_MODEL_SCALE / OLD_CHARACTER_MODEL_SCALE;
+
+/**
+ * A human fighter's converted body, in three.js units -- ~45.5 client units
+ * tall (measured off mfighter.glb's own bounding box; see UNIT_SCALE's
+ * comment in convert-client-rigs.ts for why this is roughly double
+ * lineage2ts's collisionMaleHeight rather than equal to it). The same
+ * reference every race's auxiliary geometry (nickname height, click volume,
+ * selection ring, camera framing) is pegged to, same as before this was
+ * corrected it was pegged to the placeholder capsule's 1.7. Not per-race on
+ * purpose: a dwarf rendering shorter than this and an orc taller than it is
+ * the point (see CHARACTER_MODEL_SCALE), but the *auxiliary* geometry was
+ * never per-race either, so this keeps that the same rough
+ * one-size-fits-all it always was.
+ */
+export const REFERENCE_HUMAN_HEIGHT_M = 45.5 * CHARACTER_MODEL_SCALE;
+
+/**
+ * How far every other body-relative or decorative number in these scenes
+ * (nickname height, click volume, selection ring, camera framing, the
+ * char-select campfire's own hand-tuned geometry) needs to shrink now that
+ * REFERENCE_HUMAN_HEIGHT_M is the real ~0.43 instead of the placeholder
+ * capsule's arbitrary 1.7 they were all originally tuned against.
+ */
+export const LEGACY_SCENE_SCALE = REFERENCE_HUMAN_HEIGHT_M / 1.7;
 
 /**
  * World height of the middle of a converted body's head, for anything that

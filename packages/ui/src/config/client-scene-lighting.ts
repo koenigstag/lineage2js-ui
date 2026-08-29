@@ -108,9 +108,14 @@ export const CLIENT_FOG_FAR = 10000 * CHARACTER_MODEL_SCALE;
  *
  * Eight `LogPawn` slots: seven on an arc and one in front. Fitting a circle
  * to the seven puts its centre within two units of that eighth slot and gives
- * a radius of 131.1 client units, which is 5.00 in scene units -- so the
- * front slot is not a ninth place off to the side, it is the middle of the
- * ring, and the arc is drawn around it.
+ * a radius of 131.1 client units -- so the front slot is not a ninth place
+ * off to the side, it is the middle of the ring, and the arc is drawn around
+ * it. Converted the same way a body is (CHARACTER_MODEL_SCALE) rather than
+ * hand-copied as a fixed scene-unit number, so a future correction to that
+ * scale (like the factor-of-2 UNIT_SCALE/CHARACTER_MODEL_SCALE one that made
+ * this 5.00 in scene units when it should have been closer to 2.5) carries
+ * through here too instead of leaving the ring sized for bodies that no
+ * longer exist.
  *
  * The seven sit at even 13.4-degree steps except across the middle, where the
  * step is exactly doubled: the arc keeps its centre slot empty rather than
@@ -125,6 +130,6 @@ export const CLIENT_FOG_FAR = 10000 * CHARACTER_MODEL_SCALE;
  * ring's centre anywhere else lands the fire on the arc itself, in among the
  * bodies.
  */
-export const SELECT_ARC_RADIUS = 5.0;
+export const SELECT_ARC_RADIUS = 131.1 * CHARACTER_MODEL_SCALE;
 /** Total angle the seven span, from the fitted circle: 36.3 to 130.5 degrees. */
 export const SELECT_ARC_SPREAD = (94.2 * Math.PI) / 180;

@@ -3,9 +3,13 @@ import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, type Sprite } from "three";
 import { l2ToThree } from "../../../../utils/coords";
 import { ARRIVE_EPSILON, interpolatedCreaturePosition } from "../../../../utils/creature-movement";
+import { REFERENCE_HUMAN_HEIGHT_M } from "../../../../utils/models/character-model";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 
-const DIAMETER_M = 0.75;
+// Knee-high on a person, not body-sized -- a fraction of REFERENCE_HUMAN_HEIGHT_M
+// rather than its own fixed number so it tracks that if it's ever remeasured
+// again instead of drifting back out of proportion with the body next to it.
+const DIAMETER_M = REFERENCE_HUMAN_HEIGHT_M * 0.5;
 // Lifts the disc's center off the ground so it reads as a standing ring
 // rather than a coin half-buried in the terrain -- half the diameter, so the
 // bottom edge still grazes the ground regardless of size.

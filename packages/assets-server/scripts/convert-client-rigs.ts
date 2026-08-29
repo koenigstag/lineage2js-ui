@@ -61,12 +61,20 @@ const OUT_TEXTURE_DIR = path.join(__dirname, "../assets/highfive/textures");
 const ROOT_BONE = "bip01";
 
 /**
- * umodel's glTF export is 1/100th of the client's own units, while the
- * Unity-derived rigs are in those units directly (a human comes out ~44 units
- * tall, which is what the web client's single CHARACTER_MODEL_SCALE expects).
- * Undoing that keeps one constant working for bodies from either pipeline --
- * and keeps an orc taller than a dwarf instead of normalising each rig to the
- * same height.
+ * umodel's glTF export is 1/100th of the client's own units. Undoing that
+ * lands a human fighter at ~45.5 units tall.
+ *
+ * This briefly read 50 instead, on the theory that lineage2ts's
+ * collisionMaleHeight for HumanFighter (23.0, playerClassTemplates.csv) was
+ * the body's full standing height rather than roughly half of it (a
+ * collision cylinder shorter than the visible body is an ordinary MMO
+ * convention, not something specific to this server) -- 23 matched what 50
+ * produced almost exactly, which read as confirmation at the time. Testing
+ * a live character against real geodata said otherwise: rendered at that
+ * height, bodies came out about half the size they should have been.
+ * CHARACTER_MODEL_SCALE (character-model.ts) is still the corrected
+ * L2_TO_THREE_SCALE either way -- that half of the original fix held up,
+ * only this one didn't.
  */
 const UNIT_SCALE = 100;
 

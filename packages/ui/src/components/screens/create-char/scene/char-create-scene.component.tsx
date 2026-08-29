@@ -5,7 +5,7 @@ import { PlayerModel } from "../../../core/scene/player-model.component";
 import { RACES, getBodyScale, type RaceNames, type BaseClass, type SexNames } from "../../../../config/character-races";
 import type { CharacterAppearance } from "../../../../config/character-appearance";
 import { getCharacterModelUrl } from "../../../../config/character-models";
-import { getHeadHeight, useCharacterModel } from "../../../../utils/models/character-model";
+import { CLIENT_DATA_CORRECTION, getHeadHeight, useCharacterModel } from "../../../../utils/models/character-model";
 import {
   CLIENT_AMBIENT_INTENSITY,
   CLIENT_FOG_FAR,
@@ -32,11 +32,25 @@ const GROUP_SPACING = 10;
  * step: the race's whole line-up, then the chosen class's two bodies, then
  * the face -- which is where the remaining choices (face, hair, hair colour)
  * are made, so it is framed close enough to judge them.
+ *
+ * All three scale with CLIENT_DATA_CORRECTION, not LEGACY_SCENE_SCALE: GROUP_SHOT
+ * and CLASS_SHOT frame RACE_GALLERY's own slot positions (corrected by that
+ * same factor, see race-gallery.utils.ts), and FACE_SHOT frames getHeadHeight()'s
+ * output, which is CHARACTER_MODEL_SCALE-derived and therefore *also* shrank
+ * by exactly CLIENT_DATA_CORRECTION when that scale was corrected -- using
+ * LEGACY_SCENE_SCALE here (as this first did) mismatches both, which is what
+ * put the close-up shot's camera through some heads and off in empty space
+ * for others.
  */
-const GROUP_SHOT = { height: 2.4, distance: 7, lookHeight: 1.6 };
-const CLASS_SHOT = { height: 2, distance: 4.4, lookHeight: 1.25 };
-const FACE_SHOT = { distance: 0.95, above: 0.02 };
-/** Where the placeholder body's head sits, for the races and setups with no converted model to measure. */
+const GROUP_SHOT = { height: 2.4 * CLIENT_DATA_CORRECTION, distance: 7 * CLIENT_DATA_CORRECTION, lookHeight: 1.6 * CLIENT_DATA_CORRECTION };
+const CLASS_SHOT = { height: 2 * CLIENT_DATA_CORRECTION, distance: 4.4 * CLIENT_DATA_CORRECTION, lookHeight: 1.25 * CLIENT_DATA_CORRECTION };
+const FACE_SHOT = { distance: 0.95 * CLIENT_DATA_CORRECTION, above: 0.02 * CLIENT_DATA_CORRECTION };
+/**
+ * Where the placeholder body's head sits, for the races and setups with no
+ * converted model to measure. Not scaled: this describes CharacterModel's
+ * own procedural capsule, which was never wrong and never changed -- see
+ * LEGACY_SCENE_SCALE's own comment.
+ */
 const PLACEHOLDER_HEAD_HEIGHT = 1.64;
 
 function groupXForRace(race: RaceNames): number {
@@ -105,8 +119,13 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
       return { position: [groupX, GROUP_SHOT.height, GROUP_SHOT.distance], lookAt: [groupX, GROUP_SHOT.lookHeight, 0] };
     }
 
+    // z carried through, not just x: CLIENT_SLOTS puts some slots (every
+    // race's index 3 among them) well off z=0 -- up to 1.43 -- and FACE_SHOT's
+    // distance is only ~0.47, so a shot that assumed z=0 for everyone was
+    // landing the camera behind where that body actually stands, looking
+    // through the back of its head rather than at the front of its face.
     const inClass = group.variants
-      .map((variant, index) => ({ variant, x: groupX + group.slots[index].x }))
+      .map((variant, index) => ({ variant, x: groupX + group.slots[index].x, z: group.slots[index].z }))
       .filter((entry) => entry.variant.baseClass === baseClass);
     // A race whose templates dropped the chosen class out from under the
     // selection: fall back to the group shot rather than aiming at nothing.
@@ -116,7 +135,11 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
 
     if (sex === null) {
       const centre = inClass.reduce((sum, entry) => sum + entry.x, 0) / inClass.length;
-      return { position: [centre, CLASS_SHOT.height, CLASS_SHOT.distance], lookAt: [centre, CLASS_SHOT.lookHeight, 0] };
+      const centreZ = inClass.reduce((sum, entry) => sum + entry.z, 0) / inClass.length;
+      return {
+        position: [centre, CLASS_SHOT.height, centreZ + CLASS_SHOT.distance],
+        lookAt: [centre, CLASS_SHOT.lookHeight, centreZ],
+      };
     }
 
     const chosen = inClass.find((entry) => entry.variant.sex === sex) ?? inClass[0];
@@ -128,8 +151,8 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
       ? getHeadHeight(focusedBody)
       : PLACEHOLDER_HEAD_HEIGHT * getBodyScale(race, baseClass, chosen.variant.sex).height;
     return {
-      position: [chosen.x, headHeight + FACE_SHOT.above, FACE_SHOT.distance],
-      lookAt: [chosen.x, headHeight, 0],
+      position: [chosen.x, headHeight + FACE_SHOT.above, chosen.z + FACE_SHOT.distance],
+      lookAt: [chosen.x, headHeight, chosen.z],
     };
   }, [race, baseClass, sex, focusedBody]);
 

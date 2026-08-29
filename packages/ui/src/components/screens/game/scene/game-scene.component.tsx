@@ -3,6 +3,8 @@ import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import type { Camera } from "three";
 import { observer } from "mobx-react-lite";
 import { CharacterModel } from "../../../core/scene/character-model.component";
+import { REFERENCE_HUMAN_HEIGHT_M } from "../../../../utils/models/character-model";
+import { IS_DEMO_MODE } from "../../../../config/env";
 import { l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
 import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
@@ -21,8 +23,11 @@ const MOVE_SPEED = 400; // L2 world units / second
 
 // Orbit camera rig -- all in three.js meters/radians (post-conversion),
 // matching the human/character scale used by the other r3f scenes in this app.
-const CAMERA_DISTANCE_M = 8;
-const CAMERA_LOOK_HEIGHT_M = 1.4; // roughly chest height on the character
+// Both keep the same fraction of a body-height back and up that 8/1.4 were
+// of the placeholder capsule's arbitrary 1.7, just of REFERENCE_HUMAN_HEIGHT_M
+// (the real, corrected reference) instead.
+const CAMERA_DISTANCE_M = 8 * (REFERENCE_HUMAN_HEIGHT_M / 1.7);
+const CAMERA_LOOK_HEIGHT_M = 1.4 * (REFERENCE_HUMAN_HEIGHT_M / 1.7); // roughly chest height on the character
 const DEFAULT_AZIMUTH = 0;
 const DEFAULT_PITCH = 0.5; // radians above horizontal
 const MIN_PITCH = 0.15;
@@ -334,8 +339,10 @@ export const GameScene = observer(function GameScene() {
             exists (no live session yet). Once gameStore.creatures has us,
             GameCreaturesField already renders this exact objectId via
             PlayerModel with our real race/class colors -- rendering both
-            would double up. */}
-        {!realPlayer && (
+            would double up. Also gated on IS_DEMO_MODE: without it, a real
+            deployment with no session yet should show an empty world, not a
+            WASD-controllable test capsule wandering around for anyone to see. */}
+        {!realPlayer && IS_DEMO_MODE && (
           <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={yaw} color="#5b8fd6" />
         )}
 

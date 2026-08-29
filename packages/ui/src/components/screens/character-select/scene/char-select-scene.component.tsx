@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Campfire } from "./campfire.component";
 import { PlayerModel } from "../../../core/scene/player-model.component";
+import { LEGACY_SCENE_SCALE } from "../../../../utils/models/character-model";
 import type { RaceNames, BaseClass, SexNames } from "../../../../config/character-races";
 import { DaySky } from "../../../core/scene/day-sky.component";
 import {
@@ -23,7 +24,7 @@ const SKY_Z = -25;
 const SUN_DISTANCE = 14;
 
 /** The middle of the ring: characters stand a radius away from it and turn to face it. */
-const ARC_CENTER_Z = -3;
+const ARC_CENTER_Z = -0.6 * SELECT_ARC_RADIUS;
 
 /**
  * How far behind that middle the campfire sits.
@@ -34,7 +35,7 @@ const ARC_CENTER_Z = -3;
  * a fire the group has gathered at, and being further from the camera it
  * stops sitting on the bottom edge of the frame.
  */
-const FIRE_INSET = 2;
+const FIRE_INSET = 0.4 * SELECT_ARC_RADIUS;
 
 // Kept as constants rather than inline in the Canvas props because the
 // characters' facing is derived from the camera position below -- the two
@@ -43,8 +44,19 @@ const FIRE_INSET = 2;
 // to stand people in: they are a radius of SELECT_ARC_RADIUS out, so the
 // camera sits closer than the distance alone suggests and looks past the fire
 // at the arc behind it, or the group ends up a thin band under empty sky.
-const CAMERA_POSITION: [x: number, y: number, z: number] = [0, 3.2, 2.6];
-const CAMERA_TARGET: [x: number, y: number, z: number] = [0, 1.5, -5.5];
+//
+// Every component is a fixed multiple of SELECT_ARC_RADIUS (the ratios this
+// originally hand-tuned position worked out to against the 5.00 that
+// constant used to be) rather than its own independent number -- since that
+// radius is itself derived from CHARACTER_MODEL_SCALE now, the whole rig
+// resizes as one piece if that ever moves again, instead of a camera framed
+// for a ring of one size looking at bodies standing in a ring of another.
+const CAMERA_POSITION: [x: number, y: number, z: number] = [
+  0,
+  0.64 * SELECT_ARC_RADIUS,
+  0.52 * SELECT_ARC_RADIUS,
+];
+const CAMERA_TARGET: [x: number, y: number, z: number] = [0, 0.3 * SELECT_ARC_RADIUS, -1.1 * SELECT_ARC_RADIUS];
 
 export interface CharSelectSceneProps {
   characters: Array<{ id: number; nickname: string; race: string; baseClass: string; sex: string }>;
@@ -83,8 +95,10 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
           <meshStandardMaterial color="#0e0d0c" roughness={1} />
         </mesh>
 
-        {/* Built around its own origin, so the ring's centre is a group around it. */}
-        <group position={[0, 0, ARC_CENTER_Z - FIRE_INSET]}>
+        {/* Built around its own origin, so the ring's centre is a group around it.
+            Scaled down like everything else pegged to the placeholder capsule's
+            old 1.7 -- see LEGACY_SCENE_SCALE. */}
+        <group position={[0, 0, ARC_CENTER_Z - FIRE_INSET]} scale={LEGACY_SCENE_SCALE}>
           <Campfire />
         </group>
 
