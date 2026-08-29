@@ -19,6 +19,13 @@
       "runtimeArgs": ["--filter", "@lineage2js/ui", "dev"],
       "port": 5174,
       "autoPort": true
+    },
+    {
+      "name": "assets-server-verify",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@lineage2js/assets-server", "dev"],
+      "port": 4001,
+      "autoPort": true
     }
   ]
 }
