@@ -52,7 +52,17 @@ export function BaseInput({
   // every control on the panel starting at the same x.
   return (
     <label style={{ display: "contents" }}>
-      <span style={{ color: "#8a8a8a", fontSize: 12 }}>{label}</span>
+      <span
+        style={{
+          color: "#8a8a8a",
+          fontSize: 12,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </span>
       {field}
     </label>
   );
