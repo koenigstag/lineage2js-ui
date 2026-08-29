@@ -1,5 +1,6 @@
 import { DoubleSide } from "three";
 import { NicknameLabel } from "./nickname-label.component";
+import { DEFAULT_CURSOR } from "../../../config/cursor-urls";
 
 /**
  * @deprecated Invented placeholder tone, not ported from any real art source
@@ -102,7 +103,7 @@ export function CharacterModel({
                   }
                 : undefined
             }
-            onPointerOut={cursor ? () => (document.body.style.cursor = "auto") : undefined}
+            onPointerOut={cursor ? () => (document.body.style.cursor = DEFAULT_CURSOR) : undefined}
           >
             <capsuleGeometry args={[0.24, 0.85, 4, 8]} />
             <meshStandardMaterial color={color} roughness={0.7} />

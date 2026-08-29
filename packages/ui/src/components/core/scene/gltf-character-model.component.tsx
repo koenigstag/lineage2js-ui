@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { AnimationMixer, LoopOnce, type AnimationAction, type Group } from "three";
 import { NicknameLabel } from "./nickname-label.component";
 import { applyCharacterTextures } from "../../../utils/models/character-textures";
+import { DEFAULT_CURSOR } from "../../../config/cursor-urls";
 import type { CharacterAppearance } from "../../../config/character-appearance";
 import {
   CHARACTER_MODEL_SCALE,
@@ -383,7 +384,7 @@ export function GltfCharacterModel({
               }
             : undefined
         }
-        onPointerOut={cursor ? () => (document.body.style.cursor = "auto") : undefined}
+        onPointerOut={cursor ? () => (document.body.style.cursor = DEFAULT_CURSOR) : undefined}
       >
         <capsuleGeometry args={[0.3, 1.1, 4, 8]} />
       </mesh>

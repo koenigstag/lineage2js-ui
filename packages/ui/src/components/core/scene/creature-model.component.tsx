@@ -6,6 +6,7 @@ import { getNpcRaceColor } from "../../../config/npc-race-mapping";
 import type { RaceNames } from "../../../config/character-races";
 import type { WeaponClass } from "../../../config/weapon-class-mapping";
 import type { WorldCreatureSnapshot } from "../../../stores/GameStore";
+import { cursorStyle } from "../../../config/cursor-urls";
 
 interface CreatureModelProps {
   creature: WorldCreatureSnapshot;
@@ -33,9 +34,14 @@ const KIND_FALLBACK_COLOR: Record<WorldCreatureSnapshot["kind"], string> = {
 // act instead (click #1 on the current target attacks/talks -- see
 // game-creatures-field.component.tsx). Player/summon never get one, since
 // clicking either is always just "select", selected or not.
+//
+// The fallback keyword (second cursorStyle() argument) is what this showed
+// before real cursor art existed -- kept as the CSS-mandated last value, so
+// an unconfigured VITE_CURSOR_BASE_URL (or one specific file 404ing) looks
+// exactly like it always did rather than breaking.
 const KIND_CURSOR: Partial<Record<WorldCreatureSnapshot["kind"], string>> = {
-  mob: "nw-resize",
-  npc: "help",
+  mob: cursorStyle("attack", "nw-resize"),
+  npc: cursorStyle("help", "help"),
 };
 
 /**
