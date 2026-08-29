@@ -34,13 +34,25 @@
 
 In this order -- each one is easier once the one before it is settled.
 
-1. **Finish the appearance rendering.** What is left: the client offers a fifth
-   hair style that is empty in chargrp for every rig, so where it comes from is
-   still unexplained; and the seam where the face mesh meets the scalp, most
-   visible on a Kamael's forehead with face 3, where a marking stops dead at the
-   hairline (the geometry is welded and the boundary colours match within ~10 of
-   255, so the remaining suspect is shading -- the two meshes' normals at the
-   seam under one directional light).
+1. **Finish the appearance rendering.** The hair list itself is now the
+   client's -- five styles for a male rig, seven for a female one -- since
+   chargrp's hair table turned out to have three axes rather than two. What is
+   left:
+   - The seam where the face mesh meets the scalp, most visible on a Kamael's
+     forehead with face 3, where a marking stops dead at the hairline. The
+     geometry is welded and the boundary colours match within ~10 of 255, so
+     the remaining suspect is shading -- the two meshes' normals at the seam
+     under one directional light.
+   - A style's *texture* is still derived from its mesh name by
+     `textureName()`, while chargrp names one per row. The two agree on every
+     rig checked, but one of them should be the source of truth, and it should
+     be the table.
+   - `hasChoiceTexture()` drops a piece whose texture did not export and then
+     renumbers the surviving styles densely, so a missing texture shifts every
+     later index -- the same class of bug as the axis error, waiting to
+     happen. It should keep the style's index and drop only the piece. Some
+     rigs are already short a fringe this way (MDarkElf style 3, MDwarf styles
+     2-4).
 2. **Armour, with its meshes and textures.** `armorgrp.json` already names, per
    item and per rig, the mesh and texture of every slot plus any attachments.
    Missing: converting the armour meshes themselves (only the empty-slot bodies
