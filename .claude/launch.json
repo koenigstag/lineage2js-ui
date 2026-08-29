@@ -16,8 +16,9 @@
     {
       "name": "ui-verify",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@lineage2js/ui", "dev", "--", "--port", "5174"],
-      "port": 5174
+      "runtimeArgs": ["--filter", "@lineage2js/ui", "dev"],
+      "port": 5174,
+      "autoPort": true
     }
   ]
 }
