@@ -14,7 +14,6 @@ import {
   FILL_SKY_COLOR,
   SELECT_ARC_RADIUS,
   SELECT_ARC_SPREAD,
-  SELECT_FRONT_OFFSET,
 } from "../../../../config/client-scene-lighting";
 
 const SKY_SIZE: [number, number] = [70, 45];
@@ -24,17 +23,20 @@ const SKY_Z = -25;
 const SUN_DISTANCE = 14;
 
 /**
- * The arc's own centre, which the client puts in front of the ring rather
- * than at its middle -- see SELECT_FRONT_OFFSET. Characters stand a radius
- * away from it and turn to face it.
+ * The middle of the ring the characters stand around, and where the campfire
+ * is. They stand a radius away from it and turn to face it.
  */
-const ARC_CENTER_Z = SELECT_FRONT_OFFSET;
+const ARC_CENTER_Z = 0;
 
 // Kept as constants rather than inline in the Canvas props because the
 // characters' facing is derived from the camera position below -- the two
 // can't be allowed to drift apart.
-const CAMERA_POSITION: [x: number, y: number, z: number] = [0, 4.2, 7.5];
-const CAMERA_TARGET: [x: number, y: number, z: number] = [0, 3, 0];
+// Framed for the client's ring rather than the tighter circle this scene used
+// to stand people in: they are a radius of SELECT_ARC_RADIUS out, so the
+// camera sits closer than the distance alone suggests and looks past the fire
+// at the arc behind it, or the group ends up a thin band under empty sky.
+const CAMERA_POSITION: [x: number, y: number, z: number] = [0, 3.4, 4.6];
+const CAMERA_TARGET: [x: number, y: number, z: number] = [0, 1.5, -3.4];
 
 export interface CharSelectSceneProps {
   characters: Array<{ id: number; nickname: string; race: string; baseClass: string; sex: string }>;

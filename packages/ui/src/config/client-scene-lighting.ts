@@ -119,9 +119,12 @@ export const CLIENT_FOG_FAR = 10000 * CHARACTER_MODEL_SCALE;
  * Every slot's yaw points at that centre, to within a degree on all seven.
  * That is the rule to carry over rather than the numbers -- a character faces
  * the middle of the ring, which is also where the camera looks from.
+ *
+ * The campfire stands in that middle here. In the client the spot belongs to
+ * whoever has stepped forward, but nothing steps forward yet, and putting the
+ * ring's centre anywhere else lands the fire on the arc itself, in among the
+ * bodies.
  */
 export const SELECT_ARC_RADIUS = 5.0;
 /** Total angle the seven span, from the fitted circle: 36.3 to 130.5 degrees. */
 export const SELECT_ARC_SPREAD = (94.2 * Math.PI) / 180;
-/** How far in front of the arc the selected slot sits, along the camera's axis. */
-export const SELECT_FRONT_OFFSET = 4.18;
