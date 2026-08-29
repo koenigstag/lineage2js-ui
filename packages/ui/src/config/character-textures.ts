@@ -12,6 +12,23 @@ const CHARACTER_TEXTURE_BASE_URL = import.meta.env.VITE_CHARACTER_TEXTURE_BASE_U
 export type BodyPart = "face" | "hair" | "upper" | "lower" | "boots" | "gloves" | "wing";
 
 /**
+ * A material's name is the slot it fills, which is the body part -- except for
+ * hair, where it carries a style index after a dash.
+ *
+ * Hair is the one part a rig ships more than one of: the client keeps two head
+ * meshes (`m00_bh` and `m00_ah`) and character creation picks between them, so
+ * both are merged into the body and the runtime draws one. Rigs whose second
+ * head the client never shows -- the orcs, the shamans, the male dwarf, the
+ * male dark elf -- come out with a single style.
+ */
+export function parseSlot(slot: string): { part: BodyPart; style: number } {
+  const dash = slot.lastIndexOf("-");
+  if (dash < 0) return { part: slot as BodyPart, style: 0 };
+  const style = Number(slot.slice(dash + 1));
+  return Number.isInteger(style) ? { part: slot.slice(0, dash) as BodyPart, style } : { part: slot as BodyPart, style: 0 };
+}
+
+/**
  * Which appearance choice selects a part's texture.
  *
  * Both of the ones that vary are texture swaps in retail rather than
@@ -35,7 +52,16 @@ function variantFor(part: BodyPart, appearance: CharacterAppearance): number {
  * an hour of the previous art is what everyone gets -- which is exactly how
  * long a wrong body can be mistaken for a wrong converter.
  */
-type TextureIndex = Record<string, Partial<Record<BodyPart, number>> & { v?: string; gloss?: BodyPart[] }>;
+interface TextureEntry {
+  /** Slot -> how many variants of it the rig ships. */
+  [slot: string]: number | string | string[] | undefined;
+  /** Cache-busting token the server adds per rig. */
+  v?: string;
+  /** Slots whose alpha is a gloss mask rather than transparency. */
+  gloss?: string[];
+}
+
+type TextureIndex = Record<string, TextureEntry>;
 
 /**
  * Fetched once per session. Without it a caller would have to guess which
@@ -81,10 +107,25 @@ function base(): string {
  * what a page holding an index fetched before the converter rewrote it did.
  * The field is written even when empty, so its presence is the signal.
  */
-export async function characterTextureIsGlossMask(rig: string, part: BodyPart): Promise<boolean> {
+export async function characterTextureIsGlossMask(rig: string, slot: string): Promise<boolean> {
   const index = await textureIndex();
   const gloss = index?.[rig]?.gloss;
-  return gloss ? gloss.includes(part) : true;
+  return gloss ? gloss.includes(slot) : true;
+}
+
+/**
+ * How many hair styles a rig actually has, for the creation screen's select.
+ *
+ * Zero when there is no texture server to ask, which is also when the bodies
+ * are flat-tinted capsules with no hair to change -- the caller falls back to
+ * offering none rather than offering choices that do nothing.
+ */
+export async function characterHairStyleCount(rig: string): Promise<number> {
+  const index = await textureIndex();
+  const entry = index?.[rig];
+  if (!entry) return 0;
+  return Object.entries(entry).filter(([slot, count]) => typeof count === "number" && parseSlot(slot).part === "hair")
+    .length;
 }
 
 /**
@@ -95,14 +136,15 @@ export async function characterTextureIsGlossMask(rig: string, part: BodyPart): 
  */
 export async function characterTextureUrl(
   rig: string,
-  part: BodyPart,
+  slot: string,
   appearance: CharacterAppearance
 ): Promise<string | undefined> {
   const index = await textureIndex();
   const entry = index?.[rig];
-  const available = entry?.[part];
-  if (!available) return undefined;
+  const available = entry?.[slot];
+  if (typeof available !== "number" || available <= 0) return undefined;
+  const { part } = parseSlot(slot);
   const variant = Math.min(Math.max(variantFor(part, appearance), 0), available - 1);
   const version = entry?.v ? `?v=${entry.v}` : "";
-  return `${base()}${rig}/${part}-${variant}.png${version}`;
+  return `${base()}${rig}/${slot}-${variant}.png${version}`;
 }

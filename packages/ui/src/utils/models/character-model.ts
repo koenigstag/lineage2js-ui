@@ -4,6 +4,7 @@ import type { AnimationClip, Bone, Group, Mesh, MeshStandardMaterial } from "thr
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinnedScene } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { versionedModelUrl } from "../../config/character-models";
+import { parseSlot } from "../../config/character-textures";
 
 export interface CharacterModelAsset {
   scene: Group;
@@ -155,8 +156,13 @@ export function instantiateCharacterModel(asset: CharacterModelAsset, tint: Char
     // Materials survive the clone by reference, so tinting one character would
     // otherwise repaint every character sharing the rig.
     const material = (mesh.material as MeshStandardMaterial).clone();
-    const color = tint[TINT_FOR_MATERIAL[material.name]];
+    const { part, style } = parseSlot(material.name);
+    const color = tint[TINT_FOR_MATERIAL[part]];
     if (color) material.color.set(color);
+    // Only the first head until something chooses otherwise: a body carries
+    // every hair style it has, and drawing them together puts two haircuts on
+    // one scalp. applyCharacterTextures moves this to the chosen one.
+    if (part === "hair" && style !== 0) material.visible = false;
     mesh.material = material;
   });
 

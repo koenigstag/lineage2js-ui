@@ -12,6 +12,7 @@
     "convert:models": "tsx scripts/convert-unity-models.ts",
     "convert:client-rigs": "tsx scripts/convert-client-rigs.ts",
     "convert:armorgrp": "tsx scripts/convert-armorgrp.ts",
+    "convert:chargrp": "tsx scripts/convert-chargrp.ts",
     "extract:icons": "tsx scripts/extract-client-icons.ts",
     "lint": "eslint src/**",
     "clean": "rm -rf dist"

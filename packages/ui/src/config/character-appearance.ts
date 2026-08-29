@@ -14,6 +14,13 @@ export const DEFAULT_APPEARANCE: CharacterAppearance = { face: 0, hair: 0, hairC
 
 /** How many variants the creation screen offers, matching retail's own counts. */
 export const FACE_COUNT = 3;
+/**
+ * Only a fallback now. How many hair styles a body actually has is a property
+ * of that body -- the client ships two head meshes for most rigs and one for
+ * the orcs, the shamans and the male dwarf -- so the screen asks the converted
+ * rig (see characterHairStyleCount) and falls back to this when there is no
+ * texture server to ask, which is also when there is no hair to change.
+ */
 export const HAIR_STYLE_COUNT = 5;
 
 /**
@@ -52,5 +59,5 @@ function numberedOptions(count: number, key: string): Array<{ value: string; lab
 }
 
 export const faceOptions = () => numberedOptions(FACE_COUNT, "face");
-export const hairOptions = () => numberedOptions(HAIR_STYLE_COUNT, "hair");
+export const hairOptions = (count = HAIR_STYLE_COUNT) => numberedOptions(count, "hair");
 export const hairColorOptions = () => numberedOptions(HAIR_COLOR_COUNT, "color");

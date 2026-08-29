@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { SelectInput, type SelectOption } from "../../core/inputs/select.input";
@@ -12,8 +12,11 @@ import {
   faceOptions,
   hairColorOptions,
   hairOptions,
+  HAIR_STYLE_COUNT,
   type CharacterAppearance,
 } from "../../../config/character-appearance";
+import { characterHairStyleCount } from "../../../config/character-textures";
+import { getCharacterModelUrl } from "../../../config/character-models";
 import {
   MAX_CHARACTER_NAME_LENGTH,
   validateCharacterName,
@@ -60,6 +63,34 @@ export const CharCreateMenu = observer(function CharCreateMenu({
   const { alert, modal: alertModal } = useAlert();
 
   const [nickname, setNickname] = useState("");
+
+  // How many hair styles this particular body has. Asked of the converted rig
+  // rather than assumed, because it differs: most have the client's two head
+  // meshes and the orcs, the shamans and the male dwarf have one. Null until
+  // the answer is in, and for a body with no rig to ask.
+  const [hairStyles, setHairStyles] = useState<number | null>(null);
+  useEffect(() => {
+    const url = baseClass !== null && sex !== null ? getCharacterModelUrl({ race, baseClass, sex }) : undefined;
+    const rig = url?.split("/").pop()?.replace(/\.glb$/i, "");
+    if (!rig) {
+      setHairStyles(null);
+      return;
+    }
+    let live = true;
+    void characterHairStyleCount(rig).then((count) => {
+      if (!live || count <= 0) return;
+      setHairStyles(count);
+      // A style this body does not have would be a select showing a choice
+      // that draws nothing, and a character created carrying it.
+      if (appearance.hair >= count) onAppearanceChange({ ...appearance, hair: count - 1 });
+    });
+    return () => {
+      live = false;
+    };
+    // appearance is deliberately not a dependency: this only has to correct
+    // the value when the body underneath it changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [race, baseClass, sex]);
 
   const raceOptions: SelectOption[] = getAvailableRacesFromTemplates(session.characterTemplates).map((value) => ({
     value,
@@ -171,7 +202,7 @@ export const CharCreateMenu = observer(function CharCreateMenu({
         onChange={(value) => onAppearanceChange({ ...appearance, face: Number(value) })}
       />
       <SelectInput
-        options={hairOptions()}
+        options={hairOptions(hairStyles ?? HAIR_STYLE_COUNT)}
         value={String(appearance.hair)}
         placeholder={t("charCreate.hairPlaceholder")}
         disabled={!bodyChosen}

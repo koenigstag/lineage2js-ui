@@ -30,8 +30,8 @@ pitch; this file is for working in the code.
   supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles),
   `convert:client-rigs` (an installed game client, read with umodel -> one
   `.glb` per race/sex plus its textures under
-  `assets/highfive/textures/<rig>/`) and `convert:armorgrp` (the client's
-  `system/armorgrp.dat` -> `assets/highfive/data/`). `convert:models`, which
+  `assets/highfive/textures/<rig>/`) and `convert:armorgrp` / `convert:chargrp` (the
+  client's `system/*.dat` tables -> `assets/highfive/data/`). `convert:models`, which
   built the ten non-orc bodies out of a Unity port of the client, is
   superseded by `convert:client-rigs` -- kept for now, but nothing depends
   on its output any more.
@@ -42,7 +42,10 @@ pitch; this file is for working in the code.
   says which mesh and texture each rig wears with a slot empty, so the rig
   converter no longer guesses that from texture names. Don't go back to
   guessing: the guesses were wrong for the mystics' legs and boots and
-  could not find the Kamael's gloves at all.
+  could not find the Kamael's gloves at all. `chargrp.ts` reads the
+  appearance table the same way, but **only its hair and face sections** --
+  the rest of that record is not reversed yet, so it splits records on the
+  rig-name marker each one ends with rather than parsing through.
 
 ## Commands
 

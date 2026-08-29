@@ -127,6 +127,20 @@ type BodyPart = "face" | "hair" | "upper" | "lower" | "boots" | "gloves" | "wing
 /** Merge order, nothing more; a rig with no piece for a part gets no primitive for it. */
 const BODY_PARTS: BodyPart[] = ["face", "hair", "upper", "lower", "boots", "gloves", "wing"];
 
+/**
+ * What a piece's material is called, which is also how the runtime finds its
+ * texture and, for hair, which of them to draw.
+ *
+ * Every part but hair has exactly one mesh, so its name is the part. Hair
+ * does not: the client ships two head meshes per rig -- `m00_bh` and
+ * `m00_ah` -- and character creation picks between them. Both are converted
+ * and both are merged in, each as its own primitive, so the runtime can show
+ * one and hide the other without reloading the body.
+ */
+function slotName(part: BodyPart, style = 0): string {
+  return part === "hair" ? `hair-${style}` : part;
+}
+
 interface PieceSource {
   /** Suffix after the rig name, e.g. "m000_f" -- for a piece that lives in one set. */
   suffix?: string;
@@ -138,13 +152,13 @@ interface PieceSource {
   /** What it is, which decides both its material and the texture that goes on it. */
   part: BodyPart;
   /**
-   * Alternatives, not additions: pieces sharing a variant name fill the same
-   * spot on the body different ways, and only the first one a rig actually
-   * ships is taken. The client picks between them by the character's own
-   * appearance -- hairStyle for these -- which nothing in this pipeline
-   * models yet, and merging every candidate puts two haircuts on one head.
+   * Marks a piece as one of several the player chooses between, rather than
+   * one more piece of the same body -- hair, and only hair. Declared order is
+   * the offering order; the index a piece actually gets is assigned after the
+   * export, so a rig that ships fewer of them (the orcs have no `ah` head)
+   * still numbers its own from zero.
    */
-  variant?: string;
+  choice?: boolean;
   /**
    * Build the body on this piece's skeleton. Defaults to the rig's own first
    * piece, which is right whenever the rig has a body of its own; a body
@@ -194,8 +208,8 @@ const BODY_PIECES: PieceSource[] = [
   { bodyPart: "b", part: "boots" },
   { bodyPart: "g", part: "gloves" },
   { suffix: "m000_f", part: "face" },
-  { suffix: "m000_m00_bh", part: "hair", variant: "hair" },
-  { suffix: "m000_m00_ah", part: "hair", variant: "hair" },
+  { suffix: "m000_m00_bh", part: "hair", choice: true },
+  { suffix: "m000_m00_ah", part: "hair", choice: true },
 ];
 
 /**
@@ -425,7 +439,7 @@ function rigidAttachment(mesh: THREE.SkinnedMesh): { root: number; bone: THREE.B
  * the rig's and the rest contribute only their meshes.
  */
 function assemble(
-  pieces: { group: THREE.Group; part: BodyPart; name: string }[],
+  pieces: { group: THREE.Group; slot: string; name: string }[],
   selfAnimated: Set<string>
 ): AssembledBody {
   // All of them, not just the first: a piece whose mesh has more than one
@@ -506,7 +520,7 @@ function assemble(
   }
 
   const geometries: THREE.BufferGeometry[] = [];
-  const parts: BodyPart[] = [];
+  const slots: string[] = [];
   for (const piece of pieces) {
     piece.group.updateMatrixWorld(true);
     for (const mesh of meshesOf(piece.group)) {
@@ -566,7 +580,7 @@ function assemble(
       }
     }
       geometries.push(geometry);
-      parts.push(piece.part);
+      slots.push(piece.slot);
     }
   }
 
@@ -575,10 +589,17 @@ function assemble(
   // part. That is the floor: a part carries its own texture, so it cannot
   // share a material with another. The names are what the runtime finds them
   // by (see instantiateCharacterModel).
-  const partGeometries = BODY_PARTS.map((part) => {
-    const forPart = geometries.filter((_, index) => parts[index] === part);
-    return forPart.length > 0 ? mergeGeometries(forPart, false) : null;
-  }).filter((geometry): geometry is THREE.BufferGeometry => geometry !== null);
+  // BODY_PARTS is still the order, with each part's slots kept in the order
+  // they were merged -- which for hair is the order the styles are offered in.
+  const slotOrder = BODY_PARTS.flatMap((part) => [
+    ...new Set(slots.filter((slot) => slot === part || slot.startsWith(`${part}-`))),
+  ]);
+  const partGeometries = slotOrder
+    .map((slot) => {
+      const forSlot = geometries.filter((_, index) => slots[index] === slot);
+      return forSlot.length > 0 ? mergeGeometries(forSlot, false) : null;
+    })
+    .filter((geometry): geometry is THREE.BufferGeometry => geometry !== null);
 
   const merged = mergeGeometries(partGeometries, true);
   if (!merged) throw new Error("Body pieces have incompatible geometry attributes");
@@ -586,10 +607,10 @@ function assemble(
   primary.geometry = merged;
   // Rebind: adopting joints changed the array the skin indices point into.
   primary.bind(new THREE.Skeleton(bones, boneInverses), primary.bindMatrix);
-  primary.material = BODY_PARTS.filter((part) => parts.includes(part)).map(
-    (part) =>
+  primary.material = slotOrder.map(
+    (slot) =>
       new THREE.MeshStandardMaterial({
-        name: part,
+        name: slot,
         color: 0xffffff,
         roughness: 0.75,
         // A wing is a single sheet of triangles, not a closed volume, and the
@@ -597,7 +618,7 @@ function assemble(
         // is its back -- drawn one-sided it disappears except for a sliver at
         // the shoulder. Everything else on a body is closed and keeps the
         // cheaper single-sided draw.
-        side: part === "wing" ? THREE.DoubleSide : THREE.FrontSide,
+        side: slot === "wing" ? THREE.DoubleSide : THREE.FrontSide,
       })
   );
   primary.name = "body";
@@ -772,6 +793,21 @@ function bodySuffix(umodel: string, client: string, rig: string, piece: PieceSou
 }
 
 /**
+ * Whether a rig ships a texture for a piece the player is offered a choice of.
+ *
+ * The mesh alone is not enough to offer one. The orcs, the shamans and the
+ * male dwarf all publish an `ah` head their package has no texture for, and
+ * the client never shows it -- chargrp.dat lists only `bh` for them. Merging
+ * it anyway put an untextured head inside the body and, because the merge
+ * measures what it merged, made the male orc six units taller than he is.
+ */
+function hasChoiceTexture(umodel: string, client: string, rig: string, suffix: string): boolean {
+  const names = listTextures(umodel, client, rig);
+  const base = textureName(rig, suffix, "00").toLowerCase();
+  return names.has(base) || names.has(`${base}_ori`);
+}
+
+/**
  * Bare skin for a body part, published plainly or as _ori beside an _sp map
  * this pipeline has no use for.
  *
@@ -838,7 +874,12 @@ const PART_TEXTURES: Record<
  * `_sp` texture has colour under its transparent pixels and every other one is
  * black there.
  */
-export type TextureEntry = Partial<Record<BodyPart, number>> & { gloss?: BodyPart[] };
+export interface TextureEntry {
+  /** Slot -> how many variants of it the rig ships. Hair slots carry a style index, see slotName. */
+  [slot: string]: number | string[] | undefined;
+  /** Slots whose alpha is a specularity mask rather than transparency. */
+  gloss?: string[];
+}
 
 export type TextureManifest = Record<string, TextureEntry>;
 
@@ -854,16 +895,17 @@ async function exportTextures(
   client: string,
   workDir: string,
   rig: string,
-  pieces: { part: BodyPart; rig: string; suffix: string }[]
+  pieces: { part: BodyPart; slot: string; rig: string; suffix: string }[]
 ): Promise<TextureEntry> {
   const outDir = path.join(OUT_TEXTURE_DIR, rig.toLowerCase());
   await fs.promises.mkdir(outDir, { recursive: true });
-  const counts: Partial<Record<BodyPart, number>> = {};
-  const gloss: BodyPart[] = [];
+  const counts: Record<string, number> = {};
+  const gloss: string[] = [];
+  const written = new Set<string>();
 
-  for (const piece of new Map(pieces.map((piece) => [piece.part, piece])).values()) {
+  for (const piece of new Map(pieces.map((piece) => [piece.slot, piece])).values()) {
     const { variants, candidates } = PART_TEXTURES[piece.part];
-    let written = 0;
+    let count = 0;
     for (let variant = 0; variant < variants; variant++) {
       let source: string | undefined;
       let chosen: string | undefined;
@@ -891,11 +933,21 @@ async function exportTextures(
       // Variants run out rather than skip: a rig with two faces has t00 and
       // t01, never t00 and t02, so the first gap is the end of the list.
       if (!source) break;
-      await fs.promises.copyFile(source, path.join(outDir, `${piece.part}-${variant}.png`));
-      if (chosen?.toLowerCase().endsWith("_sp") && !gloss.includes(piece.part)) gloss.push(piece.part);
-      written++;
+      const name = `${piece.slot}-${variant}.png`;
+      await fs.promises.copyFile(source, path.join(outDir, name));
+      written.add(name);
+      if (chosen?.toLowerCase().endsWith("_sp") && !gloss.includes(piece.slot)) gloss.push(piece.slot);
+      count++;
     }
-    if (written > 0) counts[piece.part] = written;
+    if (count > 0) counts[piece.slot] = count;
+  }
+
+  // Anything left from an earlier conversion goes: slots have been renamed
+  // before now (hair grew a style index), and a file the manifest no longer
+  // mentions is at best dead weight and at worst the one a stale client asks
+  // for.
+  for (const name of await fs.promises.readdir(outDir)) {
+    if (name.endsWith(".png") && !written.has(name)) await fs.promises.rm(path.join(outDir, name));
   }
 
   // Always written, empty included: its presence is how the runtime knows
@@ -914,6 +966,7 @@ async function convertRig(
   const exported: {
     file: string;
     part: BodyPart;
+    slot: string;
     own: boolean;
     rig: string;
     pkg: string;
@@ -921,9 +974,11 @@ async function convertRig(
     primary?: boolean;
   }[] = [];
 
-  const filled = new Set<string>();
+  // Styles are numbered as they are found, not as they are declared: the orcs
+  // ship no `ah` head, and a gap in the numbering would leave the runtime
+  // offering a choice that selects nothing.
+  const choices = new Map<BodyPart, number>();
   for (const piece of pieceSources) {
-    if (piece.variant && filled.has(piece.variant)) continue;
     const from = piece.from ?? { pkg: source.pkg, rig: source.rig };
     const suffix = piece.suffix ?? bodySuffix(umodel, client, from.rig, piece);
     const object = `${from.rig}_${suffix}`;
@@ -937,16 +992,19 @@ async function convertRig(
       }
     }
     if (!fs.existsSync(file)) continue;
+    if (piece.choice && !hasChoiceTexture(umodel, client, from.rig, suffix)) continue;
+    const style = piece.choice ? (choices.get(piece.part) ?? 0) : 0;
+    if (piece.choice) choices.set(piece.part, style + 1);
     exported.push({
       file,
       part: piece.part,
+      slot: slotName(piece.part, style),
       own: from.pkg === source.pkg,
       rig: from.rig,
       pkg: from.pkg,
       suffix,
       primary: piece.primary,
     });
-    if (piece.variant) filled.add(piece.variant);
   }
   if (exported.length === 0) throw new Error(`No body pieces found for ${source.rig}`);
 
@@ -1053,7 +1111,7 @@ async function convertRig(
   await fs.promises.writeFile(outFile, Buffer.from(glb));
 
   const textures = await exportTextures(umodel, client, workDir, source.rig, exported);
-  const untextured = BODY_PARTS.filter((part) => exported.some((piece) => piece.part === part) && !textures[part]);
+  const untextured = [...new Set(exported.map((piece) => piece.slot))].filter((slot) => !textures[slot]);
   console.log(
     `  ${source.rig}: ${exported.length} pieces, ${clips.length} clips, ` +
       `${Math.round(body.height)} units tall, ${Math.round(glb.byteLength / 1024)} KB -> ${path.basename(outFile)}` +
@@ -1062,8 +1120,9 @@ async function convertRig(
       (body.aligned.length ? `  (aligned: ${body.aligned.join(", ")})` : "") +
       (odd.length ? `  (rest pose of its own: ${odd.join(", ")})` : "") +
       (missing.length ? `  (no sequence for ${missing.join("/")})` : "") +
-      `  (textures: ${BODY_PARTS.filter((part) => textures[part])
-        .map((part) => `${part}x${textures[part]}`)
+      `  (textures: ${Object.entries(textures)
+        .filter(([slot, count]) => slot !== "gloss" && typeof count === "number")
+        .map(([slot, count]) => `${slot}x${String(count)}`)
         .join(" ")})` +
       (untextured.length ? `  (no texture for ${untextured.join("/")})` : "")
   );

@@ -1,10 +1,6 @@
 import { SRGBColorSpace, TextureLoader } from "three";
 import type { MeshStandardMaterial, Object3D, Texture } from "three";
-import {
-  characterTextureIsGlossMask,
-  characterTextureUrl,
-  type BodyPart,
-} from "../../config/character-textures";
+import { characterTextureIsGlossMask, characterTextureUrl, parseSlot } from "../../config/character-textures";
 import type { CharacterAppearance } from "../../config/character-appearance";
 
 /**
@@ -60,21 +56,35 @@ export async function applyCharacterTextures(
   appearance: CharacterAppearance,
   isCurrent: () => boolean
 ): Promise<void> {
-  const materials = new Map<BodyPart, MeshStandardMaterial[]>();
+  const materials = new Map<string, MeshStandardMaterial[]>();
   root.traverse((object) => {
     const material = (object as { material?: MeshStandardMaterial }).material;
     if (!material?.name) return;
-    const part = material.name as BodyPart;
-    const existing = materials.get(part);
+    const existing = materials.get(material.name);
     if (existing) existing.push(material);
-    else materials.set(part, [material]);
+    else materials.set(material.name, [material]);
   });
 
+  // Which head to draw. Counted off the body rather than the index, so it is
+  // right before the manifest arrives and right for a rig converted without
+  // one -- and clamped, because a character created on a client with more
+  // styles than this body has must still render.
+  const styles = [...materials.keys()].filter((slot) => parseSlot(slot).part === "hair").length;
+  const chosenStyle = Math.min(Math.max(appearance.hair, 0), Math.max(styles - 1, 0));
+
   await Promise.all(
-    [...materials].map(async ([part, targets]) => {
-      const url = await characterTextureUrl(rig, part, appearance);
+    [...materials].map(async ([slot, targets]) => {
+      const { part, style } = parseSlot(slot);
+      // Both heads are in the body; only one is ever drawn. Material.visible
+      // is what does it -- the parts share one geometry, so there is no object
+      // to hide.
+      const shown = part !== "hair" || style === chosenStyle;
+      for (const material of targets) material.visible = shown;
+      if (!shown) return;
+
+      const url = await characterTextureUrl(rig, slot, appearance);
       if (!url || !isCurrent()) return;
-      const glossMask = await characterTextureIsGlossMask(rig, part);
+      const glossMask = await characterTextureIsGlossMask(rig, slot);
       const texture = await loadTexture(url);
       if (!texture || !isCurrent()) return;
       for (const material of targets) {
