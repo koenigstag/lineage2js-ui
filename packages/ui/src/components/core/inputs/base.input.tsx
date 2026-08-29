@@ -2,6 +2,8 @@ import type { ChangeEvent, CSSProperties, KeyboardEvent } from "react";
 
 export interface BaseInputProps {
   value: string;
+  /** Set beside the field rather than inside it, on the same line. */
+  label?: string;
   placeholder?: string;
   onChange: (value: string) => void;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -13,6 +15,7 @@ export interface BaseInputProps {
 
 export function BaseInput({
   value,
+  label,
   placeholder,
   onChange,
   onKeyDown,
@@ -21,7 +24,7 @@ export function BaseInput({
   type = "text",
   style,
 }: BaseInputProps) {
-  return (
+  const field = (
     <input
       type={type}
       value={value}
@@ -41,5 +44,16 @@ export function BaseInput({
         ...style,
       }}
     />
+  );
+
+  if (!label) return field;
+  // `display: contents` so the label and the field become cells of the
+  // surrounding FieldGrid rather than a row of their own -- that is what keeps
+  // every control on the panel starting at the same x.
+  return (
+    <label style={{ display: "contents" }}>
+      <span style={{ color: "#8a8a8a", fontSize: 12 }}>{label}</span>
+      {field}
+    </label>
   );
 }

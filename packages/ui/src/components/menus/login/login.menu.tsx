@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
+import { FieldGrid } from "../../core/inputs/field-grid";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useConfirmation } from "../../core/confirmation-modal";
 import { useAlert } from "../../core/alert-modal";
@@ -71,8 +72,10 @@ export const LoginMenu = observer(
           padding: 16,
         }}
       >
-        <BaseInput value={account} placeholder={t("login.idPlaceholder")} onChange={setAccount} />
-        <BaseInput value={password} placeholder={t("login.pwdPlaceholder")} onChange={setPassword} type="password" onKeyDown={handleKeyDown} />
+        <FieldGrid>
+          <BaseInput value={account} label={t("login.idLabel")} onChange={setAccount} />
+          <BaseInput value={password} label={t("login.pwdLabel")} onChange={setPassword} type="password" onKeyDown={handleKeyDown} />
+        </FieldGrid>
         <div style={{ display: "flex", gap: 8 }}>
           <BaseButton onClick={handleLogin} disabled={session.isConnecting}>
             {session.isConnecting ? t("common.connecting") : t("login.loginButton")}

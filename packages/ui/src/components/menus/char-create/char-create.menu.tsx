@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { BaseInput } from "../../core/inputs/base.input";
 import { SelectInput, type SelectOption } from "../../core/inputs/select.input";
+import { FieldGrid } from "../../core/inputs/field-grid";
 import { BaseButton } from "../../core/buttons/base.button";
 import { useAlert } from "../../core/alert-modal";
 import { useGameStore, useSessionStore, useUiStore } from "../../../stores/StoreContext";
@@ -169,52 +170,54 @@ export const CharCreateMenu = observer(function CharCreateMenu({
         padding: 16,
       }}
     >
-      <BaseInput
-        value={nickname}
-        placeholder={t("charCreate.nicknamePlaceholder")}
-        maxLength={MAX_CHARACTER_NAME_LENGTH}
-        onChange={setNickname}
-      />
-      <SelectInput
-        options={raceOptions}
-        value={race}
-        placeholder={t("charCreate.racePlaceholder")}
-        onChange={(value) => onRaceChange(value as RaceNames)}
-      />
-      <SelectInput
-        options={baseClassOptions}
-        value={baseClass ?? ""}
-        placeholder={t("charCreate.classPlaceholder")}
-        onChange={(value) => onBaseClassChange(value as BaseClass)}
-      />
-      <SelectInput
-        options={sexOptions}
-        value={sex ?? ""}
-        placeholder={t("charCreate.sexPlaceholder")}
-        disabled={baseClass === null}
-        onChange={(value) => onSexChange(value as SexNames)}
-      />
-      <SelectInput
-        options={faceOptions()}
-        value={String(appearance.face)}
-        placeholder={t("charCreate.facePlaceholder")}
-        disabled={!bodyChosen}
-        onChange={(value) => onAppearanceChange({ ...appearance, face: Number(value) })}
-      />
-      <SelectInput
-        options={hairOptions(hairStyles ?? HAIR_STYLE_COUNT)}
-        value={String(appearance.hair)}
-        placeholder={t("charCreate.hairPlaceholder")}
-        disabled={!bodyChosen}
-        onChange={(value) => onAppearanceChange({ ...appearance, hair: Number(value) })}
-      />
-      <SelectInput
-        options={hairColorOptions()}
-        value={String(appearance.hairColor)}
-        placeholder={t("charCreate.hairColorPlaceholder")}
-        disabled={!bodyChosen}
-        onChange={(value) => onAppearanceChange({ ...appearance, hairColor: Number(value) })}
-      />
+      <FieldGrid>
+        <BaseInput
+          value={nickname}
+          label={t("charCreate.nicknameLabel")}
+          maxLength={MAX_CHARACTER_NAME_LENGTH}
+          onChange={setNickname}
+        />
+        <SelectInput
+          options={raceOptions}
+          value={race}
+          label={t("charCreate.raceLabel")}
+          onChange={(value) => onRaceChange(value as RaceNames)}
+        />
+        <SelectInput
+          options={baseClassOptions}
+          value={baseClass ?? ""}
+          label={t("charCreate.classLabel")}
+          onChange={(value) => onBaseClassChange(value as BaseClass)}
+        />
+        <SelectInput
+          options={sexOptions}
+          value={sex ?? ""}
+          label={t("charCreate.sexLabel")}
+          disabled={baseClass === null}
+          onChange={(value) => onSexChange(value as SexNames)}
+        />
+        <SelectInput
+          options={hairOptions(hairStyles ?? HAIR_STYLE_COUNT)}
+          value={String(appearance.hair)}
+          label={t("charCreate.hairLabel")}
+          disabled={!bodyChosen}
+          onChange={(value) => onAppearanceChange({ ...appearance, hair: Number(value) })}
+        />
+        <SelectInput
+          options={hairColorOptions()}
+          value={String(appearance.hairColor)}
+          label={t("charCreate.hairColorLabel")}
+          disabled={!bodyChosen}
+          onChange={(value) => onAppearanceChange({ ...appearance, hairColor: Number(value) })}
+        />
+        <SelectInput
+          options={faceOptions()}
+          value={String(appearance.face)}
+          label={t("charCreate.faceLabel")}
+          disabled={!bodyChosen}
+          onChange={(value) => onAppearanceChange({ ...appearance, face: Number(value) })}
+        />
+      </FieldGrid>
       <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
         {/* Deliberately not disabled on an empty name -- validation explains why it's rejected. An
             unchosen class or sex is different: there is no mistake to explain, the character simply
