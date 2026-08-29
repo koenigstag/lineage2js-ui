@@ -1,4 +1,5 @@
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import { FORM_CONTROL_CURSOR } from "../../../config/cursor-urls";
 
 export interface BaseButtonProps {
   children: ReactNode;
@@ -17,7 +18,7 @@ const baseStyle: CSSProperties = {
   padding: "6px 12px",
   textAlign: "center",
   textDecoration: "none",
-  cursor: "default",
+  cursor: FORM_CONTROL_CURSOR,
 };
 
 export function BaseButton({ children, onClick, href, disabled, style }: BaseButtonProps) {
@@ -34,7 +35,7 @@ export function BaseButton({ children, onClick, href, disabled, style }: BaseBut
       type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{ ...baseStyle, opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "default", ...style }}
+      style={{ ...baseStyle, opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : FORM_CONTROL_CURSOR, ...style }}
     >
       {children}
     </button>

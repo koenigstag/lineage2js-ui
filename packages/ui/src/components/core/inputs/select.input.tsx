@@ -1,4 +1,5 @@
 import type { ChangeEvent } from "react";
+import { FORM_CONTROL_CURSOR } from "../../../config/cursor-urls";
 
 /**
  * What an unmade choice reads as, now that the label sits beside the control
@@ -41,6 +42,7 @@ export function SelectInput({ options, value, label, placeholder, disabled, onCh
         border: "1px solid #666666",
         borderRadius: 4,
         padding: "6px 8px",
+        cursor: FORM_CONTROL_CURSOR,
       }}
     >
       {(placeholder || value === "") && (

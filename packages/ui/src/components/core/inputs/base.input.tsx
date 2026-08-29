@@ -1,4 +1,5 @@
 import type { ChangeEvent, CSSProperties, KeyboardEvent } from "react";
+import { FORM_CONTROL_CURSOR } from "../../../config/cursor-urls";
 
 export interface BaseInputProps {
   value: string;
@@ -41,6 +42,7 @@ export function BaseInput({
         border: "1px solid #666666",
         borderRadius: 4,
         padding: "6px 8px",
+        cursor: FORM_CONTROL_CURSOR,
         ...style,
       }}
     />

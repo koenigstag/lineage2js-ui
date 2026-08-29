@@ -5,6 +5,7 @@ import { BaseButton } from "../../core/buttons/base.button";
 import { useAlert } from "../../core/alert-modal";
 import { useSessionStore } from "../../../stores/StoreContext";
 import { MENU_Z_INDEX } from "../../../config/z-index";
+import { FORM_CONTROL_CURSOR } from "../../../config/cursor-urls";
 import { t } from "../../../lang/lang";
 
 // The login protocol has no server display name -- only an Id. Real L2
@@ -142,7 +143,7 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
             border: "1px solid #444444",
             borderRadius: 4,
             color: "#999999",
-            cursor: "pointer",
+            cursor: FORM_CONTROL_CURSOR,
             padding: "2px 6px",
             fontSize: 14,
             lineHeight: 1.4,
@@ -176,7 +177,7 @@ export const ServerSelectMenu = observer(function ServerSelectMenu({ onConfirm }
                 style={{
                   padding: "6px 10px",
                   fontSize: 12,
-                  cursor: "pointer",
+                  cursor: FORM_CONTROL_CURSOR,
                   color: option.mode === sortMode ? "#e8dfc8" : "#999999",
                   backgroundColor: option.mode === sortMode ? "#332a1a" : "transparent",
                 }}

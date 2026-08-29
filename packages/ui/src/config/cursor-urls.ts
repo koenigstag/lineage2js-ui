@@ -36,3 +36,12 @@ export function cursorStyle(name: string, fallback: string): string {
  * gltf-character-model.component.tsx's onPointerOut.
  */
 export const DEFAULT_CURSOR = cursorStyle("default", "auto");
+
+/**
+ * Same real-art-with-fallback shape as DEFAULT_CURSOR, but falls back to the
+ * "default" keyword instead of "auto" -- for form controls (BaseButton,
+ * BaseInput, SelectInput), so they show the plain arrow even where the
+ * browser would otherwise pick its own cursor for the element type (the
+ * text-select I-beam on an <input>, for instance) once no art is set.
+ */
+export const FORM_CONTROL_CURSOR = cursorStyle("default", "default");
