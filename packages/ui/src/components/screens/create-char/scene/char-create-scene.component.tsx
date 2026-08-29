@@ -2,12 +2,18 @@ import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Object3D } from "three";
 import { PlayerModel } from "../../../core/scene/player-model.component";
-import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
-import { StarField } from "../../login/atmosphere/star-field.component";
 import { RACES, getBodyScale, type RaceNames, type BaseClass, type SexNames } from "../../../../config/character-races";
 import type { CharacterAppearance } from "../../../../config/character-appearance";
 import { getCharacterModelUrl } from "../../../../config/character-models";
 import { getHeadHeight, useCharacterModel } from "../../../../utils/models/character-model";
+import {
+  CLIENT_AMBIENT_INTENSITY,
+  CLIENT_FOG_FAR,
+  CLIENT_FOG_NEAR,
+  CLIENT_SUN_DIRECTION,
+  CLIENT_SUN_INTENSITY,
+} from "../../../../config/client-scene-lighting";
+import { DaySky } from "./day-sky.component";
 import { RACE_GALLERY, type GalleryVariant } from "./race-gallery.utils";
 import { CameraRig, type CameraFocus } from "./camera-rig.component";
 
@@ -48,23 +54,34 @@ function variantOffsets(variants: GalleryVariant[]): number[] {
   return offsets.map((offset) => offset - mid);
 }
 
-interface MoonLightProps {
+interface SunLightProps {
   groupX: number;
 }
 
-// Directional lights aim at their `target` object's world position -- the
-// default target sits at the world origin, which put distant groups (large
-// groupX) at a steep side angle instead of front-lit. Giving the light its
-// own target object that tracks groupX keeps the light aimed at whichever
-// group the camera is currently on.
-function MoonLight({ groupX }: MoonLightProps) {
+/** How far along its own direction to put the sun. Any distance does, for a light with no falloff. */
+const SUN_DISTANCE = 12;
+
+// The client's own sun, at the angle its lobby level sets (see
+// config/client-scene-lighting). Directional lights aim at their `target`
+// object's world position, and the default target sits at the world origin --
+// which for a distant group (large groupX) would swing the light round to the
+// side. Giving it a target that tracks groupX keeps the angle the same for
+// every race, which is what the client gets for free by having one sun over
+// six places in one level.
+function SunLight({ groupX }: SunLightProps) {
   const target = useMemo(() => new Object3D(), []);
   target.position.set(groupX, 1.5, 0);
+  const [dx, dy, dz] = CLIENT_SUN_DIRECTION;
 
   return (
     <>
       <primitive object={target} />
-      <directionalLight position={[groupX + 2, 9, 8]} target={target} intensity={1.4} color="#d8e4ff" />
+      <directionalLight
+        position={[groupX + dx * SUN_DISTANCE, 1.5 + dy * SUN_DISTANCE, dz * SUN_DISTANCE]}
+        target={target}
+        intensity={CLIENT_SUN_INTENSITY}
+        color="#fff4e0"
+      />
     </>
   );
 }
@@ -135,11 +152,12 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
       >
         <CameraRig focus={focus} cut={race} />
 
-        <ambientLight intensity={0.7} color="#5a6a8a" />
-        <MoonLight groupX={groupXForRace(race)} />
+        <fog attach="fog" args={["#8fa8c8", CLIENT_FOG_NEAR, CLIENT_FOG_FAR]} />
 
-        <SkyLayer size={SKY_SIZE} z={SKY_Z} />
-        <StarField size={SKY_SIZE} z={SKY_Z + 1} />
+        <ambientLight intensity={CLIENT_AMBIENT_INTENSITY} />
+        <SunLight groupX={groupXForRace(race)} />
+
+        <DaySky size={SKY_SIZE} z={SKY_Z} />
 
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(RACES.length - 1) * GROUP_SPACING * 0.5, 0, 0]}>
           <planeGeometry args={[RACES.length * GROUP_SPACING + 200, 200]} />
