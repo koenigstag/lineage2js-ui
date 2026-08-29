@@ -10,6 +10,7 @@ import { CharSelectScene } from "./scene/char-select-scene.component";
 import { useGameStore, useSessionStore, useUiStore } from "../../../stores/StoreContext";
 import { toLocalRace, toLocalBaseClass, toLocalSex } from "../../../config/network-mapping";
 import { t } from "../../../lang/lang";
+import { DEFAULT_CURSOR } from "../../../config/cursor-urls";
 
 export const CharSelectScreen = observer(function CharSelectScreen() {
   const game = useGameStore();
@@ -59,7 +60,10 @@ export const CharSelectScreen = observer(function CharSelectScreen() {
   const selectedCharacter = characters.find((character) => character.id === game.selectedCharacterId);
 
   return (
-    <Screen className="screen screen--select-char" style={{ display: "flex", flexDirection: "column" }}>
+    <Screen
+      className="screen screen--select-char"
+      style={{ display: "flex", flexDirection: "column", cursor: DEFAULT_CURSOR }}
+    >
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
         <CharSelectScene
           characters={characters}

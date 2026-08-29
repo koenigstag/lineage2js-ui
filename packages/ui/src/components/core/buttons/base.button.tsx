@@ -17,7 +17,7 @@ const baseStyle: CSSProperties = {
   padding: "6px 12px",
   textAlign: "center",
   textDecoration: "none",
-  cursor: "pointer",
+  cursor: "default",
 };
 
 export function BaseButton({ children, onClick, href, disabled, style }: BaseButtonProps) {
@@ -34,7 +34,7 @@ export function BaseButton({ children, onClick, href, disabled, style }: BaseBut
       type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{ ...baseStyle, opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer", ...style }}
+      style={{ ...baseStyle, opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "default", ...style }}
     >
       {children}
     </button>

@@ -9,6 +9,7 @@ import { WindowsRoot } from "../../windows/core/windows-root";
 import { LOGIN_WINDOW_IDS } from "../../../config/windows.registry";
 import { AtmosphereScene } from "./atmosphere/atmosphere-scene.component";
 import { useUiStore } from "../../../stores/StoreContext";
+import { DEFAULT_CURSOR } from "../../../config/cursor-urls";
 
 export function LoginScreen() {
   const [showServerSelect, setShowServerSelect] = useState(false);
@@ -18,7 +19,7 @@ export function LoginScreen() {
   return (
     <Screen
       className="screen screen--login"
-      style={{ display: "flex", flexDirection: "column" }}
+      style={{ display: "flex", flexDirection: "column", cursor: DEFAULT_CURSOR }}
     >
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
         <AtmosphereScene />

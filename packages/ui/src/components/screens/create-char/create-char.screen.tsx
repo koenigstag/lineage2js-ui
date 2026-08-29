@@ -9,6 +9,7 @@ import { useSessionStore } from "../../../stores/StoreContext";
 import { getAvailableRacesFromTemplates } from "../../../config/network-mapping";
 import { type RaceNames, type BaseClass, type SexNames } from "../../../config/character-races";
 import { DEFAULT_APPEARANCE, type CharacterAppearance } from "../../../config/character-appearance";
+import { DEFAULT_CURSOR } from "../../../config/cursor-urls";
 
 export const CreateCharScreen = observer(function CreateCharScreen() {
   const session = useSessionStore();
@@ -55,7 +56,10 @@ export const CreateCharScreen = observer(function CreateCharScreen() {
   }
 
   return (
-    <Screen className="screen screen--create-char" style={{ display: "flex", flexDirection: "column" }}>
+    <Screen
+      className="screen screen--create-char"
+      style={{ display: "flex", flexDirection: "column", cursor: DEFAULT_CURSOR }}
+    >
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
         <CharCreateScene
           race={race}
