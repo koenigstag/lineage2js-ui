@@ -1,6 +1,7 @@
 import { DoubleSide } from "three";
 import { NicknameLabel } from "./nickname-label.component";
 import { DEFAULT_CURSOR } from "../../../config/cursor-urls";
+import { LEGACY_SCENE_SCALE } from "../../../utils/models/character-model";
 
 /**
  * @deprecated Invented placeholder tone, not ported from any real art source
@@ -36,6 +37,13 @@ interface CharacterModelProps {
  * Simple procedural humanoid placeholder -- no character art exists yet.
  * Purely presentational: geometry/pose/label/click, decides nothing about
  * what color/scale to use -- that's PlayerModel/CreatureModel's job.
+ *
+ * All the raw geometry below (capsule, head, cape, ring) is hand-authored at
+ * roughly the placeholder's own historical ~1.7-unit height, same as it's
+ * always been -- LEGACY_SCENE_SCALE brings that down to
+ * REFERENCE_HUMAN_HEIGHT_M so this stands next to a real converted body (or
+ * the geodata terrain) at the size it should, instead of the ~2x-too-tall
+ * that number turned out to be against real client data.
  */
 export function CharacterModel({
   x,
@@ -55,7 +63,9 @@ export function CharacterModel({
 }: CharacterModelProps) {
   return (
     <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
-      {nickname && <NicknameLabel text={nickname} position={[0, 1.95 * heightScale, 0]} />}
+      {nickname && (
+        <NicknameLabel text={nickname} position={[0, 1.95 * heightScale * LEGACY_SCENE_SCALE, 0]} />
+      )}
 
       {/*
         Tips the whole body over to lie flat on the ground instead of
@@ -68,7 +78,13 @@ export function CharacterModel({
         position offset needed.
       */}
       <group rotation={isDead ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
-        <group scale={[widthScale, heightScale, widthScale]}>
+        <group
+          scale={[
+            widthScale * LEGACY_SCENE_SCALE,
+            heightScale * LEGACY_SCENE_SCALE,
+            widthScale * LEGACY_SCENE_SCALE,
+          ]}
+        >
           <mesh
             position={[0, 0.9, 0]}
             onClick={

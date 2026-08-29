@@ -2,6 +2,8 @@
 // translation from L2's html dialect into real rendering/behavior in one
 // place, rather than scattering that logic through the parser's tree walk.
 
+import { POINTER_CURSOR } from "../../config/cursor-urls";
+
 // L2's <font color="..."> can be a real hex string or one of a handful of
 // named UI tokens the retail client resolves against its own theme. There's
 // no reference table for these anywhere in this codebase (or the
@@ -70,7 +72,7 @@ class L2LinkElement extends HTMLElement {
 
   connectedCallback() {
     this.style.display = "inline";
-    this.style.cursor = "pointer";
+    this.style.cursor = POINTER_CURSOR;
     this.style.textDecoration = "underline";
     this.style.color = "#6496f9";
     this.addEventListener("click", this.handleClick);

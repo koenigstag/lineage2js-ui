@@ -266,7 +266,6 @@ export const Window = observer(function Window({ id, children, onClose }: Window
             padding: "4px 8px",
             background: TITLEBAR_BACKGROUND,
             borderBottom: `1px solid ${TITLEBAR_BORDER_COLOR}`,
-            cursor: config.draggable ? "move" : "default",
             ...config.windowStyle?.titlebar,
           }}
           onPointerDown={handleDragStart}
@@ -338,7 +337,6 @@ export const Window = observer(function Window({ id, children, onClose }: Window
               background: SIDEBAR_BACKGROUND,
               border: `1px solid ${SIDEBAR_STRIP_BORDER_COLOR}`,
               borderRight: "none",
-              cursor: config.draggable ? "move" : "default",
               ...config.windowStyle?.sidebar,
             }}
             onPointerDown={handleDragStart}
