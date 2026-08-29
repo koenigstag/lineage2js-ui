@@ -43,9 +43,15 @@ pitch; this file is for working in the code.
   converter no longer guesses that from texture names. Don't go back to
   guessing: the guesses were wrong for the mystics' legs and boots and
   could not find the Kamael's gloves at all. `chargrp.ts` reads the
-  appearance table the same way, but **only its hair and face sections** --
-  the rest of that record is not reversed yet, so it splits records on the
-  rig-name marker each one ends with rather than parsing through.
+  appearance table the same way, and reads all of it: hair styles, faces, the
+  body each empty equipment slot wears, effects and sounds. Both readers hold
+  the same line -- the parse must consume the table exactly, ending on its
+  `SafePackage` marker -- so a schema change that "mostly works" fails loudly
+  instead of returning plausible nonsense. Field names follow the structure
+  definitions in L2ClientDat
+  (https://github.com/MobiusDevelopment/l2clientdat), a useful reference for
+  adding another table; it is GPL and this repo is MIT, so nothing is copied
+  from it.
 
 ## Commands
 

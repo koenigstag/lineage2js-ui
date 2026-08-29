@@ -2,30 +2,29 @@
  * The client's character-appearance table, `system/chargrp.dat`.
  *
  * One record per player rig, in the same order as armorgrp's body slots, and
- * the part worth having is what character creation offers: the head meshes for
- * each hair style and the three faces, each with the texture that belongs on
- * it. This is the client's own answer to a question the model pipeline had
- * been getting from the package listing -- and getting wrong, because a rig
- * publishes head meshes it never shows.
+ * what it holds is exactly what character creation offers: the head meshes for
+ * every hair style, the three faces, and the body a rig wears with each
+ * equipment slot empty -- each with the texture that belongs on it. It is the
+ * client's own answer to questions this pipeline used to take from the package
+ * listing, which is not the same thing: a rig publishes head meshes the client
+ * never shows.
  *
- * **Only part of the record is decoded.** The hair and face sections read
- * exactly; the equipment, effect and sound sections that follow them do not
- * yet, so this skips to the next record instead of parsing through. That is
- * safe because the split does not depend on them: every record ends with its
- * rig's name written as a length-prefixed ASCII string (`09 "MFighter" 00`),
- * the same kind of marker that closes armorgrp, and those are found by
- * scanning the whole file. Where the next record begins after one is settled
- * by parsing forward: exactly one offset yields 150 clean hair pairs followed
- * by a face list, which is a strong enough shape that a wrong guess cannot
- * satisfy it.
- *
- * Do not "fix" this by loosening the checks. The one thing worse than an
- * incomplete reader here is one that quietly returns plausible nonsense.
+ * The record layout below was reversed against a High Five client and is exact
+ * in the sense that can be checked: reading all seventeen records consumes the
+ * decoded table byte for byte, ending on its "SafePackage" trailer. The field
+ * *names* come from the structure definitions shipped with L2ClientDat
+ * (https://github.com/MobiusDevelopment/l2clientdat), which agree with the
+ * layout field for field -- nothing of theirs is copied here, that project is
+ * GPL and this one is MIT, but it is the reference to reach for when adding
+ * another table.
  */
 import { DatReader, readDatFile } from "./l2-dat";
 
-/** Rigs in file order -- the same sixteen, in the same order, as armorgrp's body slots. */
-const RIG_NAMES = [
+/**
+ * Rigs in file order -- the same sixteen, in the same order, as armorgrp's body
+ * slots, plus a seventeenth that is empty in every field.
+ */
+export const CHAR_RIGS = [
   "MFighter",
   "FFighter",
   "MDarkElf",
@@ -44,94 +43,163 @@ const RIG_NAMES = [
   "FKamael",
 ] as const;
 
+const RECORDS = CHAR_RIGS.length + 1;
+
 /**
- * The hair table's shape: five styles, each with a slot per armour set,
- * because a helmet replaces the head mesh and the table says which one with
- * what.
+ * The hair table: five styles for each of fifteen armour sets, row
+ * `style * 15 + set`, because a helmet replaces the head and the table says
+ * which one with what. Set 0 is what an unequipped body wears.
  */
 const HAIR_STYLES = 5;
-const HAIR_SLOTS = 30;
+const HAIR_SETS = 15;
 
-export interface HairEntry {
-  /** Which of the style's slots this is; low ones are the sets a new character wears. */
-  slot: number;
-  mesh: string;
-  texture: string;
+/**
+ * The equipment section is one slot per body part, of which only four are ever
+ * filled: the numbering is armorgrp's own `body_part`, where 20 is gloves, 21
+ * the torso, 22 the legs and 23 the boots. The client writes the twenty before
+ * them and the five after as empty slots, which is 360 and 90 bytes of nothing.
+ */
+const BODY_SLOTS = 29;
+const EQUIPMENT_SLOTS = { gloves: 20, upper: 21, lower: 22, boots: 23 } as const;
+
+export type EquipmentSlot = keyof typeof EQUIPMENT_SLOTS;
+
+/** The eleven weapon-stance voice lists, in file order. */
+const VOICE_LISTS = 11;
+
+/** One row of the hair table: a style's head for one armour set. */
+export interface HairRow {
+  style: number;
+  set: number;
+  /** The front piece. On its own it is a fringe -- the female fighter's is forty-two vertices. */
+  ahMesh: string;
+  ahTexture: string;
+  /** The head of hair. Whole by itself, which is why the styles that have only this one work. */
+  bhMesh: string;
+  bhTexture: string;
+}
+
+/** What one equipment slot puts on the body when nothing is equipped. */
+export interface BodySlot {
+  mesh: string[];
+  texture: string[];
+  /** Extra meshes hung off it -- the Kamael's torso carries their wing here. */
+  addMesh: string[];
+  addTexture: string[];
+  /** One byte per extra mesh; the Kamael's read "w" and "l", for wing and legs. */
+  addTags: string;
+  addTags2: string;
 }
 
 export interface CharRecord {
   rig: string;
-  /** Five styles, each listing only the slots the client filled. */
-  hair: HairEntry[][];
+  /** 75 rows; the empty ones are dropped. */
+  hair: HairRow[];
   face: { mesh: string[]; texture: string[] };
-  /** Where the record sits in the decoded table, for anyone checking this against the bytes. */
-  at: number;
+  body: Partial<Record<EquipmentSlot, BodySlot>>;
+  attackEffect: string;
+  sounds: { attack: string[]; defense: string[]; damage: string[]; voice: string[][] };
+  /** Further head meshes and their textures, per record -- where the `m01` hair lives. */
+  extra: { mesh: string[]; texture: string[] };
 }
 
-/** A record ends with its rig's name as `<len> <ascii> 00`. */
-function nameMarkerAt(data: Buffer, at: number): string | undefined {
-  const length = data[at];
-  if (length < 4 || length > 20 || at + length >= data.length) return undefined;
-  if (data[at + length] !== 0) return undefined;
-  const text = data.subarray(at + 1, at + length).toString("latin1");
-  if (!/^[A-Za-z]+$/.test(text)) return undefined;
-  return RIG_NAMES.includes(text as (typeof RIG_NAMES)[number]) ? text : undefined;
+function readSlot(reader: DatReader): BodySlot {
+  return {
+    mesh: reader.list(() => reader.string()).filter(Boolean),
+    texture: reader.list(() => reader.string()).filter(Boolean),
+    addMesh: reader.list(() => reader.string()).filter(Boolean),
+    addTexture: reader.list(() => reader.string()).filter(Boolean),
+    addTags: reader.byteList().toString("latin1"),
+    addTags2: reader.byteList().toString("latin1"),
+  };
 }
 
-function readHairAndFace(data: Buffer, at: number): Omit<CharRecord, "rig"> | undefined {
-  const reader = new DatReader(data.subarray(at));
-  const hair: HairEntry[][] = [];
-  try {
-    for (let style = 0; style < HAIR_STYLES; style++) {
-      const entries: HairEntry[] = [];
-      for (let slot = 0; slot < HAIR_SLOTS; slot++) {
-        const mesh = reader.string();
-        const texture = reader.string();
-        if (mesh || texture) entries.push({ slot, mesh, texture });
-      }
-      hair.push(entries);
+function readRecord(reader: DatReader, rig: string): CharRecord {
+  const hair: HairRow[] = [];
+  for (let style = 0; style < HAIR_STYLES; style++) {
+    for (let set = 0; set < HAIR_SETS; set++) {
+      const row = {
+        style,
+        set,
+        ahMesh: reader.string(),
+        ahTexture: reader.string(),
+        bhMesh: reader.string(),
+        bhTexture: reader.string(),
+      };
+      if (row.ahMesh || row.bhMesh) hair.push(row);
     }
-    const mesh = reader.list(() => reader.string());
-    const texture = reader.list(() => reader.string());
-    // The face list is the anchor: three meshes whose names end in `_f`.
-    if (mesh.length === 0 || !mesh[0].toLowerCase().endsWith("_f")) return undefined;
-    return { hair, face: { mesh, texture }, at };
-  } catch {
-    return undefined;
   }
+
+  const face = {
+    mesh: reader.list(() => reader.string()).filter(Boolean),
+    texture: reader.list(() => reader.string()).filter(Boolean),
+  };
+
+  const slots: BodySlot[] = [];
+  for (let index = 0; index < BODY_SLOTS; index++) slots.push(readSlot(reader));
+  const body: Partial<Record<EquipmentSlot, BodySlot>> = {};
+  for (const [name, index] of Object.entries(EQUIPMENT_SLOTS) as [EquipmentSlot, number][]) {
+    const slot = slots[index];
+    if (slot.mesh.length || slot.texture.length) body[name] = slot;
+  }
+
+  const attackEffect = reader.string();
+  reader.i32(); // walk animation frame
+  const [attackCount, defenseCount, damageCount] = [reader.i32(), reader.i32(), reader.i32()];
+  const take = (count: number): string[] => {
+    const items: string[] = [];
+    for (let index = 0; index < count; index++) items.push(reader.string());
+    return items;
+  };
+  const sounds = {
+    attack: take(attackCount),
+    defense: take(defenseCount),
+    damage: take(damageCount),
+    voice: Array.from({ length: VOICE_LISTS }, () => reader.list(() => reader.string()).filter(Boolean)),
+  };
+
+  reader.i32();
+  const name = reader.pascalString();
+  if (name && name !== rig) {
+    throw new Error(`chargrp: record for ${rig} closes with the name ${JSON.stringify(name)}`);
+  }
+  reader.i32();
+  reader.i32();
+  reader.i32();
+  const extra = {
+    mesh: reader.list(() => reader.string()).filter(Boolean),
+    texture: reader.list(() => reader.string()).filter(Boolean),
+  };
+
+  return { rig, hair, face, body, attackEffect, sounds, extra };
 }
 
-/** Every rig's appearance table, in file order. */
+/**
+ * Every rig's appearance table.
+ *
+ * Throws rather than returning a partial read: a table that does not end
+ * exactly where it should has been parsed with the wrong shape somewhere, and
+ * every name it produced after that point is suspect.
+ */
 export function readChargrp(file: string): CharRecord[] {
   const data = readDatFile(file);
-
-  const markers: number[] = [];
-  for (let at = 0; at < data.length - 34; at++) {
-    if (nameMarkerAt(data, at)) markers.push(at);
-  }
-  if (markers.length !== RIG_NAMES.length) {
-    throw new Error(`chargrp: found ${markers.length} rig-name markers, expected ${RIG_NAMES.length}`);
-  }
-
+  const reader = new DatReader(data);
   const records: CharRecord[] = [];
-  let start = 0;
-  for (let index = 0; index < markers.length; index++) {
-    const parsed = readHairAndFace(data, start);
-    if (!parsed) throw new Error(`chargrp: record ${index} does not begin at byte ${start}`);
-    records.push({ rig: nameMarkerAt(data, markers[index])!, ...parsed });
-
-    if (index + 1 >= markers.length) break;
-    // The next record begins somewhere after this one's name; only one offset
-    // makes a whole hair table and a face list fall out.
-    const after = markers[index] + 1 + data[markers[index]];
-    let next: number | undefined;
-    for (let skip = 0; skip < 800 && next === undefined; skip += 2) {
-      if (readHairAndFace(data, after + skip)) next = after + skip;
+  for (let index = 0; index < RECORDS; index++) {
+    const rig = CHAR_RIGS[index] ?? "";
+    try {
+      const record = readRecord(reader, rig);
+      if (rig) records.push(record);
+    } catch (error) {
+      throw new Error(
+        `chargrp record ${index} (${rig || "spare"}) did not parse at byte ${reader.offset}: ` +
+          `${error instanceof Error ? error.message : String(error)}`
+      );
     }
-    if (next === undefined) {
-      throw new Error(`chargrp: no record start found after the ${records[index].rig} marker at byte ${markers[index]}`);
-    }
-    start = next;
+  }
+  const trailer = reader.rest;
+  if (trailer.subarray(1).toString("latin1") !== "SafePackage\0") {
+    throw new Error(`chargrp: ${trailer.length} bytes left over after ${RECORDS} records`);
   }
   return records;
 }
@@ -139,15 +207,24 @@ export function readChargrp(file: string): CharRecord[] {
 /**
  * The head pieces each style puts on a character wearing no armour.
  *
- * A style is not one mesh. The slots come in pairs -- `2 * set` holds the
- * armour set's `ah` piece and `2 * set + 1` its `bh` -- and a style draws
- * whichever of the pair it fills. The human fighter's first style fills both,
- * and it has to: her `ah` is a forty-two vertex fringe covering the front of
- * the head and nothing else, so drawn on its own it leaves her bald. The other
- * styles fill only the `bh` slot, which is a whole head of hair by itself.
- *
- * Slots 0 and 1 are the starting set, which is what an unequipped body wears.
+ * A style is not one mesh. Its row for the starting set holds an `ah` piece and
+ * a `bh` one, and the client draws whichever are filled. The human fighter's
+ * first style fills both, and it has to: her `ah` is a forty-two vertex fringe
+ * across the front of the head, so drawn alone it leaves her bald.
  */
-export function bareHeads(record: CharRecord): HairEntry[][] {
-  return record.hair.map((style) => style.filter((entry) => entry.slot <= 1 && entry.mesh));
+export function bareHeads(record: CharRecord): { mesh: string; texture: string }[][] {
+  return Array.from({ length: HAIR_STYLES }, (_, style) => {
+    const row = record.hair.find((candidate) => candidate.style === style && candidate.set === 0);
+    if (!row) return [];
+    return [
+      { mesh: row.ahMesh, texture: row.ahTexture },
+      { mesh: row.bhMesh, texture: row.bhTexture },
+    ].filter((piece) => piece.mesh);
+  });
+}
+
+/** Splits a `Package.Object` name, as the client writes them in this table. */
+export function splitObjectName(name: string): { pkg: string; object: string } {
+  const dot = name.indexOf(".");
+  return dot < 0 ? { pkg: "", object: name } : { pkg: name.slice(0, dot), object: name.slice(dot + 1) };
 }

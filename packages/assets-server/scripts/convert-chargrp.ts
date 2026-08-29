@@ -6,7 +6,8 @@
  * model pipeline had been reading that off the package listing, which is not
  * the same thing: a rig publishes head meshes the client never shows.
  *
- * Only the hair and face sections are decoded; see client-data/chargrp.ts.
+ * The whole record is decoded; see client-data/chargrp.ts for the layout and
+ * for where its field names come from.
  *
  * The output is derived from NCsoft's copyrighted client data and must never
  * be committed; it lands under assets/, covered by its blanket .gitignore.
@@ -54,14 +55,17 @@ async function main(): Promise<void> {
       {
         source: "system/chargrp.dat",
         generated: new Date().toISOString(),
-        note: "Only the hair and face sections of each record are decoded; see scripts/client-data/chargrp.ts.",
         rigs: records.map((record) => ({
           rig: record.rig,
           face: record.face,
           // What each style puts on a character in the starting set, which is
           // the list creation offers. A style can be more than one piece.
           styles: bareHeads(record),
+          body: record.body,
           hair: record.hair,
+          attackEffect: record.attackEffect,
+          sounds: record.sounds,
+          extra: record.extra,
         })),
       },
       null,
@@ -75,7 +79,10 @@ async function main(): Promise<void> {
     const heads = bareHeads(record)
       .map((pieces) => pieces.map((head) => head.mesh.split(".").pop()).join("+") || "-")
       .join(", ");
-    console.log(`  ${record.rig.padEnd(9)} ${record.face.texture.length} faces, styles: ${heads}`);
+    console.log(
+      `  ${record.rig.padEnd(9)} ${record.face.texture.length} faces, ` +
+        `${Object.keys(record.body).length} body slots, styles: ${heads}`
+    );
   }
 }
 

@@ -155,6 +155,30 @@ export class DatReader {
     return this.data.subarray(this.at);
   }
 
+  u8(): number {
+    return this.data[this.at++];
+  }
+
+  /** A byte length followed by that many bytes -- how these tables store short tag arrays. */
+  byteList(): Buffer {
+    const count = this.u8();
+    const value = this.data.subarray(this.at, this.at + count);
+    this.at += count;
+    return value;
+  }
+
+  /**
+   * A length-prefixed ASCII string, the odd one out among these tables' UTF-16
+   * ones. Both the file's own "SafePackage" trailer and chargrp's per-record
+   * rig name are written this way, and the length counts the trailing NUL.
+   */
+  pascalString(): string {
+    const length = this.u8();
+    const value = this.data.subarray(this.at, this.at + length).toString("latin1");
+    this.at += length;
+    return value.replace(/\u0000+$/u, "");
+  }
+
   u16(): number {
     const value = this.data.readUInt16LE(this.at);
     this.at += 2;
