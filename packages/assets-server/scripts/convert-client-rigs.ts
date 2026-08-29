@@ -297,12 +297,15 @@ const RIGS: ClientRig[] = [
  * trailing rig name. Same set the Unity path exports, so a body from either
  * answers to the same states (see CreatureModel's animationFor).
  */
-const CLIPS: { name: string; candidates: string[]; inPlace?: boolean }[] = [
-  { name: "idle", candidates: ["Wait_Hand"] },
-  { name: "walk", candidates: ["Walk_Hand"], inPlace: true },
-  { name: "run", candidates: ["Run_Hand"], inPlace: true },
+// `loops` marks the cycles the runtime repeats (see ONE_SHOT in
+// gltf-character-model.component.tsx). They are the only clips whose end has
+// to meet their beginning; a one-shot simply stops.
+const CLIPS: { name: string; candidates: string[]; inPlace?: boolean; loops?: boolean }[] = [
+  { name: "idle", candidates: ["Wait_Hand"], loops: true },
+  { name: "walk", candidates: ["Walk_Hand"], inPlace: true, loops: true },
+  { name: "run", candidates: ["Run_Hand"], inPlace: true, loops: true },
   { name: "sit", candidates: ["Sit"] },
-  { name: "sitIdle", candidates: ["SitWait"] },
+  { name: "sitIdle", candidates: ["SitWait"], loops: true },
   { name: "stand", candidates: ["Stand"] },
   { name: "attack", candidates: ["Atk01_Hand"] },
   { name: "attack1hs", candidates: ["Atk01_1HS"] },
@@ -1144,7 +1147,7 @@ async function convertRig(
       continue;
     }
 
-    const options = { boneNames: body.boneNames, rootBone: ROOT_BONE, inPlace: wanted.inPlace };
+    const options = { boneNames: body.boneNames, rootBone: ROOT_BONE, inPlace: wanted.inPlace, loops: wanted.loops };
     const clip = toThreeClip(psa, sequence, wanted.name, options);
     // The same sequence off the other skeletons, appended to the same clip:
     // three plays one clip per state over the whole body, so a piece with an

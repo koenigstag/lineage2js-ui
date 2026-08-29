@@ -114,6 +114,39 @@ export interface ClipOptions {
   rootBone: string;
   /** Applied to the root's translation, for a rig driven by another's clip. */
   rootMotionScale?: number;
+  /**
+   * Close the cycle, for a clip the runtime repeats.
+   *
+   * three interpolates between keys and holds past the last one; it does not
+   * wrap. So a clip whose last frame is a step short of its first plays that
+   * step as a jump at the loop point -- which is what an idle standing still
+   * and twitching once a cycle actually was.
+   */
+  loops?: boolean;
+}
+
+/** How far apart two rotations are, in degrees, sign-insensitive. */
+function angleBetween(a: readonly number[], b: readonly number[]): number {
+  const dot = Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]);
+  return (2 * Math.acos(Math.min(1, dot)) * 180) / Math.PI;
+}
+
+/** Whether a sequence's last frame is a repeat of its first rather than a step short of it. */
+function endsWhereItBegan(psa: PsaFile, sequence: PsaSequence, boneCount: number): boolean {
+  if (sequence.frames < 3) return false;
+  let gap = 0;
+  let step = 0;
+  for (let bone = 0; bone < boneCount; bone++) {
+    const first = psa.keys[sequence.firstRawFrame * boneCount + bone];
+    const last = psa.keys[(sequence.firstRawFrame + sequence.frames - 1) * boneCount + bone];
+    const previous = psa.keys[(sequence.firstRawFrame + sequence.frames - 2) * boneCount + bone];
+    if (!first || !last || !previous) continue;
+    gap = Math.max(gap, angleBetween(first.rotation, last.rotation));
+    step = Math.max(step, angleBetween(previous.rotation, last.rotation));
+  }
+  // A still sequence has neither, and closing it either way is the same thing.
+  if (step < 0.01) return true;
+  return gap < step * 0.25;
 }
 
 /**
@@ -126,6 +159,14 @@ export function toThreeClip(psa: PsaFile, sequence: PsaSequence, name: string, o
   const boneCount = psa.boneNames.length;
   const tracks: THREE.KeyframeTrack[] = [];
   const scale = POSITION_SCALE;
+  // Whether the sequence already ends where it began. Both conventions are in
+  // the client, sometimes in one file: most idles are N frames of a cycle whose
+  // next frame would be the first, while the longer ones repeat the first frame
+  // at the end. Told apart by how the first-to-last difference compares with a
+  // single step -- a duplicated end is a fraction of one, a real step is all of
+  // it.
+  const closed = options.loops === true && endsWhereItBegan(psa, sequence, boneCount);
+  const wrap = options.loops === true && !closed;
 
   for (let bone = 0; bone < boneCount; bone++) {
     const boneName = THREE.PropertyBinding.sanitizeNodeName(psa.boneNames[bone]);
@@ -161,6 +202,17 @@ export function toThreeClip(psa: PsaFile, sequence: PsaSequence, name: string, o
     }
 
     if (times.length === 0) continue;
+    if (wrap) {
+      // One more key, a cycle's length in, holding the pose the clip starts
+      // from: the last step now plays as motion instead of a snap.
+      times.push(sequence.frames / sequence.rate);
+      let first: [number, number, number, number] = [rotations[0], rotations[1], rotations[2], rotations[3]];
+      if (previous && previous[0] * first[0] + previous[1] * first[1] + previous[2] * first[2] + previous[3] * first[3] < 0) {
+        first = [-first[0], -first[1], -first[2], -first[3]];
+      }
+      rotations.push(...first);
+      if (isRoot && positions.length > 0) positions.push(positions[0], positions[1], positions[2]);
+    }
     tracks.push(new THREE.QuaternionKeyframeTrack(`${boneName}.quaternion`, times, rotations));
 
     // Every other bone's translation only ever encodes bone lengths, which
@@ -179,6 +231,8 @@ export function toThreeClip(psa: PsaFile, sequence: PsaSequence, name: string, o
     }
   }
 
-  const clip = new THREE.AnimationClip(name, sequence.frames / sequence.rate, tracks);
-  return clip;
+  // A closed cycle ends on its last key rather than holding it for another
+  // frame; anything else runs the full frames/rate the client authored.
+  const duration = closed ? (sequence.frames - 1) / sequence.rate : sequence.frames / sequence.rate;
+  return new THREE.AnimationClip(name, duration, tracks);
 }
