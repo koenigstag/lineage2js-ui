@@ -71,6 +71,10 @@ import NpcInfoMutator from "./NpcInfoMutator";
 import NpcInfo from "../../incoming/game/NpcInfo";
 import NpcQuestHtmlMessageMutator from "./NpcQuestHtmlMessageMutator";
 import NpcQuestHtmlMessage from "../../incoming/game/NpcQuestHtmlMessage";
+import NpcSayMutator from "./NpcSayMutator";
+import NpcSay from "../../incoming/game/NpcSay";
+import L2FriendSayMutator from "./L2FriendSayMutator";
+import L2FriendSay from "../../incoming/game/L2FriendSay";
 import PartyMemberPositionMutator from "./PartyMemberPositionMutator";
 import PartyMemberPosition from "../../incoming/game/PartyMemberPosition";
 import PartySmallWindowAddMutator from "./PartySmallWindowAddMutator";
@@ -171,6 +175,8 @@ export default [
   [NpcHtmlMessageMutator.prototype, NpcHtmlMessage],
   [NpcInfoMutator.prototype, NpcInfo],
   [NpcQuestHtmlMessageMutator.prototype, NpcQuestHtmlMessage],
+  [NpcSayMutator.prototype, NpcSay],
+  [L2FriendSayMutator.prototype, L2FriendSay],
   [PartyMemberPositionMutator.prototype, PartyMemberPosition],
   [PartySmallWindowAddMutator.prototype, PartySmallWindowAdd],
   [PartySmallWindowAllMutator.prototype, PartySmallWindowAll],

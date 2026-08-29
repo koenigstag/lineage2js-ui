@@ -250,8 +250,14 @@ export const LANG_EN_US: LangDictionary = {
       alliance: "$Alliance",
       hero: "%Hero",
     },
+    senders: {
+      announcement: "Announcement",
+    },
+    errors: {
+      missingTarget: "Enter the name of the player to whisper to.",
+      emptyMessage: "Type a message after the channel prefix.",
+    },
     messagePlaceholder: "Type a message...",
-    whisperTargetPlaceholder: "Player name",
   },
   death: {
     message: "You are dead.",

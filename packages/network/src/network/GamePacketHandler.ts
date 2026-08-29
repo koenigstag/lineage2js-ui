@@ -240,6 +240,9 @@ export default class GamePacketHandler implements IPacketHandler<GameClient> {
         case 0x75:
           rpk = new Packets.FriendList();
           break;
+        case 0x78:
+          rpk = new Packets.L2FriendSay();
+          break;
         case 0x79:
           rpk = new Packets.ValidateLocation();
           break;

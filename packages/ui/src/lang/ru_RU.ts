@@ -247,8 +247,14 @@ export const LANG_RU_RU: LangDictionary = {
       alliance: "$Alliance",
       hero: "%Hero",
     },
+    senders: {
+      announcement: "Announcement",
+    },
+    errors: {
+      missingTarget: "Укажите имя игрока для приватного сообщения.",
+      emptyMessage: "Введите текст после префикса канала.",
+    },
     messagePlaceholder: "Введите сообщение...",
-    whisperTargetPlaceholder: "Имя игрока",
   },
   death: {
     message: "Вы погибли.",

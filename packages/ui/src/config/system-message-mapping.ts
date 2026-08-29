@@ -157,6 +157,36 @@ const NOISY_SYSTEM_MESSAGE_IDS = new Set<number>([
  */
 export const CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID = 31;
 
+/**
+ * System messages that belong in the chat log as well as in the system-message
+ * one (GameStore.recordSystemMessage puts them in both). They also override
+ * NOISY_SYSTEM_MESSAGE_IDS above, whose keyword-generated categories sweep
+ * three of them up by name alone.
+ *
+ * Two groups. The server's answers to a chat attempt, because a player who
+ * just pressed Enter is looking at the chat window and not at the other one --
+ * see lineage2ts's gameService/packets/receive/Say2.ts and
+ * handler/chathandlers/*. And the welcome line, which is what a chat window
+ * opens with on entering the world (EnterWorld.ts sends it first).
+ */
+export const CHAT_MIRRORED_MESSAGE_IDS = new Set<number>([
+  // Entering the world
+  34, // WELCOME_TO_LINEAGE
+
+  // Refusals of something the player just tried to say
+  145, // TARGET_IS_NOT_FOUND_IN_THE_GAME -- whispered at someone unknown or offline
+  176, // THE_PERSON_IS_IN_MESSAGE_REFUSAL_MODE
+  745, // YOU_ARE_NOT_IN_PETITION_CHAT
+  786, // INCORRECT_SYNTAX -- an unrecognised ". command"
+  966, // CHATTING_IS_CURRENTLY_PROHIBITED -- chat ban
+  1078, // DONT_SPAM -- the server's 2-per-second limit, or an over-long line
+  2085, // SHOUT_AND_TRADE_CHAT_CANNOT_BE_USED_WHILE_POSSESSING_CURSED_WEAPON
+  2483, // YOU_HAVE_BEEN_REPORTED_SO_CHATTING_NOT_ALLOWED
+]);
+
 export function isNoisySystemMessage(messageId: number): boolean {
+  if (CHAT_MIRRORED_MESSAGE_IDS.has(messageId)) {
+    return false;
+  }
   return NOISY_SYSTEM_MESSAGE_IDS.has(messageId);
 }

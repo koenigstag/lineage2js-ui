@@ -168,7 +168,7 @@ export const GameMenu = observer(function GameMenu() {
     if (await session.restart()) {
       // selectedCharacterId stays put so the character we just left comes back
       // preselected, like the real client does.
-      game.setActiveCharacter(undefined);
+      game.leaveWorld();
       ui.setScreen("select-char");
     } else {
       await alert(session.error ?? t("game.restartFailed"));

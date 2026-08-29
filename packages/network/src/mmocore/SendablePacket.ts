@@ -55,15 +55,19 @@ export default abstract class SendablePacket extends AbstractPacket {
     return this;
   }
 
+  /**
+   * UTF-16LE, null-terminated. The terminator goes out even for an empty
+   * string: the server reads these unconditionally (lineage2ts's
+   * ReadableClientPacket.readS), so skipping it would shift every following
+   * field of the packet.
+   */
   writeS(txt: string): this {
-    if (txt.length > 0) {
-      for (let i = 0; i < txt.length; ++i) {
-        const c = txt.charCodeAt(i);
-        this.writeC(c & 0xff);
-        this.writeC((c & 0xff00) >>> 8);
-      }
-      this.writeH(0);
+    for (let i = 0; i < txt.length; ++i) {
+      const c = txt.charCodeAt(i);
+      this.writeC(c & 0xff);
+      this.writeC((c & 0xff00) >>> 8);
     }
+    this.writeH(0);
     return this;
   }
 

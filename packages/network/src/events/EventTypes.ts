@@ -161,6 +161,24 @@ export declare type ECreatureSay = {
   };
   once: boolean;
 };
+export declare type ENpcSay = {
+  type: string;
+  data: {
+    objectId: number;
+    type: number;
+    /** Npc template id (already un-offset from the wire's +1000000). */
+    npcId: number;
+    /** -1 when `messages` holds the literal line, otherwise an NpcString id whose parameters `messages` holds. */
+    npcStringId: number;
+    messages: string[];
+  };
+  once: boolean;
+};
+export declare type EL2FriendSay = {
+  type: string;
+  data: { receiverName: string; senderName: string; message: string };
+  once: boolean;
+};
 export declare type ENpcHtmlMessage = {
   type: string;
   data: { npcObjectId: number; html: string; itemId: number };
@@ -270,6 +288,11 @@ export declare type OnSystemMessage = [
   (e: ESystemMessage) => void
 ];
 export declare type OnCreatureSay = ["CreatureSay", (e: ECreatureSay) => void];
+export declare type OnNpcSay = ["NpcSay", (e: ENpcSay) => void];
+export declare type OnL2FriendSay = [
+  "L2FriendSay",
+  (e: EL2FriendSay) => void
+];
 export declare type OnNpcHtmlMessage = [
   "NpcHtmlMessage",
   (e: ENpcHtmlMessage) => void
@@ -313,6 +336,8 @@ export declare type EventHandlerType =
   | OnConfirmDlg
   | OnSystemMessage
   | OnCreatureSay
+  | OnNpcSay
+  | OnL2FriendSay
   | OnRecipeBookEvent
   | OnNpcHtmlMessage
   | OnNpcQuestHtmlMessage

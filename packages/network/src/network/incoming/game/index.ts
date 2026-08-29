@@ -45,6 +45,7 @@ import ExUISetting from "./ExUISetting";
 import ExVitalityPointInfo from "./ExVitalityPointInfo";
 import ExVoteSystemInfo from "./ExVoteSystemInfo";
 import FriendList from "./FriendList";
+import L2FriendSay from "./L2FriendSay";
 import GameGuardQuery from "./GameGuardQuery";
 import GameClientPacket from "./GameClientPacket";
 import GetItem from "./GetItem";
@@ -185,6 +186,7 @@ export {
   ExVitalityPointInfo,
   ExVoteSystemInfo,
   FriendList,
+  L2FriendSay,
   GameGuardQuery,
   GameClientPacket,
   GetItem,

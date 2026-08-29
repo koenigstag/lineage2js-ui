@@ -29,6 +29,8 @@ import {
   type EAttacked,
   type ESystemMessage,
   type ECreatureSay,
+  type ENpcSay,
+  type EL2FriendSay,
   type EDie,
   type ERevive,
   type EConfirmDlg,
@@ -48,7 +50,9 @@ import {
   CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID,
   formatSystemMessage,
   isNoisySystemMessage,
+  CHAT_MIRRORED_MESSAGE_IDS,
 } from "../config/system-message-mapping";
+import { CHAT_SYSTEM_CHANNEL } from "../config/chat-channels";
 import { toLocalBaseClass, toLocalRace, toLocalSex } from "../config/network-mapping";
 import { canMoveStraight } from "../utils/geodata/geo-path";
 import { loadedGeoTiles } from "../utils/geodata/geo-tile-index";
@@ -843,6 +847,13 @@ export interface ChatMessage {
   text: string;
 }
 
+/**
+ * What sendChatMessage did with a line. Anything other than "sent" means
+ * nothing left the client, so the chat window keeps the draft instead of
+ * clearing a message the player would then have to retype.
+ */
+export type ChatSendResult = "sent" | "empty" | "missing-target";
+
 let nextChatMessageId = 1;
 const CHAT_MAX_ENTRIES = 200;
 
@@ -1172,6 +1183,31 @@ export class GameStore {
 
   setActiveCharacter(id: number | undefined) {
     this.me = id;
+  }
+
+  /**
+   * Counterpart to the world-enter reset in bindToClient (the UserInfo
+   * handler): drops everything that described the world we just left, on the
+   * way back to character selection via the game menu's Restart.
+   *
+   * The two message logs are the visible reason -- they only ever grow, so
+   * without this the next character opens onto the previous one's chat and
+   * combat text. isPlayerDead matters for the same flow from the other end:
+   * dying is the usual reason to press Restart, nothing else clears the flag,
+   * and carrying it back in would put the death modal over a freshly entered
+   * world. A target belongs to a world too.
+   *
+   * Everything else the game screen shows -- inventory, skills, buffs,
+   * hotbar, nearby creatures -- is re-sent by the server on the next
+   * world-enter and re-synced from those packets, so it is left alone.
+   */
+  leaveWorld() {
+    this.me = undefined;
+    this.chatMessages = [];
+    this.systemMessages = [];
+    this.isPlayerDead = false;
+    this.target = undefined;
+    this.pendingAction = undefined;
   }
 
   /**
@@ -2032,6 +2068,14 @@ export class GameStore {
       return;
     }
     const text = formatSystemMessage(messageId, params, paramTypes);
+    // Some system messages belong in the chat log too -- the welcome line the
+    // world opens with, and the server's refusals of a chat line ("don't
+    // spam", "target not found", chat ban), which are the only feedback the
+    // player gets and used to land in a different window than the one they
+    // were typing into.
+    if (CHAT_MIRRORED_MESSAGE_IDS.has(messageId)) {
+      this.recordChatMessage(CHAT_SYSTEM_CHANNEL, "", text);
+    }
     this.systemMessages = [...this.systemMessages, { id: nextSystemMessageEntryId++, text }].slice(
       -SYSTEM_MESSAGES_MAX_ENTRIES
     );
@@ -2052,10 +2096,17 @@ export class GameStore {
    * demo mode has no server to echo from, so it appends locally instead,
    * same dual-path treatment as the rest of this store.
    */
-  sendChatMessage(text: string, channel: number, target?: string) {
+  sendChatMessage(text: string, channel: number, target?: string): ChatSendResult {
     const trimmed = text.trim();
     if (!trimmed) {
-      return;
+      return "empty";
+    }
+
+    // A whisper with nobody to whisper to used to be dropped on the floor
+    // here, draft and all. Refuse it instead, so the window can say why.
+    const whisperTarget = target?.trim();
+    if (channel === ChatType.WHISPER && !whisperTarget) {
+      return "missing-target";
     }
 
     if (this.client?.GameClient.IsConnected) {
@@ -2064,9 +2115,7 @@ export class GameStore {
           this.client.shout(trimmed);
           break;
         case ChatType.WHISPER:
-          if (target) {
-            this.client.tell(trimmed, target);
-          }
+          this.client.tell(trimmed, whisperTarget as string);
           break;
         case ChatType.PARTY:
           this.client.sayToParty(trimmed);
@@ -2088,15 +2137,16 @@ export class GameStore {
           this.client.say(trimmed);
           break;
       }
-      return;
+      return "sent";
     }
 
     const senderName = this.charInfo.name || "You";
-    if (channel === ChatType.WHISPER && target) {
-      this.recordChatMessage(channel, `->${target}`, trimmed);
-      return;
-    }
-    this.recordChatMessage(channel, senderName, trimmed);
+    this.recordChatMessage(
+      channel,
+      channel === ChatType.WHISPER ? `->${whisperTarget}` : senderName,
+      trimmed
+    );
+    return "sent";
   }
 
   /**
@@ -2411,9 +2461,39 @@ export class GameStore {
       runInAction(() => this.recordSystemMessage(e.data.messageId, e.data.params, e.data.paramTypes));
     });
 
+    // An npcStringId-driven CreatureSay (the server's fromNpcName/
+    // fromSystemMessage builders) carries no literal text -- only that id's
+    // substitution parameters, and this client has no NpcString table to put
+    // them into. Drop those rather than logging a blank line under a name.
     client.on("CreatureSay", (e: ECreatureSay) => {
-      const text = e.data.messages.join(" ");
+      const text = e.data.messages.join(" ").trim();
+      if (!text) {
+        return;
+      }
       runInAction(() => this.recordChatMessage(e.data.type, e.data.charName, text));
+    });
+
+    // NPCs and mobs talking -- a separate packet from CreatureSay (opcode
+    // 0x30) that identifies the speaker by template id instead of by name, so
+    // the display name comes from whatever the world scene already knows
+    // about that objectId. Same NpcString caveat as above.
+    client.on("NpcSay", (e: ENpcSay) => {
+      const text = e.data.messages.join(" ").trim();
+      if (!text) {
+        return;
+      }
+      const senderName = this.creatures.get(e.data.objectId)?.name ?? "";
+      runInAction(() => this.recordChatMessage(e.data.type, senderName, text));
+    });
+
+    // A private message sent through the friends list rather than through
+    // Say2's whisper channel -- its own packet (0x78), so it needs its own
+    // subscription. No friends window to put it in yet, so it joins the chat
+    // log on the channel the wire reserves for it.
+    client.on("L2FriendSay", (e: EL2FriendSay) => {
+      runInAction(() =>
+        this.recordChatMessage(ChatType.FRIEND, e.data.senderName, e.data.message)
+      );
     });
 
     // Drives the death modal -- only reacts when the affected creature is

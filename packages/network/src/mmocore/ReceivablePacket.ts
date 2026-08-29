@@ -61,6 +61,18 @@ export default abstract class ReceivablePacket extends AbstractPacket {
     return result;
   }
 
+  /**
+   * Whether a further field can still be read out of this packet. Mirrors
+   * lineage2ts's ReadableClientPacket.hasMoreData(): the smallest thing left
+   * on the wire is an empty string, which is still its 2-byte terminator, so
+   * a lone trailing byte is padding rather than data. Use this -- not an
+   * ad-hoc `_offset + n < byteLength` -- for the trailing variable-length
+   * string lists in CreatureSay/NpcSay.
+   */
+  hasMoreData(): boolean {
+    return this._offset < this._buffer.byteLength - 1;
+  }
+
   readB(length: number): Uint8Array {
     const value = this._buffer.slice(this._offset, this._offset + length);
     this._offset += length;
