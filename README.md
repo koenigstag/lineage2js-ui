@@ -13,7 +13,7 @@ The network protocol implementation is still incomplete, and the UI client is in
 
 ## Already implemented features
 - Login, re-login and real game server connection
-- Character selection and creation with demo 3d models and real data from the server
+- Character selection and creation with the client's own converted 3d bodies -- textured, with the face, hair style and hair colour the game offers -- and real data from the server
 - Detailed character info window with stats - real info from server, not demo data
 - Draggable windows system like in the original game client
 - Char info window (Lvl, Nickname, CP/HP/MP/VP) - draggable
@@ -32,7 +32,7 @@ The network protocol implementation is still incomplete, and the UI client is in
 - Put the player in the world — fake surface, send movement to server, show mob radar, use demo 3D models
 - Core gameplay systems — movement, combat, chat, quests, party
 
-Real landscape and buildings rendering, geodata integration, minimap, global map, location maps, and 3D models rewrite are planned for the future updates.
+Real landscape and buildings rendering, geodata integration, minimap, global map, location maps, and 3D models for mobs and equipment are planned for the future updates.
 
 The item-by-item breakdown lives in [TODO.md](./TODO.md). Known bugs/issues are tracked in [KNOWN-BUGS.md](./KNOWN-BUGS.md).
 

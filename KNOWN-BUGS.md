@@ -8,3 +8,4 @@ If you find missing feature please check [TODO.md](./TODO.md) first. If it is no
 - Skills list to learn does not show skills for closest level (tested on level 1). Instead it shows skills for required level 30+.
 - Battlelog and chat show demo text instead of real messages. WIP
 - Chat commands are not implemented yet. WIP
+- A Kamael's wing stays where it is while the body leans into a run, instead of following the back. What is known and what to try next is in [TODO.md](./TODO.md).
