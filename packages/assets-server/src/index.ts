@@ -70,6 +70,52 @@ app.get("/highfive/models/versions.json", async (_req, res) => {
   res.json(await assetVersions("highfive/models"));
 });
 
+/** A token for a whole folder, changing whenever any file in it does -- the textures of one rig move together. */
+async function directoryVersion(relativeDir: string): Promise<string> {
+  const versions = await assetVersions(relativeDir);
+  const combined = Object.keys(versions)
+    .sort()
+    .map((name) => versions[name])
+    .join("|");
+  let hash = 0;
+  for (let i = 0; i < combined.length; i++) hash = (hash * 31 + combined.charCodeAt(i)) | 0;
+  return (hash >>> 0).toString(36);
+}
+
+/**
+ * The texture manifest: which parts each rig has, how many variants of the two
+ * that vary, and a token per rig for hanging off the URLs (see
+ * assets-server/scripts/convert-client-rigs.ts and the UI's
+ * config/character-textures.ts).
+ *
+ * Uncacheable for the same reason the model versions above are, and it bites
+ * harder: a client holding a stale copy doesn't merely fetch an old texture,
+ * it never asks for the ones that have appeared since -- a rig added to the
+ * set stays flat-tinted until the copy expires.
+ *
+ * The token is per rig rather than per file because that is how they are
+ * produced: one conversion run rewrites all of a rig's textures at once, and
+ * a re-export of the whole set is the only thing that changes any of them.
+ */
+app.get("/highfive/textures/index.json", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  let manifest: Record<string, Record<string, unknown>>;
+  try {
+    manifest = JSON.parse(await fs.readFile(path.join(ASSETS_DIR, "highfive/textures/index.json"), "utf8")) as Record<
+      string,
+      Record<string, unknown>
+    >;
+  } catch {
+    res.json({});
+    return;
+  }
+  for (const rig of Object.keys(manifest)) {
+    manifest[rig].v = await directoryVersion(`highfive/textures/${rig}`);
+  }
+  res.json(manifest);
+});
+
+
 // Login screen background counts -- the UI picks a random id in [1, count]
 // and requests it as a regular static file (see below), so this only needs
 // to report how many numbered variants currently exist in each folder.

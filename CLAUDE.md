@@ -27,9 +27,22 @@ pitch; this file is for working in the code.
   an ETag from file size/mtime, so overwriting a file is enough to
   invalidate clients' caches (no URL versioning needed). `scripts/` holds
   the offline converters that produce those files from sources the user
-  supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles) and
-  `convert:models` (the Unity L2J client's FBX bodies + Unity `.anim` clips
-  -> one `.glb` per race/sex).
+  supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles),
+  `convert:client-rigs` (an installed game client, read with umodel -> one
+  `.glb` per race/sex plus its textures under
+  `assets/highfive/textures/<rig>/`) and `convert:armorgrp` (the client's
+  `system/armorgrp.dat` -> `assets/highfive/data/`). `convert:models`, which
+  built the ten non-orc bodies out of a Unity port of the client, is
+  superseded by `convert:client-rigs` -- kept for now, but nothing depends
+  on its output any more.
+- The client's `system/*.dat` tables are RSA+zlib, and
+  `scripts/client-data/` reads them: `l2-dat.ts` decrypts (with both the
+  NCsoft key and the l2encdec one repacked clients use -- the file itself
+  picks) and `armorgrp.ts` holds the reversed record schema. It is what
+  says which mesh and texture each rig wears with a slot empty, so the rig
+  converter no longer guesses that from texture names. Don't go back to
+  guessing: the guesses were wrong for the mystics' legs and boots and
+  could not find the Kamael's gloves at all.
 
 ## Commands
 

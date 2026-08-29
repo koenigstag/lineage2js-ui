@@ -1,6 +1,10 @@
 import { SRGBColorSpace, TextureLoader } from "three";
 import type { MeshStandardMaterial, Object3D, Texture } from "three";
-import { characterTextureUrl, type BodyPart } from "../../config/character-textures";
+import {
+  characterTextureIsGlossMask,
+  characterTextureUrl,
+  type BodyPart,
+} from "../../config/character-textures";
 import type { CharacterAppearance } from "../../config/character-appearance";
 
 /**
@@ -70,6 +74,7 @@ export async function applyCharacterTextures(
     [...materials].map(async ([part, targets]) => {
       const url = await characterTextureUrl(rig, part, appearance);
       if (!url || !isCurrent()) return;
+      const glossMask = await characterTextureIsGlossMask(rig, part);
       const texture = await loadTexture(url);
       if (!texture || !isCurrent()) return;
       for (const material of targets) {
@@ -77,14 +82,13 @@ export async function applyCharacterTextures(
         // The tint stood in for the texture; leaving it on would multiply
         // straight into it and repaint the art.
         material.color.set(0xffffff);
-        // Some of these are cut-outs rather than solid sheets -- the Kamael
-        // wing is a feathered shape painted on a square, and the client masks
-        // the square away with the texture's own alpha. Testing rather than
-        // blending it keeps the depth buffer honest, which matters for a part
-        // drawn from both sides; a texture with no alpha at all reads as
-        // fully opaque and passes the test everywhere, so this costs the rest
-        // of the body nothing.
-        material.alphaTest = 0.5;
+        // Alpha is transparency on most parts and a gloss mask on the ones
+        // the converter flags -- getting it backwards either paints hair and
+        // cloth black or erases a body, so the answer comes from the index
+        // rather than from anything visible in the image. Tested rather than
+        // blended: it keeps the depth buffer honest for shapes drawn from
+        // both sides, and the alpha here is all but binary anyway.
+        material.alphaTest = glossMask ? 0 : 0.5;
         material.needsUpdate = true;
       }
     })

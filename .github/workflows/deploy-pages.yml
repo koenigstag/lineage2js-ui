@@ -62,7 +62,7 @@ jobs:
           VITE_WIKI_URL: ${{ vars.VITE_WIKI_URL }}
 
           # Converted character bodies, one <rig>.glb per race/sex -- see
-          # assets-server/scripts/convert-unity-models.ts. Unset leaves every
+          # assets-server/scripts/convert-client-rigs.ts. Unset leaves every
           # character on the procedural placeholder.
           VITE_CHARACTER_MODEL_BASE_URL: ${{ vars.VITE_CHARACTER_MODEL_BASE_URL }}
 

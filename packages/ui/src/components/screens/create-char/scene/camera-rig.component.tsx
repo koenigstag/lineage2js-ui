@@ -20,6 +20,16 @@ const SETTLED = 0.001;
 
 interface CameraRigProps {
   focus: CameraFocus;
+  /**
+   * Cut rather than travel whenever this changes.
+   *
+   * The stages of one race are a move in for a closer look, and animating
+   * them says so. Crossing to another race is not that: the groups stand in a
+   * row far apart, so easing there is a long sideways pan through every race
+   * in between, which reads as the camera going for a walk rather than as the
+   * choice that was actually made.
+   */
+  cut?: string;
 }
 
 /**
@@ -28,7 +38,7 @@ interface CameraRigProps {
  * animating between them is what makes that read as moving in for a closer
  * look rather than as the scene cutting to a different place.
  */
-export function CameraRig({ focus }: CameraRigProps) {
+export function CameraRig({ focus, cut }: CameraRigProps) {
   const { camera } = useThree();
   const aim = useRef(new Vector3(...focus.lookAt));
   const wantPosition = useRef(new Vector3());
@@ -37,13 +47,15 @@ export function CameraRig({ focus }: CameraRigProps) {
   // there), so there is nothing to travel -- without this the screen would
   // open on a fly-in nobody asked for.
   const placed = useRef(false);
+  const lastCut = useRef(cut);
 
   useFrame((_, delta) => {
     wantPosition.current.set(...focus.position);
     wantAim.current.set(...focus.lookAt);
 
-    if (!placed.current) {
+    if (!placed.current || lastCut.current !== cut) {
       placed.current = true;
+      lastCut.current = cut;
       camera.position.copy(wantPosition.current);
       aim.current.copy(wantAim.current);
       camera.lookAt(aim.current);

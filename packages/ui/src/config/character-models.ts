@@ -6,10 +6,12 @@ const CHARACTER_MODEL_BASE_URL = import.meta.env.VITE_CHARACTER_MODEL_BASE_URL;
 /**
  * Rig file names, matching the retail client's own body-mesh naming
  * (`MFighter`, `FDarkElf`, ...) since that's what the converted files are
- * named after. The first ten come from the Unity project
- * (assets-server/scripts/convert-unity-models.ts), the orc and Kamael six
- * from the client itself (convert-client-rigs.ts) -- indistinguishable once
- * converted.
+ * named after. All sixteen are converted from the client itself
+ * (assets-server/scripts/convert-client-rigs.ts). Ten of them used to come
+ * from a Unity port instead; converting those from the client too was worth
+ * doing for the textures, and it confirmed the port had been faithful -- the
+ * human fighter came out to the same height and the same head position, to
+ * three decimals.
  */
 type RigName =
   | "MFighter"
@@ -35,9 +37,7 @@ type RigName =
  * MMagic), while an elf mystic wears the same body as an elf fighter.
  *
  * Orcs split the same way humans do -- the shaman body is the mystic one --
- * and Kamael use one body per sex whatever the class. Both races come from
- * the client directly (assets-server's convert-client-rigs.ts): the Unity
- * project the other ten are converted from has no models for either.
+ * and Kamael use one body per sex whatever the class.
  */
 const RIG_BY_RACE: Partial<Record<RaceNames, Partial<Record<BaseClass, Record<SexNames, RigName>>>>> = {
   HUMAN: {

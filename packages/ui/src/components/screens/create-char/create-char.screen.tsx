@@ -39,17 +39,28 @@ export const CreateCharScreen = observer(function CreateCharScreen() {
   const [appearance, setAppearance] = useState<CharacterAppearance>(DEFAULT_APPEARANCE);
 
   function handleRaceChange(nextRace: RaceNames) {
+    if (nextRace === race) return;
     setRace(nextRace);
     // Not carried over: the classes on offer differ by race, and a fighter
     // stays chosen only because every race happens to have one -- which reads
     // as the screen having decided for you.
     setBaseClass(soleBaseClass(session.characterTemplates, nextRace));
+    setAppearance(DEFAULT_APPEARANCE);
+  }
+
+  function handleBaseClassChange(nextBaseClass: BaseClass) {
+    if (nextBaseClass === baseClass) return;
+    setBaseClass(nextBaseClass);
+    setAppearance(DEFAULT_APPEARANCE);
   }
 
   // Sex survives a race or class change on purpose. It means the same thing
   // everywhere, so clearing it would be throwing away an answer the player
-  // already gave to a question that hasn't changed.
+  // already gave to a question that hasn't changed. Face, hair and hair colour
+  // do not: each is a different body's art under the same numbering, so
+  // "face 2" carried across is a choice the player never made.
   function handleSelectVariant(nextRace: RaceNames, nextBaseClass: BaseClass, nextSex: SexNames) {
+    if (nextRace !== race || nextBaseClass !== baseClass) setAppearance(DEFAULT_APPEARANCE);
     setRace(nextRace);
     setBaseClass(nextBaseClass);
     setSex(nextSex);
@@ -71,7 +82,7 @@ export const CreateCharScreen = observer(function CreateCharScreen() {
           sex={sex}
           appearance={appearance}
           onRaceChange={handleRaceChange}
-          onBaseClassChange={setBaseClass}
+          onBaseClassChange={handleBaseClassChange}
           onSexChange={setSex}
           onAppearanceChange={setAppearance}
         />

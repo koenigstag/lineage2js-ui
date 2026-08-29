@@ -1,16 +1,21 @@
 /**
- * Builds the character bodies the Unity project has no models for -- orcs and
- * Kamael -- straight out of an installed Lineage 2 client, into the same
- * `<rig>.glb` shape convert-unity-models.ts produces for the other ten.
+ * Builds every playable character body straight out of an installed Lineage 2
+ * client: sixteen `<rig>.glb` files, one per race and sex, plus the textures
+ * that go on them.
  *
- * Why a second pipeline rather than an extension of the first: the sources
- * have nothing in common. That one reads a Unity project (FBX pieces plus
- * `.anim` YAML); this one reads the client's own packages through UE Viewer
- * (https://www.gildor.org) -- body pieces as glTF, animations as PSA. What
- * they share is the output: same clip names, same skeleton conventions, same
- * units, so the web client can't tell which produced a given body.
+ * It began as a second pipeline beside convert-unity-models.ts, which built
+ * ten of them from a Unity port of the same client and had no orcs or Kamael
+ * at all. Converting those ten from the client too settled two things at
+ * once: the port had been faithful (the human fighter comes out to the same
+ * height and head position, to three decimals) but it had lost the smoothing
+ * groups, and it could not be textured, because it merged each body into one
+ * mesh while the client keeps a texture per body part.
  *
- * One thing this path gets for free that the other had to reconstruct: clip
+ * What this reads: the client's own packages through UE Viewer
+ * (https://www.gildor.org) -- body pieces as glTF, animations as PSA,
+ * textures as PNG.
+ *
+ * One thing it gets for free that the Unity path had to reconstruct: clip
  * timing. Every PSA sequence carries its own frame count and rate, so a clip
  * comes out at the duration the client authored it for. The Unity path lost
  * that (everything flattened onto 24fps) and has a measured table to put it
@@ -33,6 +38,7 @@ import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { readPsa, toThreeClip, type PsaFile, type PsaSequence } from "./models/psa-anim";
+import { bareBodies, readArmorgrp, splitObjectName, type ArmorBody, type ArmorSlot } from "./client-data/armorgrp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, "../assets/highfive/models");
@@ -63,28 +69,35 @@ const ROOT_BONE = "bip01";
  */
 const UNIT_SCALE = 100;
 
-/** The joint carrying most of a piece's weight -- what it hangs from, for a piece that is skinned rather than rigid. */
-function dominantBone(mesh: THREE.SkinnedMesh): number {
-  const skinIndex = mesh.geometry.getAttribute("skinIndex") as THREE.BufferAttribute;
-  const skinWeight = mesh.geometry.getAttribute("skinWeight") as THREE.BufferAttribute;
-  const total = new Map<number, number>();
-  for (let vertex = 0; vertex < skinIndex.count; vertex++) {
-    for (let influence = 0; influence < 4; influence++) {
-      const weight = skinWeight.getComponent(vertex, influence);
-      if (weight <= 0) continue;
-      const bone = skinIndex.getComponent(vertex, influence);
-      total.set(bone, (total.get(bone) ?? 0) + weight);
-    }
-  }
-  let best = -1;
-  let heaviest = 0;
-  for (const [bone, weight] of total) {
-    if (weight > heaviest) {
-      heaviest = weight;
-      best = bone;
-    }
-  }
-  return best;
+const IDENTITY = new THREE.Matrix4();
+
+/**
+ * A piece's skeleton boiled down to a string, so two of them can be compared.
+ *
+ * Pieces of one rig normally share a rest pose exactly, and the merge relies
+ * on it: geometry is taken as it comes and bound to whichever skeleton leads,
+ * so a piece skinned against a different rest pose lands crooked. They are
+ * not always the same, though -- the male dark elf's torso is published in a
+ * pose of its own, a few centimetres off every other piece of him.
+ */
+function skeletonFingerprint(group: THREE.Group): string {
+  let mesh: THREE.SkinnedMesh | null = null;
+  group.traverse((object) => {
+    if (!mesh && (object as THREE.SkinnedMesh).isSkinnedMesh) mesh = object as THREE.SkinnedMesh;
+  });
+  if (!mesh) return "";
+  group.updateMatrixWorld(true);
+  const position = new THREE.Vector3();
+  // Sorted, because a skin lists its joints in whatever order it uses them
+  // and two pieces of one rig routinely disagree about that while sharing the
+  // pose exactly. Only where a joint rests should count here.
+  return (mesh as THREE.SkinnedMesh).skeleton.bones
+    .map((bone) => {
+      position.setFromMatrixPosition(bone.matrixWorld);
+      return `${bone.name}:${position.x.toFixed(3)},${position.y.toFixed(3)},${position.z.toFixed(3)}`;
+    })
+    .sort()
+    .join("|");
 }
 
 /** Nearest joint to a point, for placing a piece that arrived without one of its own. */
@@ -115,8 +128,13 @@ type BodyPart = "face" | "hair" | "upper" | "lower" | "boots" | "gloves" | "wing
 const BODY_PARTS: BodyPart[] = ["face", "hair", "upper", "lower", "boots", "gloves", "wing"];
 
 interface PieceSource {
-  /** Suffix after the rig name, e.g. "m000_u". */
-  suffix: string;
+  /** Suffix after the rig name, e.g. "m000_f" -- for a piece that lives in one set. */
+  suffix?: string;
+  /**
+   * A body part, named by its letter alone: which set it comes from differs by
+   * rig and is read off the textures rather than fixed here -- see bodySet.
+   */
+  bodyPart?: "u" | "l" | "b" | "g";
   /** What it is, which decides both its material and the texture that goes on it. */
   part: BodyPart;
   /**
@@ -159,11 +177,22 @@ interface ClientRig {
 }
 
 /** The pieces a body is made of, in the same slots the Unity path uses. */
+/**
+ * The body a character wears with nothing equipped is the m001 set, not m000:
+ * one mesh per part, textured t02 for bare skin and t01 for the squire's
+ * shirt a character can be given. m000 exists beside it with textures of its
+ * own (t1000) and is not what the game shows -- taking it dressed the female
+ * dark elf in underwear she does not have, and left the Kamael untextured
+ * altogether, since m000 has no body textures for them at all.
+ *
+ * The face, the hair and the Kamael wing are not part of that: they stay in
+ * m000, where the client keeps them.
+ */
 const BODY_PIECES: PieceSource[] = [
-  { suffix: "m000_u", part: "upper" },
-  { suffix: "m000_l", part: "lower" },
-  { suffix: "m000_b", part: "boots" },
-  { suffix: "m000_g", part: "gloves" },
+  { bodyPart: "u", part: "upper" },
+  { bodyPart: "l", part: "lower" },
+  { bodyPart: "b", part: "boots" },
+  { bodyPart: "g", part: "gloves" },
   { suffix: "m000_f", part: "face" },
   { suffix: "m000_m00_bh", part: "hair", variant: "hair" },
   { suffix: "m000_m00_ah", part: "hair", variant: "hair" },
@@ -181,6 +210,22 @@ const BODY_PIECES: PieceSource[] = [
 const WING: PieceSource[] = [{ suffix: "m000_w_ad00", part: "wing" }];
 
 const RIGS: ClientRig[] = [
+  // Every one of these came from the Unity project before (see
+  // convert-unity-models.ts), as a single mesh with no textures. The client
+  // has them all, split into the same parts as the orcs and with the same
+  // three faces and four hair colours, so they are converted from it now and
+  // the Unity path no longer has a rig to itself.
+  { rig: "MFighter", pkg: "Fighter", animObject: "MFighter_anim" },
+  { rig: "FFighter", pkg: "Fighter", animObject: "FFighter_anim" },
+  { rig: "MMagic", pkg: "Magic", animObject: "MMagic_anim" },
+  { rig: "FMagic", pkg: "Magic", animObject: "FMagic_anim" },
+  { rig: "MElf", pkg: "Elf", animObject: "MElf_anim" },
+  { rig: "FElf", pkg: "Elf", animObject: "FElf_anim" },
+  { rig: "MDarkElf", pkg: "DarkElf", animObject: "MDarkElf_anim" },
+  { rig: "FDarkElf", pkg: "DarkElf", animObject: "FDarkElf_anim" },
+  { rig: "MDwarf", pkg: "Dwarf", animObject: "MDwarf_anim" },
+  { rig: "FDwarf", pkg: "Dwarf", animObject: "FDwarf_anim" },
+
   { rig: "MOrc", pkg: "Orc", animObject: "MOrc_anim" },
   { rig: "FOrc", pkg: "Orc", animObject: "FOrc_anim" },
   { rig: "MShaman", pkg: "Shaman", animObject: "MShaman_anim" },
@@ -201,10 +246,10 @@ const RIGS: ClientRig[] = [
     pkg: "Shaman",
     animObject: "FShaman_anim",
     pieces: [
-      { suffix: "m000_u", part: "upper", from: { pkg: "Orc", rig: "FOrc" }, primary: true },
-      { suffix: "m000_l", part: "lower", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_b", part: "boots", from: { pkg: "Orc", rig: "FOrc" } },
-      { suffix: "m000_g", part: "gloves", from: { pkg: "Orc", rig: "FOrc" } },
+      { bodyPart: "u", part: "upper", from: { pkg: "Orc", rig: "FOrc" }, primary: true },
+      { bodyPart: "l", part: "lower", from: { pkg: "Orc", rig: "FOrc" } },
+      { bodyPart: "b", part: "boots", from: { pkg: "Orc", rig: "FOrc" } },
+      { bodyPart: "g", part: "gloves", from: { pkg: "Orc", rig: "FOrc" } },
       { suffix: "m000_f", part: "face" },
       { suffix: "m000_m00_bh", part: "hair", from: { pkg: "Orc", rig: "FOrc" } },
     ],
@@ -379,7 +424,10 @@ function rigidAttachment(mesh: THREE.SkinnedMesh): { root: number; bone: THREE.B
  * pieces before this pipeline was written), so the first piece's skeleton is
  * the rig's and the rest contribute only their meshes.
  */
-function assemble(pieces: { group: THREE.Group; part: BodyPart; name: string }[]): AssembledBody {
+function assemble(
+  pieces: { group: THREE.Group; part: BodyPart; name: string }[],
+  selfAnimated: Set<string>
+): AssembledBody {
   // All of them, not just the first: a piece whose mesh has more than one
   // material arrives from GLTFLoader as a group of that many skinned meshes
   // (the Kamael torso is two), and taking one would leave the rest in the
@@ -423,17 +471,27 @@ function assemble(pieces: { group: THREE.Group; part: BodyPart; name: string }[]
     if (existing !== undefined) return existing;
 
     const pieceParent = pieceBone.parent as THREE.Bone | null;
-    // A piece rigged on a skeleton of its own -- the Kamael wing -- has a
-    // root joint whose parent is the mesh rather than another joint, and its
-    // transforms are in the body's own space: the wing's animation puts that
-    // joint 36 units up, which is a height above the character's feet, not an
-    // offset from anything. So it goes beside the body's root joint rather
-    // than under a joint, and its own animation moves it from there, the way
-    // the client attaches it. Hanging it off a joint instead adds that
-    // joint's transform to every frame -- invisible in the reference pose,
-    // where the bind matrices cancel it out, and a wing thrown wide open the
-    // moment anything plays.
-    const parent = pieceParent?.isBone ? bones[adoptBone(pieceParent)] : bodySpace;
+    // A piece rigged on a skeleton of its own has a root joint whose parent
+    // is the mesh rather than another joint, and where it belongs depends on
+    // whether anything drives it.
+    //
+    // The Kamael wing has an animation set of its own, written in the body's
+    // space -- it puts the wing's root 36 units up, which is a height above
+    // the character's feet and not an offset from anything -- so the wing
+    // goes beside the body's root joint and its own animation moves it from
+    // there, the way the client attaches it. Hanging it off a joint instead
+    // adds that joint's transform to every frame: invisible in the reference
+    // pose, where the bind matrices cancel it, and a wing thrown wide open
+    // the moment anything plays.
+    //
+    // Hair strands are the other kind, and want the opposite. Nothing
+    // animates them, so they have to ride the joint they rest against or they
+    // stay behind while the head turns.
+    const parent = pieceParent?.isBone
+      ? bones[adoptBone(pieceParent)]
+      : selfAnimated.has(boneKey(pieceBone.name))
+        ? bodySpace
+        : nearestBone(bones, new THREE.Vector3().setFromMatrixPosition(pieceBone.matrixWorld));
     const clone = pieceBone.clone(false);
     clone.name = name;
     parent.add(clone);
@@ -465,25 +523,35 @@ function assemble(pieces: { group: THREE.Group; part: BodyPart; name: string }[]
       remap[rigid.root] = adoptBone(rigid.bone);
       reattached.push(`${piece.name} -> ${THREE.PropertyBinding.sanitizeNodeName(rigid.bone.name)}`);
     }
-    // A piece off another rig's skeleton sits where that skeleton put it,
-    // which is not where this one's joints are: the female orc mystic wears a
-    // female orc body but her head is the shaman's, and the shaman's head
-    // joint rests 0.1 units lower, which is exactly how far her face sank
-    // into her shoulders. Move it by the difference at the joint it hangs
-    // from -- zero for every piece that shares the skeleton, which is most.
-    const held = rigid ? mesh.skeleton.bones.indexOf(rigid.bone) : dominantBone(mesh);
-    const anchor = held < 0 ? -1 : rigid ? adoptBone(rigid.bone) : remap[held];
-    // Only against a joint this skeleton already had. An adopted one is a
-    // copy of the piece's own, re-parented onto whatever it rests against, so
-    // it sits wherever that put it -- measuring the piece against that would
-    // be measuring it against itself and moving it by the error.
-    if (anchor >= 0 && !adoptedIndices.has(anchor)) {
-      const shift = new THREE.Vector3()
-        .setFromMatrixPosition(bones[anchor].matrixWorld)
-        .sub(new THREE.Vector3().setFromMatrixPosition(mesh.skeleton.bones[held].matrixWorld));
-      if (shift.length() > 0.001) {
-        geometry.translate(shift.x, shift.y, shift.z);
-        aligned.push(`${piece.name} by ${(shift.length() * UNIT_SCALE).toFixed(1)}`);
+    // Only a rigidly attached piece can need moving, and only when it came
+    // off another rig: it carries no weights to say where it belongs, so it
+    // sits wherever its own skeleton left it. The female orc mystic wears a
+    // female orc body with a shaman's face, and the shaman's head joint rests
+    // 0.1 units lower -- exactly how far her face sank into her shoulders.
+    // Moving it by the difference at the joint it hangs from is the whole
+    // correction, and a no-op when the two agree.
+    //
+    // A skinned piece needs nothing, even one whose skeleton rests in a pose
+    // of its own: its vertices are already in the space every other piece is
+    // in, and its weights put them back there against any skeleton whose
+    // joints rest where this one's do. Measured, not assumed -- the male dark
+    // elf's torso is the one piece of him published in a different pose, and
+    // it lines up with the rest of him untouched. What did break him was that
+    // pose leading the merge, which the ordering above now prevents.
+    if (rigid) {
+      const held = mesh.skeleton.bones.indexOf(rigid.bone);
+      const anchor = held < 0 ? -1 : adoptBone(rigid.bone);
+      // Not against an adopted joint: that is a copy of the piece's own,
+      // re-parented onto whatever it rests against, so measuring the piece
+      // against it measures it against itself.
+      if (anchor >= 0 && !adoptedIndices.has(anchor)) {
+        const shift = new THREE.Vector3()
+          .setFromMatrixPosition(bones[anchor].matrixWorld)
+          .sub(new THREE.Vector3().setFromMatrixPosition(mesh.skeleton.bones[held].matrixWorld));
+        if (shift.length() > 0.001) {
+          geometry.translate(shift.x, shift.y, shift.z);
+          aligned.push(`${piece.name} by ${(shift.length() * UNIT_SCALE).toFixed(1)}`);
+        }
       }
     }
 
@@ -572,8 +640,167 @@ function textureName(rig: string, suffix: string, id: string): string {
   return `${rig}_${suffix.slice(0, cut)}_t${id}_${suffix.slice(cut + 1)}`;
 }
 
-/** The starting body's own texture id, for the parts that come in one flavour. */
-const PLAIN = "1000";
+/**
+ * Bare skin. The id beside it, t01, is the squire's shirt on the same mesh --
+ * the client picks between them by what the character is wearing, and nothing
+ * here models equipment yet.
+ *
+ * Only the fallback path below still reasons in terms of this id. When the
+ * client's armour table can be read it says outright which mesh and texture
+ * each rig wears with a slot empty, and this stops being a guess -- see
+ * loadBareBodies.
+ */
+const BARE = "02";
+
+/**
+ * What each rig wears with nothing equipped, straight out of the client's
+ * armour table -- mesh and texture, per rig, for the torso, legs, boots and
+ * gloves.
+ *
+ * Loaded once per run and left undefined when the table cannot be read, which
+ * is the only reason bodySet and the name-guessing in bare() are still here.
+ * Their answers were close but not right: they missed the mystics' legs and
+ * boots entirely (falling back to m000's t1000, which is unused art) and had
+ * no way at all to find the Kamael's gloves, which are m002_t10 rather than
+ * any t02.
+ */
+let bareBodyTable: Record<ArmorSlot, Partial<Record<string, ArmorBody>>> | undefined;
+
+const ARMOR_PART_SLOTS: Partial<Record<BodyPart, ArmorSlot>> = {
+  upper: "upper",
+  lower: "lower",
+  boots: "boots",
+  gloves: "gloves",
+};
+
+function loadBareBodies(client: string): void {
+  const file = path.join(client, "system", "armorgrp.dat");
+  try {
+    bareBodyTable = bareBodies(readArmorgrp(file));
+  } catch (error) {
+    console.warn(
+      `Could not read ${file} (${error instanceof Error ? error.message : String(error)}).\n` +
+        "  Falling back to guessing bare bodies from texture names, which is wrong for the mystics and the Kamael."
+    );
+  }
+}
+
+/** The armour table's entry for a rig's bare body part, where there is one. */
+function bareBody(rig: string, part: BodyPart): ArmorBody | undefined {
+  const slot = ARMOR_PART_SLOTS[part];
+  return slot && bareBodyTable ? bareBodyTable[slot][rig] : undefined;
+}
+
+/**
+ * Every texture name a rig's package holds, read once and kept.
+ *
+ * Worth the extra call to umodel: which set a body part comes from is not the
+ * same for every rig, and the only honest way to tell is to look at what is
+ * actually published.
+ */
+const textureNames = new Map<string, Set<string>>();
+
+function listTextures(umodel: string, client: string, rig: string): Set<string> {
+  let names = textureNames.get(rig);
+  if (names) return names;
+  names = new Set<string>();
+  const result = spawnSync(umodel, [`-path=${client}`, "-game=l2", "-list", `SysTextures\\${rig}.utx`], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  for (const line of (result.stdout ?? "").split("\n")) {
+    const match = /Texture\s+(\S+)/.exec(line);
+    if (match) names.add(match[1].toLowerCase());
+  }
+  textureNames.set(rig, names);
+  return names;
+}
+
+/**
+ * Which set a rig's bare body comes from, part by part.
+ *
+ * The id is what identifies it -- t02 is bare skin and t01 the squire's shirt
+ * on the same mesh -- but the set that holds it is not fixed. It is m001 for
+ * most, and then the human mystics keep their bare legs and boots in m003 and
+ * their gloves in m005, the female mystic her torso in m003 and her boots in
+ * m002. Nothing in the naming says so, so the set is found by looking for the
+ * id across all of them.
+ *
+ * Some parts have no t02 anywhere -- most rigs' legs, the male mystic's torso
+ * -- and fall back to m000's t1000, which is the older art the client still
+ * ships. Those are the ones to check first when a body looks wrong.
+ */
+function bodySet(umodel: string, client: string, rig: string, part: string): string {
+  const names = listTextures(umodel, client, rig);
+  const bare = new RegExp(`^${rig}_(m\\d{3})_t${BARE}_${part}(_ori|_sp)?$`, "i");
+  const sets: string[] = [];
+  for (const name of names) {
+    const match = bare.exec(name);
+    if (match) sets.push(match[1].toLowerCase());
+  }
+  // Lowest wins where more than one carries it: the sets run oldest first, and
+  // no rig in the client publishes the same part twice under this id anyway.
+  if (sets.length > 0) return sets.sort()[0];
+
+  if (
+    names.has(`${rig}_m000_t1000_${part}`.toLowerCase()) ||
+    names.has(`${rig}_m000_t1000_${part}_ori`.toLowerCase())
+  ) {
+    return "m000";
+  }
+  // Nothing of its own. m001 is where the Kamael keep the shared sheet the
+  // fallback below picks up, and the run reports anything left bare.
+  return "m001";
+}
+
+/**
+ * Which mesh a rig's bare body part is, as the suffix after the rig's name.
+ *
+ * The armour table names it outright ("Magic.MMagic_m005_u" for the male
+ * mystic's torso); bodySet's search of the texture names is what answers when
+ * the table could not be read.
+ */
+function bodySuffix(umodel: string, client: string, rig: string, piece: PieceSource): string {
+  const letter = piece.bodyPart!;
+  const mesh = bareBody(rig, piece.part)?.mesh[0];
+  if (mesh) {
+    const { object } = splitObjectName(mesh);
+    // "MMagic_m005_u" -> "m005_u"; the rig prefix is added back by the caller.
+    if (object.toLowerCase().startsWith(`${rig.toLowerCase()}_`)) return object.slice(rig.length + 1);
+  }
+  return `${bodySet(umodel, client, rig, letter)}_${letter}`;
+}
+
+/**
+ * Bare skin for a body part, published plainly or as _ori beside an _sp map
+ * this pipeline has no use for.
+ *
+ * Falling back to the set's "ut" sheet last: the Kamael are dressed rather
+ * than bare, and their legs and gloves have no diffuse of their own -- both
+ * are painted on one sheet with the torso, which is what ut holds.
+ */
+function bare(rig: string, suffix: string, part: BodyPart): string[] {
+  const named = bareBody(rig, part)?.texture.map((name) => splitObjectName(name).object) ?? [];
+  // Named outright, and still with the two spellings after it: the plain
+  // name is sometimes a Shader rather than an image, and what it points at
+  // is the _ori or _sp beside it.
+  if (named.length > 0) {
+    return named.flatMap((name) => [name, `${name}_ori`, `${name}_sp`]);
+  }
+
+  // The id belongs to the set the suffix names: t02 in m001, t1000 in m000.
+  const set = suffix.slice(0, suffix.indexOf("_"));
+  const id = set === "m000" ? "1000" : BARE;
+  const own = textureName(rig, suffix, id);
+  const shared = textureName(rig, `${set}_ut`, id);
+  // `_sp` last, and it is not always the specular map its name suggests:
+  // where the plain name belongs to a Shader rather than a Texture -- the
+  // human mystic's torso is one -- that shader's diffuse is the _sp image,
+  // and it is the only pixels there are. Its alpha carries a gloss mask
+  // rather than transparency, which is why the runtime ignores alpha on
+  // everything but the parts that are genuinely cut out.
+  return [own, `${own}_ori`, shared, `${shared}_ori`, `${own}_sp`, `${shared}_sp`];
+}
 
 const PART_TEXTURES: Record<
   BodyPart,
@@ -584,17 +811,36 @@ const PART_TEXTURES: Record<
     variants: 4,
     candidates: (rig, v, suffix) => [textureName(rig, suffix, `0${v}`), `${textureName(rig, suffix, `0${v}`)}_ori`],
   },
-  upper: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
-  lower: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
-  boots: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
-  gloves: { variants: 1, candidates: (rig, _v, suffix) => [textureName(rig, suffix, PLAIN), `${textureName(rig, suffix, PLAIN)}_ori`] },
+  upper: { variants: 1, candidates: (rig, _v, suffix) => bare(rig, suffix, "upper") },
+  lower: { variants: 1, candidates: (rig, _v, suffix) => bare(rig, suffix, "lower") },
+  boots: { variants: 1, candidates: (rig, _v, suffix) => bare(rig, suffix, "boots") },
+  gloves: { variants: 1, candidates: (rig, _v, suffix) => bare(rig, suffix, "gloves") },
   // The wing is the exception: its mesh is an "ad00" attachment while its
   // texture is filed plainly under w.
   wing: { variants: 1, candidates: (rig) => [`${rig}_m000_t00_w_ori`, `${rig}_m000_t00_w`] },
 };
 
-/** How many variants of each part a rig actually ships, which is what the runtime reads to build its URLs. */
-export type TextureManifest = Record<string, Partial<Record<BodyPart, number>>>;
+/**
+ * What the runtime needs to know about a rig's textures: how many variants of
+ * each part it ships, and which parts must not be alpha-tested.
+ *
+ * Alpha carries two different things in this art. Where a body part's texture
+ * came from an `_sp` image, the alpha is the specularity mask the client's own
+ * material declares it to be -- the RGB there is the whole picture, right
+ * through the fully transparent pixels, and testing against it erases the
+ * body. Everywhere else -- hair, faces, the Kamael wing and the cloth on their
+ * chest -- alpha is an ordinary cut-out, and *not* testing it paints those
+ * regions black, because that is what the art has under them.
+ *
+ * The `_sp` name is what tells the two apart, and it is not a guess: those are
+ * the images a shader names as its diffuse while naming the same image as its
+ * SpecularityMask. Checked against the pixels of all sixteen rigs -- every
+ * `_sp` texture has colour under its transparent pixels and every other one is
+ * black there.
+ */
+export type TextureEntry = Partial<Record<BodyPart, number>> & { gloss?: BodyPart[] };
+
+export type TextureManifest = Record<string, TextureEntry>;
 
 /**
  * Pulls every texture a body needs out of the client, as PNG.
@@ -609,16 +855,18 @@ async function exportTextures(
   workDir: string,
   rig: string,
   pieces: { part: BodyPart; rig: string; suffix: string }[]
-): Promise<Partial<Record<BodyPart, number>>> {
+): Promise<TextureEntry> {
   const outDir = path.join(OUT_TEXTURE_DIR, rig.toLowerCase());
   await fs.promises.mkdir(outDir, { recursive: true });
   const counts: Partial<Record<BodyPart, number>> = {};
+  const gloss: BodyPart[] = [];
 
   for (const piece of new Map(pieces.map((piece) => [piece.part, piece])).values()) {
     const { variants, candidates } = PART_TEXTURES[piece.part];
     let written = 0;
     for (let variant = 0; variant < variants; variant++) {
       let source: string | undefined;
+      let chosen: string | undefined;
       for (const name of candidates(piece.rig, variant, piece.suffix)) {
         const file = path.join(workDir, "textures", piece.rig, "Texture", `${name}.png`);
         if (!fs.existsSync(file)) {
@@ -636,6 +884,7 @@ async function exportTextures(
         }
         if (fs.existsSync(file)) {
           source = file;
+          chosen = name;
           break;
         }
       }
@@ -643,12 +892,16 @@ async function exportTextures(
       // t01, never t00 and t02, so the first gap is the end of the list.
       if (!source) break;
       await fs.promises.copyFile(source, path.join(outDir, `${piece.part}-${variant}.png`));
+      if (chosen?.toLowerCase().endsWith("_sp") && !gloss.includes(piece.part)) gloss.push(piece.part);
       written++;
     }
     if (written > 0) counts[piece.part] = written;
   }
 
-  return counts;
+  // Always written, empty included: its presence is how the runtime knows
+  // this manifest can answer the question at all. An older one that cannot
+  // must leave alpha alone rather than guess.
+  return { ...counts, gloss };
 }
 
 async function convertRig(
@@ -656,7 +909,7 @@ async function convertRig(
   client: string,
   workDir: string,
   source: ClientRig
-): Promise<Partial<Record<BodyPart, number>>> {
+): Promise<TextureEntry> {
   const pieceSources: PieceSource[] = [...(source.pieces ?? BODY_PIECES), ...(source.extraPieces ?? [])];
   const exported: {
     file: string;
@@ -672,7 +925,8 @@ async function convertRig(
   for (const piece of pieceSources) {
     if (piece.variant && filled.has(piece.variant)) continue;
     const from = piece.from ?? { pkg: source.pkg, rig: source.rig };
-    const object = `${from.rig}_${piece.suffix}`;
+    const suffix = piece.suffix ?? bodySuffix(umodel, client, from.rig, piece);
+    const object = `${from.rig}_${suffix}`;
     const outDir = path.join(workDir, from.pkg);
     const file = path.join(outDir, from.pkg, "SkeletalMesh", `${object}.gltf`);
     if (!fs.existsSync(file)) {
@@ -689,40 +943,14 @@ async function convertRig(
       own: from.pkg === source.pkg,
       rig: from.rig,
       pkg: from.pkg,
-      suffix: piece.suffix,
+      suffix,
       primary: piece.primary,
     });
     if (piece.variant) filled.add(piece.variant);
   }
   if (exported.length === 0) throw new Error(`No body pieces found for ${source.rig}`);
 
-  // The rig's own pieces first, so the skeleton everything else is merged
-  // onto is the one its animations were authored against -- unless a piece
-  // asks to lead. A body borrowed from another rig has to: it is the largest
-  // and most finely skinned part, and every joint of it has to keep the rest
-  // position it was weighted against, while the head pieces riding on it are
-  // held by one joint each and can be moved onto whatever that joint turns
-  // out to be (see the alignment in assemble).
-  const ordered = [...exported].sort(
-    (a, b) => Number(b.primary ?? false) - Number(a.primary ?? false) || Number(b.own) - Number(a.own)
-  );
-  const pieces = await Promise.all(
-    ordered.map(async (piece) => ({
-      group: await loadPiece(piece.file),
-      part: piece.part,
-      name: path.basename(piece.file, ".gltf"),
-    }))
-  );
-  const body = assemble(pieces);
-
   const psaDir = path.join(workDir, `${source.pkg}-anim`);
-  const psaFile = path.join(psaDir, source.pkg, "MeshAnimation", `${source.animObject}.psa`);
-  if (!fs.existsSync(psaFile)) {
-    runUmodel(umodel, client, ["-export", `-out=${psaDir}`, `Animations\\${source.pkg}.ukx`, source.animObject]);
-  }
-  const psa: PsaFile = readPsa(psaFile);
-  const bySequence = new Map(psa.sequences.map((sequence) => [sequence.name.toLowerCase(), sequence]));
-
   const extraAnims = (source.extraAnimObjects ?? []).map((object) => {
     const file = path.join(psaDir, source.pkg, "MeshAnimation", `${object}.psa`);
     if (!fs.existsSync(file)) {
@@ -731,6 +959,54 @@ async function convertRig(
     const loaded = readPsa(file);
     return { psa: loaded, bySequence: new Map(loaded.sequences.map((s) => [s.name.toLowerCase(), s])) };
   });
+  /** Joints some other animation drives -- what tells a piece that moves on its own from one merely carried along. */
+  const selfAnimated = new Set(
+    extraAnims.flatMap((extra) =>
+      extra.psa.boneNames.map((name) => THREE.PropertyBinding.sanitizeNodeName(name).toLowerCase())
+    )
+  );
+
+  const loaded = await Promise.all(
+    exported.map(async (piece) => ({
+      ...piece,
+      group: await loadPiece(piece.file),
+      name: path.basename(piece.file, ".gltf"),
+    }))
+  );
+
+  // Whichever rest pose most of the body agrees on leads the merge. Taking
+  // the first piece instead put the male dark elf together around his torso,
+  // which is the one piece of him published in a different pose -- his head,
+  // hands, legs and boots all came out displaced around it. The majority is
+  // the safe read: a piece that disagrees with everything else is the odd one
+  // out by definition, and it is reported below rather than silently
+  // out-voted.
+  const fingerprints = new Map(loaded.map((piece) => [piece, skeletonFingerprint(piece.group)]));
+  const votes = new Map<string, number>();
+  for (const fingerprint of fingerprints.values()) votes.set(fingerprint, (votes.get(fingerprint) ?? 0) + 1);
+  const agreed = [...votes].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const odd = loaded.filter((piece) => fingerprints.get(piece) !== agreed).map((piece) => piece.name);
+
+  // An explicit lead still wins: a body borrowed from another rig has to be
+  // the skeleton, however few pieces come with it, because it is the largest
+  // and most finely skinned part and every joint of it has to keep the rest
+  // position it was weighted against (see FShaman, and the alignment in
+  // assemble that moves the head pieces onto it).
+  const pieces = loaded.sort(
+    (a, b) =>
+      Number(b.primary ?? false) - Number(a.primary ?? false) ||
+      Number(fingerprints.get(b) === agreed) - Number(fingerprints.get(a) === agreed) ||
+      Number(b.own) - Number(a.own)
+  );
+  const body = assemble(pieces, selfAnimated);
+
+  const psaFile = path.join(psaDir, source.pkg, "MeshAnimation", `${source.animObject}.psa`);
+  if (!fs.existsSync(psaFile)) {
+    runUmodel(umodel, client, ["-export", `-out=${psaDir}`, `Animations\\${source.pkg}.ukx`, source.animObject]);
+  }
+  const psa: PsaFile = readPsa(psaFile);
+  const bySequence = new Map(psa.sequences.map((sequence) => [sequence.name.toLowerCase(), sequence]));
+
 
   const clips: THREE.AnimationClip[] = [];
   const missing: string[] = [];
@@ -784,6 +1060,7 @@ async function convertRig(
       (body.adopted.length ? `  (+${body.adopted.length} joints from other pieces)` : "") +
       (body.reattached.length ? `  (attached: ${body.reattached.join(", ")})` : "") +
       (body.aligned.length ? `  (aligned: ${body.aligned.join(", ")})` : "") +
+      (odd.length ? `  (rest pose of its own: ${odd.join(", ")})` : "") +
       (missing.length ? `  (no sequence for ${missing.join("/")})` : "") +
       `  (textures: ${BODY_PARTS.filter((part) => textures[part])
         .map((part) => `${part}x${textures[part]}`)
@@ -805,6 +1082,8 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+
+  loadBareBodies(client);
 
   const only = readArg("--only");
   const rigs = only ? RIGS.filter((rig) => rig.rig.toLowerCase() === only.toLowerCase()) : RIGS;

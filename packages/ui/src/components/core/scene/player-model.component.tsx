@@ -27,7 +27,7 @@ interface PlayerModelProps {
   isDead?: boolean;
 }
 
-/** Player variant (race/baseClass/sex) -> that race's converted body, or the placeholder for the races without one. Used by char-select/char-create directly, and by CreatureModel's player branch. */
+/** Player variant (race/baseClass/sex) -> that race's converted body, or the placeholder when no model server is configured. Used by char-select/char-create directly, and by CreatureModel's player branch. */
 export function PlayerModel({
   variant,
   appearance,

@@ -133,7 +133,7 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
         gl={{ alpha: true, antialias: true }}
         camera={{ position: [initialX, GROUP_SHOT.height, GROUP_SHOT.distance], fov: 45, near: 0.1, far: 150 }}
       >
-        <CameraRig focus={focus} />
+        <CameraRig focus={focus} cut={race} />
 
         <ambientLight intensity={0.7} color="#5a6a8a" />
         <MoonLight groupX={groupXForRace(race)} />

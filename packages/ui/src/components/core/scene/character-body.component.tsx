@@ -17,7 +17,8 @@ export interface CharacterBodyProps {
   /**
    * Converted retail body to render, from config/character-models.ts.
    * Undefined -- or a URL that doesn't load -- falls back to the placeholder
-   * body, which is also all orcs, Kamael, and non-humanoid creatures ever get.
+   * body, which is also all a mob, a summon or an unconfigured model server
+   * ever gets.
    */
   modelUrl?: string;
   animation?: CharacterAnimation;
@@ -55,8 +56,8 @@ export interface CharacterBodyProps {
  * One creature body: the converted retail model when there is one and it has
  * loaded, and the procedural placeholder otherwise.
  *
- * The fallback isn't only for missing files -- orcs and Kamael have no model
- * in the source project at all, mobs and summons aren't humanoid, and no model
+ * The fallback isn't only for missing files -- mobs and summons aren't
+ * humanoid, an NPC of no particular race has no body to borrow, and no model
  * server is configured by default -- so the placeholder stays a first-class
  * path rather than a broken-image state, and the real body simply swaps in
  * once it arrives.

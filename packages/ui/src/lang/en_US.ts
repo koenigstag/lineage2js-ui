@@ -53,7 +53,7 @@ export const LANG_EN_US: LangDictionary = {
   charCreate: {
     racePlaceholder: "Race",
     classPlaceholder: "Class",
-    sexPlaceholder: "Sex",
+    sexPlaceholder: "Gender",
     facePlaceholder: "Face",
     hairPlaceholder: "Hair",
     hairColorPlaceholder: "Hair color",

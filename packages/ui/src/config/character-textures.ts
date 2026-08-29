@@ -25,8 +25,17 @@ function variantFor(part: BodyPart, appearance: CharacterAppearance): number {
   return 0;
 }
 
-/** rig -> how many variants of each part it ships, written by the converter beside the files. */
-type TextureIndex = Record<string, Partial<Record<BodyPart, number>>>;
+/**
+ * rig -> how many variants of each part it ships, written by the converter
+ * beside the files, plus a token the server adds per rig.
+ *
+ * The token is what lets the textures be cached hard and still never be
+ * stale: a re-converted rig arrives under URLs the browser has never seen.
+ * Without it the files keep their names from one conversion to the next, and
+ * an hour of the previous art is what everyone gets -- which is exactly how
+ * long a wrong body can be mistaken for a wrong converter.
+ */
+type TextureIndex = Record<string, Partial<Record<BodyPart, number>> & { v?: string; gloss?: BodyPart[] }>;
 
 /**
  * Fetched once per session. Without it a caller would have to guess which
@@ -58,6 +67,27 @@ function base(): string {
 }
 
 /**
+ * Whether a part's texture uses its alpha channel as a gloss mask rather than
+ * as transparency, which decides whether the runtime may alpha-test it.
+ *
+ * The converter works this out from where the texture came from and writes it
+ * into the index -- see TextureManifest in convert-client-rigs.ts for why the
+ * two cannot be told apart by looking at the image.
+ *
+ * An index that predates the field answers "gloss mask" for everything, which
+ * is the safe way round rather than the accurate one. The two mistakes are not
+ * equal: leaving a cut-out untested paints black around the hair, while
+ * testing a gloss mask deletes the torso and legs outright -- which is exactly
+ * what a page holding an index fetched before the converter rewrote it did.
+ * The field is written even when empty, so its presence is the signal.
+ */
+export async function characterTextureIsGlossMask(rig: string, part: BodyPart): Promise<boolean> {
+  const index = await textureIndex();
+  const gloss = index?.[rig]?.gloss;
+  return gloss ? gloss.includes(part) : true;
+}
+
+/**
  * The texture for one part of one rig, or undefined when there isn't one --
  * an unconfigured server, a part the rig doesn't ship, or a variant past the
  * end of what it has (a character created on a client offering more faces
@@ -69,8 +99,10 @@ export async function characterTextureUrl(
   appearance: CharacterAppearance
 ): Promise<string | undefined> {
   const index = await textureIndex();
-  const available = index?.[rig]?.[part];
+  const entry = index?.[rig];
+  const available = entry?.[part];
   if (!available) return undefined;
   const variant = Math.min(Math.max(variantFor(part, appearance), 0), available - 1);
-  return `${base()}${rig}/${part}-${variant}.png`;
+  const version = entry?.v ? `?v=${entry.v}` : "";
+  return `${base()}${rig}/${part}-${variant}.png${version}`;
 }
