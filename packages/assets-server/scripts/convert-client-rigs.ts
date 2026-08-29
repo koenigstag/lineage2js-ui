@@ -39,6 +39,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { readPsa, toThreeClip, type PsaFile, type PsaSequence } from "./models/psa-anim";
 import { bareBodies, readArmorgrp, splitObjectName, type ArmorBody, type ArmorSlot } from "./client-data/armorgrp";
+import { bareHeads, readChargrp, type CharRecord } from "./client-data/chargrp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, "../assets/highfive/models");
@@ -208,8 +209,7 @@ const BODY_PIECES: PieceSource[] = [
   { bodyPart: "b", part: "boots" },
   { bodyPart: "g", part: "gloves" },
   { suffix: "m000_f", part: "face" },
-  { suffix: "m000_m00_bh", part: "hair", choice: true },
-  { suffix: "m000_m00_ah", part: "hair", choice: true },
+  { part: "hair", choice: true },
 ];
 
 /**
@@ -265,7 +265,7 @@ const RIGS: ClientRig[] = [
       { bodyPart: "b", part: "boots", from: { pkg: "Orc", rig: "FOrc" } },
       { bodyPart: "g", part: "gloves", from: { pkg: "Orc", rig: "FOrc" } },
       { suffix: "m000_f", part: "face" },
-      { suffix: "m000_m00_bh", part: "hair", from: { pkg: "Orc", rig: "FOrc" } },
+      { part: "hair", from: { pkg: "Orc", rig: "FOrc" }, choice: true },
     ],
   },
   // Wings are a Kamael part and nothing else has one. They come as a mesh
@@ -706,6 +706,53 @@ function loadBareBodies(client: string): void {
   }
 }
 
+/**
+ * The heads character creation offers, from the client's own appearance table.
+ *
+ * Read rather than assumed because the rig's package is not the list: it holds
+ * heads the client never shows, and the two styles a rig keeps in its starting
+ * set are only half of what creation offers -- the other two come from armour
+ * sets m008 and m009, which nothing else in this pipeline would think to look
+ * in. Styles stay in the table's order, so a hair index means the same thing
+ * here as in the client.
+ */
+let charTable: CharRecord[] | undefined;
+
+function loadCharTable(client: string): void {
+  const file = path.join(client, "system", "chargrp.dat");
+  try {
+    charTable = readChargrp(file);
+  } catch (error) {
+    console.warn(
+      `Could not read ${file} (${error instanceof Error ? error.message : String(error)}).
+` +
+        "  Falling back to the two heads the starting set publishes, which is fewer than the client offers."
+    );
+  }
+}
+
+/** The two heads a rig's own starting set has, for a client whose table cannot be read. */
+const FALLBACK_HAIR = ["m000_m00_bh", "m000_m00_ah"];
+
+/**
+ * One piece per hair style, in the client's numbering.
+ *
+ * A style whose entry names no mesh is dropped rather than renumbered: it
+ * would be an offer that draws nothing. So is one whose texture is missing --
+ * see hasChoiceTexture.
+ */
+function hairChoices(piece: PieceSource, source: ClientRig): PieceSource[] {
+  const rig = (piece.from ?? { rig: source.rig }).rig;
+  const record = charTable?.find((candidate) => candidate.rig.toLowerCase() === rig.toLowerCase());
+  const suffixes = record
+    ? bareHeads(record)
+        .map((head) => (head?.mesh ? splitObjectName(head.mesh).object : ""))
+        .filter((object) => object.toLowerCase().startsWith(`${rig.toLowerCase()}_`))
+        .map((object) => object.slice(rig.length + 1))
+    : [];
+  return (suffixes.length > 0 ? suffixes : FALLBACK_HAIR).map((suffix) => ({ ...piece, suffix, choice: true }));
+}
+
 /** The armour table's entry for a rig's bare body part, where there is one. */
 function bareBody(rig: string, part: BodyPart): ArmorBody | undefined {
   const slot = ARMOR_PART_SLOTS[part];
@@ -962,7 +1009,9 @@ async function convertRig(
   workDir: string,
   source: ClientRig
 ): Promise<TextureEntry> {
-  const pieceSources: PieceSource[] = [...(source.pieces ?? BODY_PIECES), ...(source.extraPieces ?? [])];
+  const pieceSources: PieceSource[] = [...(source.pieces ?? BODY_PIECES), ...(source.extraPieces ?? [])].flatMap(
+    (piece) => (piece.part === "hair" ? hairChoices(piece, source) : [piece])
+  );
   const exported: {
     file: string;
     part: BodyPart;
@@ -1143,6 +1192,7 @@ async function main(): Promise<void> {
   }
 
   loadBareBodies(client);
+  loadCharTable(client);
 
   const only = readArg("--only");
   const rigs = only ? RIGS.filter((rig) => rig.rig.toLowerCase() === only.toLowerCase()) : RIGS;
