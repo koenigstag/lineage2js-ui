@@ -69,6 +69,7 @@ export function SelectInput({ options, value, label, placeholder, disabled, onCh
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          textAlign: "right",
         }}
       >
         {label}

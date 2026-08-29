@@ -59,6 +59,7 @@ export function BaseInput({
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          textAlign: "right",
         }}
       >
         {label}
