@@ -30,6 +30,52 @@
   - Rejected alternative: a login-screen "Demo Mode" button that skips straight to ui.setScreen("game") -- simpler, but skips exercising login/char-select/create-char themselves, which this is explicitly meant to cover too.
 
 
+## Char creation screen
+
+In this order -- each one is easier once the one before it is settled.
+
+1. **Finish the appearance rendering.** What is left: the client offers a fifth
+   hair style that is empty in chargrp for every rig, so where it comes from is
+   still unexplained; and the seam where the face mesh meets the scalp, most
+   visible on a Kamael's forehead with face 3, where a marking stops dead at the
+   hairline (the geometry is welded and the boundary colours match within ~10 of
+   255, so the remaining suspect is shading -- the two meshes' normals at the
+   seam under one directional light).
+2. **Armour, with its meshes and textures.** `armorgrp.json` already names, per
+   item and per rig, the mesh and texture of every slot plus any attachments.
+   Missing: converting the armour meshes themselves (only the empty-slot bodies
+   are converted today) and letting a body wear a set instead of the bare one.
+3. **Weapon models and their textures.** `weapongrp.dat` is the table for it,
+   not yet read; the same reader in `scripts/client-data/` takes it, and
+   L2ClientDat's structure definitions cover it.
+4. **Character placement and the camera.** Positions, spacing and the shots the
+   creation screen cuts between.
+
+## Game screen
+
+1. **Dropped item models.** armorgrp already carries a drop mesh and its
+   textures per item (`drop.mesh` / `drop.texture` in armorgrp.json), so the
+   table half is done.
+2. **Animation looping and duration** -- attacks that should cycle, casts whose
+   length should match the skill rather than the clip.
+3. **Hit effects.**
+4. **Projectiles** -- an arrow that travels from shooter to target.
+
+## GUI
+
+- **Double-clicking jewellery unequips instead of equipping.** With one ring or
+  earring worn and the other slot free, double-clicking a *different,
+  unequipped* one takes the worn one off instead of putting the clicked one in
+  the free slot. Entry point is `handleItemDoubleClick` in
+  `inventory.window.tsx`, which sends `useItem` and lets the server decide;
+  worth checking what object id goes out and how `getEquippedItemsBySlot`
+  (config/paperdoll-mapping.ts) assigns its `earIndex`/`fingerIndex` before
+  blaming the server.
+- **Equip slot icons for the paperdoll.** They exist in the game client; they
+  need clipping out and serving from the assets server, the same way the
+  game-menu buttons are (`assets/highfive/icons/`, plus its own
+  `VITE_*_ICON_BASE_URL` and the four places a new env var has to appear).
+
 # Long-term TODOs
 - Landscape render and textures
 - Geodata system
