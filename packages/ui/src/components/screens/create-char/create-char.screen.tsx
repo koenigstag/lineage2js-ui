@@ -41,10 +41,12 @@ export const CreateCharScreen = observer(function CreateCharScreen() {
   function handleRaceChange(nextRace: RaceNames) {
     if (nextRace === race) return;
     setRace(nextRace);
-    // Not carried over: the classes on offer differ by race, and a fighter
-    // stays chosen only because every race happens to have one -- which reads
-    // as the screen having decided for you.
+    // Neither is carried over: picking a race starts the walk-in again from
+    // the new race's whole line-up, and a class or sex still selected under it
+    // reads as the screen having decided for you. Class stays settled only
+    // where there is nothing to decide (see soleBaseClass).
     setBaseClass(soleBaseClass(session.characterTemplates, nextRace));
+    setSex(null);
     setAppearance(DEFAULT_APPEARANCE);
   }
 
@@ -54,11 +56,13 @@ export const CreateCharScreen = observer(function CreateCharScreen() {
     setAppearance(DEFAULT_APPEARANCE);
   }
 
-  // Sex survives a race or class change on purpose. It means the same thing
-  // everywhere, so clearing it would be throwing away an answer the player
-  // already gave to a question that hasn't changed. Face, hair and hair colour
-  // do not: each is a different body's art under the same numbering, so
-  // "face 2" carried across is a choice the player never made.
+  // Sex survives a class change on purpose -- within a race it means the same
+  // thing for either class, so clearing it would be throwing away an answer
+  // the player already gave to a question that hasn't changed. It does not
+  // survive a race change, where the line-up it was answered against is gone.
+  // Face, hair and hair colour survive neither: each is a different body's art
+  // under the same numbering, so "face 2" carried across is a choice the
+  // player never made.
   function handleSelectVariant(nextRace: RaceNames, nextBaseClass: BaseClass, nextSex: SexNames) {
     if (nextRace !== race || nextBaseClass !== baseClass) setAppearance(DEFAULT_APPEARANCE);
     setRace(nextRace);
