@@ -1325,6 +1325,30 @@ export class GameStore {
   }
 
   /**
+   * Cancels whatever the player is currently doing: a queued "walk into
+   * range then act" intent (see pendingAction) and/or an in-progress walk.
+   * Bound to Escape -- see App.tsx.
+   *
+   * There's no dedicated "stop" packet to send: StopMove only ever arrives
+   * from the server (see StopMoveMutator in @lineage2js/network), it isn't
+   * something the client can ask for. The same trick moveTo() already leans
+   * on for a mid-walk redirect works here too -- ordering a move to our own
+   * current (rendered) position leaves the server nowhere left to walk us,
+   * which ends the segment right where we stand.
+   */
+  cancelCurrentAction() {
+    this.pendingAction = undefined;
+    const me = this.client?.Me;
+    if (!me) {
+      return;
+    }
+    this.reportRenderedPosition(me);
+    if (creatureMoveState(me).isMoving) {
+      this.client?.moveTo(me.X, me.Y, me.Z);
+    }
+  }
+
+  /**
    * Starts the pick-up window for a creature, off the server's own "X picked
    * up Y" broadcast (GetItem), so other players' pick-ups animate too.
    *

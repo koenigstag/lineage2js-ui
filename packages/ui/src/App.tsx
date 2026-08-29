@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { observer } from "mobx-react-lite";
-import { useUiStore, useDatapackStore, useWindowManagerStore } from "./stores/StoreContext";
+import { useUiStore, useDatapackStore, useWindowManagerStore, useGameStore } from "./stores/StoreContext";
 import { useResetShortcut } from "./lib/useResetShortcut";
+import { useEscapeShortcut } from "./lib/useEscapeShortcut";
 import { LoginScreen } from "./components/screens/login/login.screen";
 import { CharSelectScreen } from "./components/screens/character-select/char-select.screen";
 import { CreateCharScreen } from "./components/screens/create-char/create-char.screen";
@@ -12,6 +13,7 @@ export const App = observer(function App() {
   const ui = useUiStore();
   const datapack = useDatapackStore();
   const windowManager = useWindowManagerStore();
+  const game = useGameStore();
 
   useEffect(() => {
     const hash = `#${ui.screen}`;
@@ -37,6 +39,7 @@ export const App = observer(function App() {
   }, [datapack, ui.lang]);
 
   useResetShortcut(() => windowManager.resetPositions());
+  useEscapeShortcut(() => game.cancelCurrentAction());
 
   switch (ui.screen) {
     case "select-char":

@@ -6,17 +6,18 @@ import { CharacterModel } from "../../../core/scene/character-model.component";
 import { l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
 import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
-import { interpolatedCreaturePosition } from "../../../../utils/creature-movement";
+import { ARRIVE_EPSILON, interpolatedCreaturePosition } from "../../../../utils/creature-movement";
 import { useGameStore } from "../../../../stores/StoreContext";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
 import { DroppedItemsField } from "./dropped-items-field.component";
+import { MoveTargetMarker } from "./move-target-marker.component";
 
 const MOVE_SPEED = 400; // L2 world units / second
 // Once within this distance of a click-to-move target, stop instead of
-// jittering back and forth around it.
-const ARRIVE_EPSILON = 8; // L2 units
+// jittering back and forth around it. See utils/creature-movement.ts for the
+// same constant shared with MoveTargetMarker.
 
 // Orbit camera rig -- all in three.js meters/radians (post-conversion),
 // matching the human/character scale used by the other r3f scenes in this app.
@@ -343,6 +344,9 @@ export const GameScene = observer(function GameScene() {
 
         {/* Ground items (SpawnItem/DropItem), if connected -- see DroppedItemsField. */}
         <DroppedItemsField />
+
+        {/* Where we're currently walking to, if anywhere -- see MoveTargetMarker. */}
+        <MoveTargetMarker realPlayer={realPlayer} />
       </Canvas>
     </div>
   );

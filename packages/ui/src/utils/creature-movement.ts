@@ -1,5 +1,12 @@
 import { loadedSurfaceHeightAtWorld } from "./geodata/geo-tile-height";
 
+// Close enough to a move target to call it "arrived" -- used both by
+// game-scene.component.tsx's local WASD/click-to-move test rig (stop instead
+// of jittering back and forth around the target) and by MoveTargetMarker
+// (hide once the real player has visibly reached its own marker), so one
+// tolerance covers both instead of two constants drifting apart.
+export const ARRIVE_EPSILON = 8; // L2 units
+
 export interface CreatureWorldPosition {
   x: number;
   y: number;
