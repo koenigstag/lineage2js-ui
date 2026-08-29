@@ -1,15 +1,15 @@
 # Short-term TODOs
-- Hotbar features - user-added shortcuts, cooldown animation, soul-shots auto-usage
-- Improve chat system
+- Hotbar cooldown animation -- shortcuts drag in from the skills, inventory and actions windows and soulshot auto-use is wired, but a skill on reuse looks the same as one that is ready. SkillCoolTime is already parsed and synced (see GameStore's syncSkills), so this is the slot rendering, not the data
+- Improve chat system -- sending and receiving work per channel with tabs; what is missing is command parsing (a line starting with `/` goes out as ordinary chat, see KNOWN-BUGS.md), picking a whisper target without typing it, and any per-tab configuration
 - Add a bottom menu -- unread messages count, clan menu, party, XP toggle, exp bar, adena, weight
 - Show curr/total exp values in a tooltip on the character window's XP bar - frontend currently shows only the percentage, and has no level-steps info (game server does not send it).
 - Add current class icon with tooltip in the character window -- currently just the "Class" text label (character.window.tsx) - depends on assets-server to serve the class icons.
 - Add subclass display in the character window -- the 3 profession slots are currently static/decorative placeholders (character.window.tsx's ProfSlot), no subclass data is parsed by the network layer yet
-- Inventory equip slots
-- Item grade in tooltips -- L2Item.Grade is never populated; confirmed against both lineage2ts's and L2J_Mobius's writeItem/AbstractItemPacket that grade (crystal_type) is never serialized onto the wire for any item packet (ItemList/InventoryUpdate/TradeStart/warehouse/...), only used server-side for filtering/sorting and soulshot-vs-weapon grade matching (SoulShots.ts/RequestAutoSoulShot.ts's `weapon.getItem().getItemGradeSPlus() === item.getItem().getItemGradeSPlus()` checks -- that validation stays entirely server-side regardless, no client-side grade data needed for correctness, only for UX). Same class of gap as npc races/levels (see DatapackStore.loadNpcRaces()'s comment) -- needs a `public/item-grades/data.json` generated once from L2J_Mobius's item stat XML (`crystal_type` field, e.g. `dist/game/data/stats/items/*.xml`) plus a `DatapackStore.loadItemGrades()` following the exact same fetch-once/cache pattern as loadNpcRaces(), wired into `getItemGradeLabel` (config/item-mapping.ts). Shape it grouped by grade rather than by item id -- `{ [gradeIndex]: itemId[] }` (ItemGrade's numeric enum value as the key, e.g. `{ "1": [2, 44, ...], "5": [1463, 1467, ...] }`) instead of a flat id->grade record, since there are only 8 grades vs thousands of items; DatapackStore inverts it into an id->grade lookup once at load time for O(1) reads.
-- Radar
-- Real player movement with server packets -- click-to-move now sends real RequestMoveTo (see GameStore.moveTo/game-scene.component.tsx), but WASD still only drives the local TestCharacterState fallback used before a live session exists, not wired to CommandMoveTo/StopMove
-- More character animation states -- idle/walk/run/death are converted and driven from the creature snapshot (CreatureModel's animationFor); the rigs also ship attacks, casting, sitting and social poses, but nothing in the client knows when a creature is doing any of those yet. Adding one is a line in convert-client-rigs.ts's CLIPS plus whatever state drives it
+- A real minimap in the radar window -- it currently shows a debug readout (position, geodata sector/chunk/block, ping) because no map art or rendering exists yet
+- WASD movement -- click-to-move sends real RequestMoveTo (see GameStore.moveTo/game-scene.component.tsx), but WASD still only drives the local TestCharacterState fallback used before a live session exists, and is wired to neither CommandMoveTo nor StopMove
+- More character animation states. Driven today (CreatureModel's animationFor): idle, walk/run off the move type, sit/stand, pick-up, death, casting for the server's own cast time, and an attack swing per weapon class. Two gaps worth closing next, both with the data already arriving:
+  - Social actions -- SocialAction is parsed and dispatched (GamePacketHandler) but has no mutator and nothing reads it, so a bow or a victory pose is invisible. The rigs ship the poses; this is a mutator, an event, and a line in convert-client-rigs.ts's CLIPS
+  - The combat stance -- bodies stand in the plain idle while fighting. The rigs have `AtkWait_<weapon>` for it, so it is the same shape as the per-weapon attacks already converted, driven off whether the creature has an engaged target
 - The Kamael wing does not follow the torso -- it hangs in place while the body leans into a run. Measured: the wing's own root, `Main_wing`, is constant across all 130 of its sequences (at most 0.026 degrees, never moves), so it is a pure attachment point and the wing's position comes entirely from whatever it hangs off. It hangs off body space, so it follows the root joint and not `bip01_spine3`, which is what actually leans. Reparenting it to that joint was tried and reverted: the attachment lands correctly (the parent chain in the glb reads `Main_wing <- bip01_spine3`) but the rest pose breaks, both wings thrown wide open, and the reason is not yet understood -- the bind inverses are taken after reparenting and ought to cancel the joint's rest transform. The fix to try next is to leave the hierarchy alone and bake the joint's *motion* into the wing root's track instead: replace the constant track, per clip, with `bip01_spine3`'s animated transform relative to its own rest pose. Nothing is lost by overwriting it, since it carries no motion of its own. (Note for whoever picks this up: a wing thrown wide open is also what the reference pose looks like when the wing's own animation is missing entirely, so the same symptom has two causes.)
 - Basic 3D models for mobs -- CreatureModel (components/core/scene/creature-model.component.tsx) is the extension point: mobs and summons still tint the old CharacterModel capsule by NpcRace, since the converted bodies are all humanoid and that's the wrong shape for a wolf. The Unity project does carry monster models (Data/Animations/LineageMonsters*, and unlike the player rigs their animations are embedded in the FBX rather than split into .anim files), so this is mostly a matter of a converter for them (the player rigs come from the client itself now, via convert-client-rigs.ts; the Unity path is superseded) and giving CharacterBody a per-archetype model url
 - Equipped armor/weapon visuals -- needed for both players and NPCs/mobs, rendered through CreatureModel/PlayerModel once there's something to render them with:
@@ -17,7 +17,7 @@
   - Local player's actual inventory (not just display ids) is separately available too: client.InventoryItems, filter IsEquipped, BodyPart is the paperdoll slot bitmask (L2Item.SLOT_* constants).
   - The display-id -> armor-piece lookup now exists: `convert:armorgrp` reads the client's own `system/armorgrp.dat` and writes `assets/highfive/data/armorgrp.json`, which lists, per item id, the mesh and texture it puts on each of the sixteen rigs (plus any attachments, e.g. the Kamael wing on their default torso). The bare-body entries out of it already drive `convert:client-rigs`.
   - Still missing: converting the armour meshes themselves (only the empty-slot bodies are converted today), a route serving `assets/highfive/data/` with an env var for it, and the display ids on WorldCreatureSnapshot -- the store doesn't carry them yet, and there is no point exposing unused data before something renders it.
-- Basic combat system -- clicking Attack on a target sends AttackRequest with the player's *current* position (CommandAttack.ts/AttackRequest.ts, `me.X/Y/Z` at click time) with no client-side range/approach logic first, so attacking anything outside melee range predictably gets rejected server-side ("Cannot see target") -- needs the same move-to-server wiring as the "Real player movement" item above, plus a "walk into range, then attack" step before sending AttackRequest
+- Combat feedback -- attacking works end to end, including walking into range first (GameStore.attack -> queueActionInRange), and the Attack broadcast already drives the swing animation. What is missing is what the player reads *from* a fight: no damage numbers over the target, no hit/miss/critical distinction on screen. The data is arriving and being thrown away -- Attack.ts reads a damage int and a flags byte for the first hit and for each of the `_hitSize` that follow, then discards all of them into `_damage`/`_flags` and keeps only the object ids. Same shape as the ChangeMoveType and GetItem fixes: expose the fields, add the event, then render it
 - Basic Quests system
 - Add NPC dialog system -- render engine and actions
 - Add item/skill/action descriptions -- no per-id table exists yet
@@ -68,8 +68,9 @@ In this order -- each one is easier once the one before it is settled.
 1. **Dropped item models.** armorgrp already carries a drop mesh and its
    textures per item (`drop.mesh` / `drop.texture` in armorgrp.json), so the
    table half is done.
-2. **Animation looping and duration** -- attacks that should cycle, casts whose
-   length should match the skill rather than the clip.
+2. **Attacks that should cycle** -- a held attack plays its swing once. Casts
+   are already handled: MagicSkillUse carries the server's own cast time and
+   the clip is stretched onto it (GameStore's isCasting window).
 3. **Hit effects.**
 4. **Projectiles** -- an arrow that travels from shooter to target.
 
@@ -89,14 +90,15 @@ In this order -- each one is easier once the one before it is settled.
   `VITE_*_ICON_BASE_URL` and the four places a new env var has to appear).
 
 # Long-term TODOs
-- Landscape render and textures
-- Geodata system
-- Minimap on radar
+- Landscape render and textures -- the world is geodata only: a walkable surface with no ground art, terrain or buildings on it
 - Global Map
 - Location Maps
-- Movement on real surface
-- Geodata integration
 - Clan window
+
+Geodata itself is done and no longer listed here: tiles are baked offline
+(assets-server's convert:geodata), streamed around the player, rendered as
+the surface they stand on, and a move order is checked against them before
+it goes out. What is left of it is the minimap, above.
 
 
 # Unhandled packets
@@ -106,7 +108,10 @@ that `GamePacketHandler.ts` doesn't parse yet -- falls into its default no-op
 instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
 `0xFE`-family main/sub opcode pair.
 
-- **Char delete**: CharacterDeleteSuccess (0x1d), CharacteDeleteFail (0x1e)
+To re-check the list, diff the names below against the `Packets.X()` calls in
+`GamePacketHandler.ts` -- anything appearing in both has since been wired and
+belongs out of here.
+
 - **Party**: ListPartyWaiting (0x9c), ExPartyRoomMember (0xfe/0x08), ExClosePartyRoom (0xfe/0x09), ExListPartyMatchingWaitingRoom (0xfe/0x36), ExOpenMPCC (0xfe/0x12), ExCloseMPCC (0xfe/0x13), ExMPCCShowPartyMemberInfo (0xfe/0x4b), ExSetPartyLooting (0xfe/0xc0)
 - **Shops/Trade**: PrivateStoreManageListSell (0xa0), PrivateStoreManageListBuy (0xbd), PrivateStoreListBuy (0xbe), ShopPreviewList (0xf5), ShopPreviewInfo (0xf6), RecipeShopSellList (0xdf), RecipeShopItemInfo (0xe0), SellListSeed (0xe9), BuyList (0xfe/0xb7), ExBuySellList (0xfe/0xb7)
 - **Friends/Mail**: FriendPacket (0x76), FriendListExtended (0x58), L2FriendSay (0x78), ExNoticePostArrived (0xfe/0xa9), ExShowReceivedPostList (0xfe/0xaa), ExReplyReceivedPost (0xfe/0xab), ExShowSentPostList (0xfe/0xac), ExReplySentPost (0xfe/0xad), ExReplyPostItemList (0xfe/0xb2), ExChangePostState (0xfe/0xb3), ExNoticePostSent (0xfe/0xb4), ExGetBookMarkInfoPacket (0xfe/0x84)
@@ -117,9 +122,8 @@ instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
 - **Manor/Crops**: ExShowSeedInfo (0xfe/0x23), ExShowCropInfo (0xfe/0x24), ExShowManorDefaultInfo (0xfe/0x25), ExShowSeedSetting (0xfe/0x26), ExShowCropSetting (0xfe/0x2b), ExShowSellCropList (0xfe/0x2c), ExShowProcureCropDetail (0xfe/0x78), ExShowSeedMapInfo (0xfe/0xa1)
 - **Olympiad/Duel/Hero**: ExOlympiadMatchEnd (0xfe/0x2d), ExOlympiadMatchList (0xfe/0xd4), ExOlympiadMode (0xfe/0x7c), ExHeroList (0xfe/0x79), ExDuelReady (0xfe/0x4d), ExDuelStart (0xfe/0x4e), ExDuelEnd (0xfe/0x4f)
 - **Enchant/Variation**: StartItemEnchanting (0x7c), EnchantResult (0x87), ExEnchantSkillResult (0xfe/0xa7), ExEnchantSkillInfo (0xfe/0x2a), ExEnchantSkillInfoDetail (0xfe/0x5e), ExShowVariationMakeWindow (0xfe/0x51), ExShowVariationCancelWindow (0xfe/0x52), ExPutItemResultForVariationMake (0xfe/0x53), ExPutIntensiveResultForVariationMake (0xfe/0x54), ExPutCommissionResultForVariationMake (0xfe/0x55), ExVariationResult (0xfe/0x56), ExPutItemResultForVariationCancel (0xfe/0x57), ExVariationCancelResult (0xfe/0x58), ExAttributeEnchantResult (0xfe/0x61), ExChooseInventoryAttributeItem (0xfe/0x62), ExShowBaseAttributeCancelWindow (0xfe/0x74), ExBaseAttributeCancelResult (0xfe/0x75), ExPutEnchantTargetItemResult (0xfe/0x81), ExPutEnchantSupportItemResult (0xfe/0x82)
-- **UI key mapping** (VK-code hotkey binds, distinct from hotbar shortcut *contents* which are already handled via ShortCutInit/Register/Delete): ExUISetting (0xfe/0x70) unhandled incoming; RequestKeyMapping (Ex 0x21) / RequestSaveKeyMapping (Ex 0x22) not implemented at all outgoing either. L2J_Mobius treats the payload as an opaque byte blob (stored verbatim in `character_variables` under `UI_KEY_MAPPING`, server never parses it), but lineage2ts's own `RequestSaveKeyMapping.ts`/`ExUISetting.ts` decode/encode the real structure: `skip 2×D` header, `tabCount:D`, then per tab two `C`-sized category-id arrays (`C[]`) followed by `keySize:D` `ActionKey` entries of `{ commandId:D, key:D, toggleKeyOne:D, toggleKeyTwo:D, visibleStatus:D }` -- `commandId` is a UI Action id (same concept as this project's Actions window), `key`/`toggleKeyOne`/`toggleKeyTwo` are the actual VK codes (primary + up to 2 alt binds), `visibleStatus` toggles action-bar visibility. Implementing this needs our own category/ActionKey table, not just a raw passthrough blob.
+- **UI key mapping** (VK-code hotkey binds, distinct from hotbar shortcut *contents* which are already handled via ShortCutInit/Register/Delete): ExUISetting (0xfe/0x70) is dispatched now but its payload is not decoded; RequestKeyMapping (Ex 0x21) / RequestSaveKeyMapping (Ex 0x22) not implemented at all outgoing either. L2J_Mobius treats the payload as an opaque byte blob (stored verbatim in `character_variables` under `UI_KEY_MAPPING`, server never parses it), but lineage2ts's own `RequestSaveKeyMapping.ts`/`ExUISetting.ts` decode/encode the real structure: `skip 2×D` header, `tabCount:D`, then per tab two `C`-sized category-id arrays (`C[]`) followed by `keySize:D` `ActionKey` entries of `{ commandId:D, key:D, toggleKeyOne:D, toggleKeyTwo:D, visibleStatus:D }` -- `commandId` is a UI Action id (same concept as this project's Actions window), `key`/`toggleKeyOne`/`toggleKeyTwo` are the actual VK codes (primary + up to 2 alt binds), `visibleStatus` toggles action-bar visibility. Implementing this needs our own category/ActionKey table, not just a raw passthrough blob.
 - **Misc**
-  - GameGuardQuery (0x74) -- anti-cheat client challenge (legacy GameGuard handshake, not relevant to a browser client)
   - MagicSkillCanceled (0x49) -- stops a skill's cast animation on the client mid-cast
   - QuestList (0x86) -- full list of the player's active/completed quests
   - SendMacroList (0xe8) -- account macro list, sent unprompted right after world-enter alongside ItemList/SkillList (confirmed on the wire: opcode 0xe8, 8-byte empty-list payload)
@@ -140,7 +144,6 @@ instead of a `Packets.*` class. Grouped by feature area; `0xNN/0xMM` is the
   - GMHennaInfo (0xf0) -- henna dye-stat breakdown shown in the GM panel
   - AgitDecoInfo (0xfd) -- clan hall ("Agit") interior decoration/function list
   - SSQStatus (0xfb) -- Seven Signs quest status pages
-  - NetPing (0xd9) -- periodic latency probe
   - ExRegenMax (0xfe/0x01) -- timed HP-regen-over-time effect ticks
   - ExColosseumFenceInfo (0xfe/0x03) -- Olympiad arena fence/barrier state
   - ExAutoSoulShot (0xfe/0x0c) -- server ack for the auto-soulshot toggle

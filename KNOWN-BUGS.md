@@ -4,8 +4,7 @@ If you find missing feature please check [TODO.md](./TODO.md) first. If it is no
 
 ## List of known bugs / issues
 - Not all items/skills/actions have icons but should have translation. Some have just placeholder background, some have missing icons. This is because of copyrighted icons. Please see [README.md](README.md) for instructions on how to serve your own game icons.
-- Initial shortcuts (hotbar) contain item inside page 1 slot 12 that is not properly displayed. It shows ID 268435533 but should be ID 5588 (Guide book).
-- Skills list to learn does not show skills for closest level (tested on level 1). Instead it shows skills for required level 30+.
-- Battlelog and chat show demo text instead of real messages. WIP
-- Chat commands are not implemented yet. WIP
+- The Learn tab does not show the skills available at the level you are on (tested at level 1); it lists ones needing level 30+.
+- Chat commands (`/target`, `/invite`, ...) are not implemented -- a line starting with `/` is sent as ordinary chat on the active tab's channel.
+- Double-clicking a ring or earring you are not wearing takes off the one you are, instead of putting the clicked one in the free slot. Where to start looking is in [TODO.md](./TODO.md).
 - A Kamael's wing stays where it is while the body leans into a run, instead of following the back. What is known and what to try next is in [TODO.md](./TODO.md).
