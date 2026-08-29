@@ -1481,7 +1481,7 @@ export class GameStore {
 
   /** Sends a bypass string back to the server (see l2-link's "l2npcbypass" CustomEvent in npc-dialogue.window.tsx). Doesn't clear npcDialogue itself -- a bypass click normally gets a fresh NpcHtmlMessage back, which replaces it; if the server sends nothing back, the window is left showing the same (now-stale) content until the player closes it, same as the real client. */
   sendNpcBypass(action: string) {
-    this.client?.dialog(action);
+    this.client?.requestBypass(action);
   }
 
   acceptPartyInvite() {

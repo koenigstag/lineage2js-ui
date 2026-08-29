@@ -319,9 +319,11 @@ export default interface ClientCommands {
    */
   partyInvite(charOrCharName?: L2Character | string): void;
   /**
-   * Send bypass to server. (dialog)
+   * Send a bypass string to the server (RequestBypassToServer) -- how an
+   * NPC dialogue's own links act, see l2-link's "l2npcbypass" CustomEvent
+   * in the UI package.
    */
-  dialog(text: string): void;
+  requestBypass(text: string): void;
   /**
    * Send logout request
    */

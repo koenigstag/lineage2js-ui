@@ -27,6 +27,13 @@ export const NpcDialogueContent = observer(function NpcDialogueContent() {
   const dialogue = game.npcDialogue;
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Deps include `dialogue`, not just `game`: the container only exists once
+  // there's a dialogue to show it for (see the early return below), so an
+  // effect that only reran when `game` changed -- it never does -- attached
+  // to containerRef.current on the very first mount, while it was still
+  // null, and then never got another chance to. The listener was never
+  // attached at all; clicking a link dispatched the event straight into a
+  // container with nothing on it to hear it.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) {
@@ -40,7 +47,7 @@ export const NpcDialogueContent = observer(function NpcDialogueContent() {
 
     container.addEventListener("l2npcbypass", handleBypass);
     return () => container.removeEventListener("l2npcbypass", handleBypass);
-  }, [game]);
+  }, [game, dialogue]);
 
   if (!dialogue) {
     return null;
