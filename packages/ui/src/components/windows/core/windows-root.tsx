@@ -21,6 +21,7 @@ import { PartyInviteConfirmContent } from "../party-invite/party-invite.window";
 import { TradeRequestConfirmContent } from "../trade-request/trade-request.window";
 import { DuelRequestConfirmContent } from "../duel-request/duel-request.window";
 import { PairActionRequestConfirmContent } from "../pair-action-request/pair-action-request.window";
+import { NpcDialogueContent } from "../npc-dialogue/npc-dialogue.window";
 import { useGameStore } from "../../../stores/StoreContext";
 
 export interface WindowsRootProps {
@@ -51,6 +52,13 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
     "trade-request": () => <TradeRequestConfirmContent />,
     "duel-request": () => <DuelRequestConfirmContent />,
     "pair-action-request": () => <PairActionRequestConfirmContent />,
+    "npc-dialogue": () => <NpcDialogueContent />,
+  };
+
+  // Windows whose shown/hidden state is gated by a GameStore field rather
+  // than WindowManagerStore's own open flag -- see Window's onClose prop.
+  const ON_CLOSE: Partial<Record<string, () => void>> = {
+    "npc-dialogue": () => game.closeNpcDialogue(),
   };
 
   return (
@@ -89,9 +97,13 @@ export const WindowsRoot = observer(function WindowsRoot({ ids }: WindowsRootPro
         if (id === "pair-action-request" && !game.pairActionRequest) {
           return null;
         }
+        // No active NPC dialogue -- same treatment.
+        if (id === "npc-dialogue" && !game.npcDialogue) {
+          return null;
+        }
 
         return (
-          <Window key={id} id={id}>
+          <Window key={id} id={id} onClose={ON_CLOSE[id]}>
             {CONTENT[id] ?? (() => null)}
           </Window>
         );

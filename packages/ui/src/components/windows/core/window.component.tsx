@@ -15,6 +15,8 @@ import type {
 export interface WindowProps {
   id: string;
   children?: () => ReactNode;
+  /** Overrides the titlebar x button's default windowManager.close(id) -- for windows whose shown/hidden state actually lives elsewhere (eg. gated by whether a GameStore field is set, not by WindowManagerStore itself), so the x clears the right thing instead of a no-op. */
+  onClose?: () => void;
 }
 
 const containerBaseStyle: CSSProperties = {
@@ -172,7 +174,7 @@ function getOriginStyle(
   };
 }
 
-export const Window = observer(function Window({ id, children }: WindowProps) {
+export const Window = observer(function Window({ id, children, onClose }: WindowProps) {
   const windowManager = useWindowManagerStore();
   const config = windowManager.getConfig(id);
   const state = windowManager.getState(id);
@@ -292,7 +294,7 @@ export const Window = observer(function Window({ id, children }: WindowProps) {
           {config.closable && (
             <button
               type="button"
-              onClick={() => windowManager.close(id)}
+              onClick={() => (onClose ? onClose() : windowManager.close(id))}
               style={{
                 ...closeButtonStyle,
                 ...config.windowStyle?.closeButton,

@@ -233,6 +233,7 @@ export const LANG_RU_RU: LangDictionary = {
     macroList: "Список макросов",
     macro: "Макрос",
     map: "Карта",
+    npcDialogue: "Чат",
   },
   chat: {
     channels: {

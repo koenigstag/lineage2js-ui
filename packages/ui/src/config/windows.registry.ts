@@ -258,6 +258,20 @@ export const WINDOW_REGISTRY: Record<string, WindowConfig> = {
     defaultPosition: () => ({ x: 0, y: 520 }),
     zIndex: CONFIRM_WINDOW_Z_INDEX,
   },
+  "npc-dialogue": {
+    id: "npc-dialogue",
+    type: "titlebar",
+    title: "windows.npcDialogue",
+    // Shown/hidden is gated by GameStore.npcDialogue (windows-root.tsx),
+    // not by WindowManagerStore's open flag -- defaultOpen just needs to
+    // stay true forever, since nothing else ever flips it. The titlebar x
+    // uses Window's onClose override (wired in windows-root.tsx) to clear
+    // npcDialogue instead of windowManager.close(id), which would otherwise
+    // be a no-op here.
+    closable: true,
+    draggable: true,
+    defaultOpen: true,
+  },
 };
 
 export const GAME_WINDOW_IDS = [
@@ -287,6 +301,7 @@ export const GAME_WINDOW_IDS = [
   "trade-request",
   "duel-request",
   "pair-action-request",
+  "npc-dialogue",
 ];
 
 export const LOGIN_WINDOW_IDS = ["settings"];

@@ -36,6 +36,7 @@ import {
   type ETradeRequest,
   type ERequestedDuel,
   type EPairActionRequest,
+  type ENpcHtmlMessage,
 } from "@lineage2js/network";
 import { IS_DEMO_MODE } from "../config/env";
 import { getNpcRace, type NpcRace } from "../config/npc-race-mapping";
@@ -1019,6 +1020,8 @@ export class GameStore {
   duelRequest: { requestorName: string; partyDuel: boolean; expiresAt: number } | undefined = undefined;
   /** Pending pair (couple) social-action request (ExAskCoupleAction -> "PairActionRequest", e.g. High Five/Exchange Bows/Couple Dance) -- drives the "pair-action-request" window. Cleared on accept/decline or the next world-enter. */
   pairActionRequest: { requesterName: string; actionId: number } | undefined = undefined;
+  /** Current NPC dialogue (NpcHtmlMessage) -- drives the "npc-dialogue" window. A fresh message simply replaces whatever was showing (matches the real client: clicking a bypass link swaps the window's content in place, it doesn't open a second window). Cleared by closeNpcDialogue() or the next world-enter. */
+  npcDialogue: { npcObjectId: number; html: string; itemId: number } | undefined = undefined;
   /** clanId -> resolved name, filled in as PledgeInfo packets arrive. See targetSnapshotFromCreature. */
   pledgeCache: Map<number, PledgeSnapshot> = IS_DEMO_MODE ? createDemoPledgeCache() : new Map();
   /** System-message feed (combat text plus everything not filtered by isNoisySystemMessage()), see system-messages window. Starts empty -- populated from real SystemMessage packets, no demo placeholder (unlike most of this store). */
@@ -1445,6 +1448,16 @@ export class GameStore {
   declineResurrect() {
     this.client?.declineResurrect();
     this.resurrectRequest = undefined;
+  }
+
+  /** Dismisses the "npc-dialogue" window without telling the server anything -- there's no "close" packet in this protocol, the real client just stops showing the window locally. */
+  closeNpcDialogue() {
+    this.npcDialogue = undefined;
+  }
+
+  /** Sends a bypass string back to the server (see l2-link's "l2npcbypass" CustomEvent in npc-dialogue.window.tsx). Doesn't clear npcDialogue itself -- a bypass click normally gets a fresh NpcHtmlMessage back, which replaces it; if the server sends nothing back, the window is left showing the same (now-stale) content until the player closes it, same as the real client. */
+  sendNpcBypass(action: string) {
+    this.client?.dialog(action);
   }
 
   acceptPartyInvite() {
@@ -2302,6 +2315,7 @@ export class GameStore {
       this.tradeRequest = undefined;
       this.duelRequest = undefined;
       this.pairActionRequest = undefined;
+      this.npcDialogue = undefined;
     }));
     // UserInfo is also the first point client.Me is guaranteed to be this
     // session's real, long-lived ActiveChar instance (CharSelectedMutator
@@ -2439,6 +2453,12 @@ export class GameStore {
     // Drives the "pair-action-request" window (High Five/Exchange Bows/
     // Couple Dance). Accepting only sends the answer -- this client has no
     // couple-action animation playback.
+    // Drives the "npc-dialogue" window. See npc-dialogue.window.tsx for the
+    // html dialect -> React tree translation (packages/ui/src/lib/npc-html).
+    client.on("NpcHtmlMessage", (e: ENpcHtmlMessage) => runInAction(() => {
+      this.npcDialogue = e.data;
+    }));
+
     client.on("PairActionRequest", (e: EPairActionRequest) => runInAction(() => {
       this.pairActionRequest = {
         requesterName: e.data.requesterName,

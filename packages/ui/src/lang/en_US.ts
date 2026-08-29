@@ -236,6 +236,7 @@ export const LANG_EN_US: LangDictionary = {
     macroList: "Macro List",
     macro: "Macro",
     map: "Map",
+    npcDialogue: "Chat",
   },
   chat: {
     channels: {
