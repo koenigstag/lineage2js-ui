@@ -22,11 +22,19 @@ const SKY_Z = -25;
 /** How far along its own direction to put the sun. Any distance does, for a light with no falloff. */
 const SUN_DISTANCE = 14;
 
+/** The middle of the ring: characters stand a radius away from it and turn to face it. */
+const ARC_CENTER_Z = -3;
+
 /**
- * The middle of the ring the characters stand around, and where the campfire
- * is. They stand a radius away from it and turn to face it.
+ * How far behind that middle the campfire sits.
+ *
+ * It only has to be inside the ring, not at its centre -- what put the bodies
+ * in the fire before was a centre four units in front of it, which is past
+ * where the arc's own ends come round. Set deeper than the middle it reads as
+ * a fire the group has gathered at, and being further from the camera it
+ * stops sitting on the bottom edge of the frame.
  */
-const ARC_CENTER_Z = 0;
+const FIRE_INSET = 2;
 
 // Kept as constants rather than inline in the Canvas props because the
 // characters' facing is derived from the camera position below -- the two
@@ -35,8 +43,8 @@ const ARC_CENTER_Z = 0;
 // to stand people in: they are a radius of SELECT_ARC_RADIUS out, so the
 // camera sits closer than the distance alone suggests and looks past the fire
 // at the arc behind it, or the group ends up a thin band under empty sky.
-const CAMERA_POSITION: [x: number, y: number, z: number] = [0, 3.4, 4.6];
-const CAMERA_TARGET: [x: number, y: number, z: number] = [0, 1.5, -3.4];
+const CAMERA_POSITION: [x: number, y: number, z: number] = [0, 3.2, 2.6];
+const CAMERA_TARGET: [x: number, y: number, z: number] = [0, 1.5, -5.5];
 
 export interface CharSelectSceneProps {
   characters: Array<{ id: number; nickname: string; race: string; baseClass: string; sex: string }>;
@@ -75,14 +83,18 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
           <meshStandardMaterial color="#0e0d0c" roughness={1} />
         </mesh>
 
-        <Campfire />
+        {/* Built around its own origin, so the ring's centre is a group around it. */}
+        <group position={[0, 0, ARC_CENTER_Z - FIRE_INSET]}>
+          <Campfire />
+        </group>
 
         {characters.map((character, index) => {
-          // The client's own arc: seven slots on a ring of SELECT_ARC_RADIUS
-          // spanning SELECT_ARC_SPREAD, centred on the spot in front of them.
-          // Its middle step is left empty there, so the positions are laid
-          // out as eight and the middle one skipped -- which is also why a
-          // character never stands between the viewer and that centre.
+          // The client's own arc: seven slots -- the account's character cap --
+          // on a ring of SELECT_ARC_RADIUS spanning SELECT_ARC_SPREAD. Its
+          // steps are even at about 13.5 degrees except across the middle,
+          // where the client doubles it exactly, so the positions are laid out
+          // as eight and the middle one skipped. That keeps the line from the
+          // viewer to the centre of the ring clear.
           const SLOTS = 8;
           const slot = index < SLOTS / 2 ? index : index + 1;
           const t = slot / SLOTS - 0.5;
