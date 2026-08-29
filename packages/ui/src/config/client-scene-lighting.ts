@@ -53,7 +53,7 @@ export const CLIENT_SUN_DIRECTION: [number, number, number] = (() => {
  * ratio is kept and the base is what daylight needs here with nothing else
  * lighting the scene.
  */
-export const CLIENT_SUN_INTENSITY = 2.6 * (70 / 64);
+export const CLIENT_SUN_INTENSITY = 4.2 * (70 / 64);
 
 /**
  * `LevelInfo0.AmbientBrightness` is 1 of 255 and its `AmbientVector` is zero,
