@@ -12,6 +12,9 @@ import {
   CLIENT_FOG_NEAR,
   CLIENT_SUN_DIRECTION,
   CLIENT_SUN_INTENSITY,
+  FILL_GROUND_COLOR,
+  FILL_INTENSITY,
+  FILL_SKY_COLOR,
 } from "../../../../config/client-scene-lighting";
 import { DaySky } from "./day-sky.component";
 import { RACE_GALLERY, type GalleryVariant } from "./race-gallery.utils";
@@ -155,6 +158,7 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
         <fog attach="fog" args={["#8fa8c8", CLIENT_FOG_NEAR, CLIENT_FOG_FAR]} />
 
         <ambientLight intensity={CLIENT_AMBIENT_INTENSITY} />
+        <hemisphereLight args={[FILL_SKY_COLOR, FILL_GROUND_COLOR, FILL_INTENSITY]} />
         <SunLight groupX={groupXForRace(race)} />
 
         <DaySky size={SKY_SIZE} z={SKY_Z} />

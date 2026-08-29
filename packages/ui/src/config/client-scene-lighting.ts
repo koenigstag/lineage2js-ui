@@ -56,13 +56,29 @@ export const CLIENT_SUN_DIRECTION: [number, number, number] = (() => {
 export const CLIENT_SUN_INTENSITY = 2.6 * (70 / 64);
 
 /**
- * `LevelInfo0.AmbientBrightness` is 1 of 255 and its `AmbientVector` is zero:
- * outdoors the client fills the shadow side from the terrain's own baked
- * lighting rather than from an ambient term. There is no baked lighting here,
- * so a body's far side goes to black -- faithful, and the first thing to
- * revisit if it reads as too harsh.
+ * `LevelInfo0.AmbientBrightness` is 1 of 255 and its `AmbientVector` is zero,
+ * so by the numbers the client has no ambient term outdoors at all.
  */
 export const CLIENT_AMBIENT_INTENSITY = 1 / 255;
+
+/**
+ * A fill the client's data does not have, to make up for one its renderer
+ * does not need.
+ *
+ * Copying the ambient above literally puts a body's shadow side at pure
+ * black, which the client's own screen never shows: UE2 lights a skeletal
+ * mesh per vertex and keeps the unlit side readable, where a standard
+ * material here falls to zero. So the literal number is the *less* faithful
+ * of the two, and this restores what the original looks like rather than what
+ * it stores.
+ *
+ * A hemisphere rather than more ambient, because the fill outdoors is sky
+ * above and ground below, and that is the shape of it: the colours are this
+ * scene's own sky and its ground plane.
+ */
+export const FILL_SKY_COLOR = "#7ba3cf";
+export const FILL_GROUND_COLOR = "#2b2724";
+export const FILL_INTENSITY = 1.1;
 
 /**
  * `ZoneInfo0`'s distance fog, converted from client units the same way bodies
