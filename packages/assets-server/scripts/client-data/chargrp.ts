@@ -245,16 +245,33 @@ export function readChargrp(file: string): CharRecord[] {
  * ones, which is what the client's own screen offers.
  */
 export function bareHeads(record: CharRecord): { mesh: string; texture: string }[][] {
-  const bare = record.hair.filter((row) => row.mode === HAIR_MODE_BARE);
-  const styles = Math.max(0, ...bare.map((row) => row.style + 1));
-  return Array.from({ length: styles }, (_, style) => {
-    const row = bare.find((candidate) => candidate.style === style);
-    if (!row) return [];
-    return [
-      { mesh: row.ahMesh, texture: row.ahTexture },
-      { mesh: row.bhMesh, texture: row.bhTexture },
-    ].filter((piece) => piece.mesh);
-  });
+  const bare = record.hair
+    .filter((row) => row.mode === HAIR_MODE_BARE)
+    .sort((left, right) => left.style - right.style);
+  const offered = new Set<string>();
+  return bare
+    .filter((row) => {
+      // A row whose leading mesh is one already offered is that same style
+      // behind a different back piece, not another entry on the list. The
+      // female Kamael's eighth row repeats her seventh's `ah` with a `_u`
+      // variant behind it, and the client offers her seven; hers is the only
+      // repeat in the whole table, on any rig.
+      //
+      // It is also the last row, so dropping it moves nothing. A repeat in the
+      // middle would renumber the styles after it -- and the style index is
+      // what the wire carries -- so that case wants looking at rather than
+      // assuming this rule still holds.
+      const leading = row.ahMesh || row.bhMesh;
+      if (offered.has(leading)) return false;
+      offered.add(leading);
+      return true;
+    })
+    .map((row) =>
+      [
+        { mesh: row.ahMesh, texture: row.ahTexture },
+        { mesh: row.bhMesh, texture: row.bhTexture },
+      ].filter((piece) => piece.mesh)
+    );
 }
 
 /** Splits a `Package.Object` name, as the client writes them in this table. */
