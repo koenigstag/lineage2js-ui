@@ -138,8 +138,8 @@ const BODY_PARTS: BodyPart[] = ["face", "hair", "upper", "lower", "boots", "glov
  * and both are merged in, each as its own primitive, so the runtime can show
  * one and hide the other without reloading the body.
  */
-function slotName(part: BodyPart, style = 0): string {
-  return part === "hair" ? `hair-${style}` : part;
+function slotName(part: BodyPart, style = 0, piece = 0): string {
+  return part === "hair" ? `hair-${style}-${piece}` : part;
 }
 
 interface PieceSource {
@@ -152,14 +152,14 @@ interface PieceSource {
   bodyPart?: "u" | "l" | "b" | "g";
   /** What it is, which decides both its material and the texture that goes on it. */
   part: BodyPart;
-  /**
-   * Marks a piece as one of several the player chooses between, rather than
-   * one more piece of the same body -- hair, and only hair. Declared order is
-   * the offering order; the index a piece actually gets is assigned after the
-   * export, so a rig that ships fewer of them (the orcs have no `ah` head)
-   * still numbers its own from zero.
+/**
+   * For hair: which style this piece belongs to and which of that style's
+   * pieces it is. A style can be more than one mesh -- the human fighter's
+   * first is a fringe over a full head of hair -- so the pair is what names
+   * the slot. Set by hairChoices; styles are renumbered densely afterwards,
+   * once it is known which survive.
    */
-  choice?: boolean;
+  hair?: { style: number; piece: number };
   /**
    * Build the body on this piece's skeleton. Defaults to the rig's own first
    * piece, which is right whenever the rig has a body of its own; a body
@@ -209,7 +209,7 @@ const BODY_PIECES: PieceSource[] = [
   { bodyPart: "b", part: "boots" },
   { bodyPart: "g", part: "gloves" },
   { suffix: "m000_f", part: "face" },
-  { part: "hair", choice: true },
+  { part: "hair" },
 ];
 
 /**
@@ -265,7 +265,7 @@ const RIGS: ClientRig[] = [
       { bodyPart: "b", part: "boots", from: { pkg: "Orc", rig: "FOrc" } },
       { bodyPart: "g", part: "gloves", from: { pkg: "Orc", rig: "FOrc" } },
       { suffix: "m000_f", part: "face" },
-      { part: "hair", from: { pkg: "Orc", rig: "FOrc" }, choice: true },
+      { part: "hair", from: { pkg: "Orc", rig: "FOrc" } },
     ],
   },
   // Wings are a Kamael part and nothing else has one. They come as a mesh
@@ -731,26 +731,32 @@ function loadCharTable(client: string): void {
   }
 }
 
-/** The two heads a rig's own starting set has, for a client whose table cannot be read. */
-const FALLBACK_HAIR = ["m000_m00_bh", "m000_m00_ah"];
+/** One head per style, for a client whose table cannot be read. Fewer than the client offers. */
+const FALLBACK_HAIR = [["m000_m00_bh"], ["m000_m00_ah"]];
 
 /**
- * One piece per hair style, in the client's numbering.
+ * The pieces of every hair style, in the client's numbering.
  *
- * A style whose entry names no mesh is dropped rather than renumbered: it
- * would be an offer that draws nothing. So is one whose texture is missing --
- * see hasChoiceTexture.
+ * A style is a list, not a mesh: the client draws every piece the style fills
+ * for the body's armour set. Where that is two, both are needed -- the human
+ * fighter's first style pairs a fringe with the head of hair under it, and the
+ * fringe alone is forty-two vertices across her forehead.
  */
 function hairChoices(piece: PieceSource, source: ClientRig): PieceSource[] {
   const rig = (piece.from ?? { rig: source.rig }).rig;
   const record = charTable?.find((candidate) => candidate.rig.toLowerCase() === rig.toLowerCase());
-  const suffixes = record
-    ? bareHeads(record)
-        .map((head) => (head?.mesh ? splitObjectName(head.mesh).object : ""))
-        .filter((object) => object.toLowerCase().startsWith(`${rig.toLowerCase()}_`))
-        .map((object) => object.slice(rig.length + 1))
+  const styles = record
+    ? bareHeads(record).map((heads) =>
+        heads
+          .map((head) => splitObjectName(head.mesh).object)
+          .filter((object) => object.toLowerCase().startsWith(`${rig.toLowerCase()}_`))
+          .map((object) => object.slice(rig.length + 1))
+      )
     : [];
-  return (suffixes.length > 0 ? suffixes : FALLBACK_HAIR).map((suffix) => ({ ...piece, suffix, choice: true }));
+  const chosen = styles.some((style) => style.length > 0) ? styles : FALLBACK_HAIR;
+  return chosen.flatMap((suffixes, style) =>
+    suffixes.map((suffix, index) => ({ ...piece, suffix, hair: { style, piece: index } }))
+  );
 }
 
 /** The armour table's entry for a rig's bare body part, where there is one. */
@@ -1023,10 +1029,6 @@ async function convertRig(
     primary?: boolean;
   }[] = [];
 
-  // Styles are numbered as they are found, not as they are declared: the orcs
-  // ship no `ah` head, and a gap in the numbering would leave the runtime
-  // offering a choice that selects nothing.
-  const choices = new Map<BodyPart, number>();
   for (const piece of pieceSources) {
     const from = piece.from ?? { pkg: source.pkg, rig: source.rig };
     const suffix = piece.suffix ?? bodySuffix(umodel, client, from.rig, piece);
@@ -1041,13 +1043,11 @@ async function convertRig(
       }
     }
     if (!fs.existsSync(file)) continue;
-    if (piece.choice && !hasChoiceTexture(umodel, client, from.rig, suffix)) continue;
-    const style = piece.choice ? (choices.get(piece.part) ?? 0) : 0;
-    if (piece.choice) choices.set(piece.part, style + 1);
+    if (piece.hair && !hasChoiceTexture(umodel, client, from.rig, suffix)) continue;
     exported.push({
       file,
       part: piece.part,
-      slot: slotName(piece.part, style),
+      slot: slotName(piece.part, piece.hair?.style, piece.hair?.piece),
       own: from.pkg === source.pkg,
       rig: from.rig,
       pkg: from.pkg,
@@ -1056,6 +1056,17 @@ async function convertRig(
     });
   }
   if (exported.length === 0) throw new Error(`No body pieces found for ${source.rig}`);
+
+  // Styles are renumbered densely. One whose only piece has no texture is gone
+  // -- the client cannot draw it either -- and leaving a hole would have the
+  // screen offer a choice that selects nothing.
+  const styles = [...new Set(exported.filter((piece) => piece.part === "hair").map((piece) => piece.slot.split("-")[1]))]
+    .sort((left, right) => Number(left) - Number(right));
+  for (const piece of exported) {
+    if (piece.part !== "hair") continue;
+    const [, style, index] = piece.slot.split("-");
+    piece.slot = slotName("hair", styles.indexOf(style), Number(index));
+  }
 
   const psaDir = path.join(workDir, `${source.pkg}-anim`);
   const extraAnims = (source.extraAnimObjects ?? []).map((object) => {

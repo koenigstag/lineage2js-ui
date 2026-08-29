@@ -137,14 +137,17 @@ export function readChargrp(file: string): CharRecord[] {
 }
 
 /**
- * The head each style puts on a character wearing no armour: the first slot
- * the style fills.
+ * The head pieces each style puts on a character wearing no armour.
  *
- * Called "first" rather than "unarmoured" deliberately -- what the slot index
- * counts is not yet established, only that the low ones hold the starting
- * sets. For every rig this picks out the same four heads the creation screen
- * offers, with the fifth style empty throughout.
+ * A style is not one mesh. The slots come in pairs -- `2 * set` holds the
+ * armour set's `ah` piece and `2 * set + 1` its `bh` -- and a style draws
+ * whichever of the pair it fills. The human fighter's first style fills both,
+ * and it has to: her `ah` is a forty-two vertex fringe covering the front of
+ * the head and nothing else, so drawn on its own it leaves her bald. The other
+ * styles fill only the `bh` slot, which is a whole head of hair by itself.
+ *
+ * Slots 0 and 1 are the starting set, which is what an unequipped body wears.
  */
-export function bareHeads(record: CharRecord): (HairEntry | undefined)[] {
-  return record.hair.map((style) => style[0]);
+export function bareHeads(record: CharRecord): HairEntry[][] {
+  return record.hair.map((style) => style.filter((entry) => entry.slot <= 1 && entry.mesh));
 }

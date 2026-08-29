@@ -59,8 +59,8 @@ async function main(): Promise<void> {
           rig: record.rig,
           face: record.face,
           // What each style puts on a character in the starting set, which is
-          // the list creation offers.
-          styles: bareHeads(record).map((head) => head ?? null),
+          // the list creation offers. A style can be more than one piece.
+          styles: bareHeads(record),
           hair: record.hair,
         })),
       },
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
   console.log(`${records.length} rigs -> ${OUT_FILE} (${Math.round(size / 1024)} KB)`);
   for (const record of records) {
     const heads = bareHeads(record)
-      .map((head) => head?.mesh.split(".").pop() ?? "-")
+      .map((pieces) => pieces.map((head) => head.mesh.split(".").pop()).join("+") || "-")
       .join(", ");
     console.log(`  ${record.rig.padEnd(9)} ${record.face.texture.length} faces, styles: ${heads}`);
   }

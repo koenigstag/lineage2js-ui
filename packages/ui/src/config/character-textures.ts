@@ -15,17 +15,14 @@ export type BodyPart = "face" | "hair" | "upper" | "lower" | "boots" | "gloves" 
  * A material's name is the slot it fills, which is the body part -- except for
  * hair, where it carries a style index after a dash.
  *
- * Hair is the one part a rig ships more than one of: the client keeps two head
- * meshes (`m00_bh` and `m00_ah`) and character creation picks between them, so
- * both are merged into the body and the runtime draws one. Rigs whose second
- * head the client never shows -- the orcs, the shamans, the male dwarf, the
- * male dark elf -- come out with a single style.
+ * Hair carries two numbers, `hair-<style>-<piece>`, because a style is not one
+ * mesh: the client draws every piece the style fills, and the human fighter's
+ * first style is a fringe over a full head of hair. Every piece of the chosen
+ * style is drawn and every piece of the others hidden.
  */
 export function parseSlot(slot: string): { part: BodyPart; style: number } {
-  const dash = slot.lastIndexOf("-");
-  if (dash < 0) return { part: slot as BodyPart, style: 0 };
-  const style = Number(slot.slice(dash + 1));
-  return Number.isInteger(style) ? { part: slot.slice(0, dash) as BodyPart, style } : { part: slot as BodyPart, style: 0 };
+  const hair = /^hair-(\d+)(?:-\d+)?$/.exec(slot);
+  return hair ? { part: "hair", style: Number(hair[1]) } : { part: slot as BodyPart, style: 0 };
 }
 
 /**
@@ -124,8 +121,12 @@ export async function characterHairStyleCount(rig: string): Promise<number> {
   const index = await textureIndex();
   const entry = index?.[rig];
   if (!entry) return 0;
-  return Object.entries(entry).filter(([slot, count]) => typeof count === "number" && parseSlot(slot).part === "hair")
-    .length;
+  const styles = new Set(
+    Object.entries(entry)
+      .filter(([slot, count]) => typeof count === "number" && parseSlot(slot).part === "hair")
+      .map(([slot]) => parseSlot(slot).style)
+  );
+  return styles.size;
 }
 
 /**
