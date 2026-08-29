@@ -97,7 +97,16 @@ function walk(node: ChildNode, key: number): ReactNode {
     // line -- measured samples wanted 16px after a paragraph and 14px after
     // a link, split into one shared value rather than threading "was this
     // the br after a link" context through the walk for a 2px difference.
-    return createElement("br", { key, style: { display: "block", marginBottom: PARAGRAPH_SPACING_PX } });
+    //
+    // margin-bottom on the <br> itself does NOT work for this -- confirmed
+    // live: browsers keep a <br>'s own box at width/height 0 in layout no
+    // matter what `display` says, so any margin on it is never realized as
+    // visible space. A separate block-level spacer right after it is what
+    // actually reserves the gap.
+    return [
+      createElement("br", { key: `${key}-br` }),
+      createElement("span", { key: `${key}-spacer`, style: { display: "block", height: PARAGRAPH_SPACING_PX } }),
+    ];
   }
 
   if (STRUCTURAL_TAGS.has(tagName)) {

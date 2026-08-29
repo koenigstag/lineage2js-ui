@@ -45,3 +45,6 @@ export const DEFAULT_CURSOR = cursorStyle("default", "auto");
  * text-select I-beam on an <input>, for instance) once no art is set.
  */
 export const FORM_CONTROL_CURSOR = cursorStyle("default", "default");
+
+/** Hover cursor for a clickable-but-not-a-form-control affordance (links, etc). */
+export const POINTER_CURSOR = cursorStyle("select", "pointer");

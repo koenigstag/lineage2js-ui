@@ -9,7 +9,7 @@
 // a best-effort starting point, not verified pixel-for-pixel against the
 // real client. Extend as real dialogue samples turn up unmapped tokens.
 const NAMED_COLOR_TOKENS: Record<string, string> = {
-  LEVEL: "#ffe066",
+  LEVEL: "#f9c701",
 };
 
 function resolveFontColor(color: string | null): string | undefined {
