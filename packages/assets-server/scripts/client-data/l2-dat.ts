@@ -197,6 +197,12 @@ export class DatReader {
     return value;
   }
 
+  f32(): number {
+    const value = this.data.readFloatLE(this.at);
+    this.at += 4;
+    return value;
+  }
+
   string(): string {
     const bytes = this.u32();
     if (this.at + bytes > this.data.length) {
