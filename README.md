@@ -17,32 +17,50 @@ client's own `.dat` tables all stay out of git — the tooling below builds them
 from a copy of the game you already own, into a folder that is gitignored.
 
 ## Already implemented features
-- Login, re-login and real game server connection
-- Character selection and creation with the client's own converted 3d bodies -- textured, with the face, hair style and hair colour the game offers -- and real data from the server
-- The player standing in the world on real geodata, with click-to-move sent to the server and the walk checked against the geodata first, so a blocked path is never asked for
-- Character bodies animated from the client's own sequences -- idle, walking, running, sitting, picking an item up, dying -- for every nearby player and NPC, not just your own
-- Detailed character info window with stats - real info from server, not demo data
-- Draggable windows system like in the original game client
-- Char info window (Lvl, Nickname, CP/HP/MP/VP) - draggable
-- Active effects window (buffs/debuffs) - draggable
-- Party members window (Nicknames, Role/Leader icons, CP/HP/MP stats) - draggable
-- Selected target window with real info - draggable, click on character/mob/party member to target them
-- System message log, and the confirm dialogs the server drives: party invite, trade, duel and couple actions
-- Inventory window - WIP, draggable, only display, no equip slots yet
-- Hotbar - WIP, only display
-- Skill list window - WIP, only display
-- Learn skill window - WIP
-- Actions window - clickable actions, WIP
-- Chat - contains demo text, network/commands/tabs are WIP
-- Radar - a debug readout of position, geodata sector/chunk/block and ping, standing in for the real minimap
+
+Everything below runs on real server data. The demo placeholders are behind
+`VITE_IS_DEMO_MODE` and off by default.
+
+**Getting in**
+- Login, re-login and real game server connection, with server select and remembered accounts
+- Character select, including deletion with the server's own deferred timer and restore before it runs out
+- Character creation on the client's own converted 3d bodies -- textured, with the face, hair style and hair colour the game offers -- and real templates from the server
+
+**In the world**
+- The player standing on real geodata, streamed as tiles around them
+- Click-to-move sent to the server, with the straight path checked against the geodata first so a blocked walk is never asked for
+- Every nearby player and NPC drawn as the client's own rig, animated from the client's own sequences: idle, walking and running, sitting and standing up, picking an item up, dying, casting for as long as the server says the cast takes, and attacking with the swing that matches the weapon in hand
+- Dropped items on the ground, and picking them up
+- Targeting by clicking a creature or cycling to the next one, then attacking or talking -- both walk into range first
+
+**Windows** — all draggable, and they remember where you put them relative to the screen edge they hang off
+- Character window with real stats
+- Char info (Lvl, Nickname, CP/HP/MP/VP)
+- Active effects (buffs/debuffs), and the target's own effect row
+- Party members (nicknames, role/leader icons, CP/HP/MP), with invite, leave, dismiss and leadership transfer
+- Selected target with real info
+- Inventory with equip slots -- equip, unequip and use items, item tooltips with real stats, weight bar
+- Hotbar -- keyboard-activated, casts skills, uses items and runs actions; drag them in from the skills, inventory and actions windows, and toggle soulshot auto-use
+- Skills list with Active/Passive/Learn tabs, and learning a skill for SP
+- Actions window -- real requests, with the server's own allowed-action list respected
+- System message log
+- Chat with channel tabs, sending and receiving
+- Settings -- UI language (English and Russian)
+- Radar -- a debug readout of position, geodata sector/chunk/block and ping, standing in for the real minimap
+- Server-driven prompts: party invite, trade, duel, couple actions, resurrect, and the death screen
+
+Quests, clan, macros and the map open as empty frames -- the window is there,
+the feature behind it is not.
 
 ## Roadmap
-- Flesh out the in-game windows — hotbar shortcuts and cooldowns, inventory equip slots, a bottom menu
-- Dress the bodies — equipped armour and weapons are parsed and the client's own item→art table is converted, but nothing renders them yet
-- Give mobs and NPCs their own models — every converted body is humanoid, so wolves still fall back to a placeholder capsule
-- Core gameplay systems — combat, chat, quests, NPC dialog
+- Fill in the empty frames — quests, clan, macros, and a real map behind the radar
+- A bottom menu — adena, weight, XP bar, unread messages, party and clan entries
+- Dress the bodies — equipment is parsed and the client's own item-to-art table is converted, but no armour or weapon is rendered on anyone yet
+- Give mobs and NPCs their own models — every converted body is humanoid, so a wolf still falls back to a placeholder capsule
+- Keyboard movement — WASD still drives only the offline test character, never the server; clicking does
+- NPC dialog, quests, and per-id item/skill descriptions
 
-Real landscape and buildings rendering, minimap, global map and location maps are planned for future updates.
+Real landscape and buildings rendering, a global map and location maps are planned for future updates.
 
 The item-by-item breakdown lives in [TODO.md](./TODO.md). Known bugs/issues are tracked in [KNOWN-BUGS.md](./KNOWN-BUGS.md).
 
