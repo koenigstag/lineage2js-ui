@@ -17,14 +17,12 @@ import {
   FILL_SKY_COLOR,
 } from "../../../../config/client-scene-lighting";
 import { DaySky } from "./day-sky.component";
-import { RACE_GALLERY, type GalleryVariant } from "./race-gallery.utils";
+import { RACE_GALLERY } from "./race-gallery.utils";
 import { CameraRig, type CameraFocus } from "./camera-rig.component";
 
 const SKY_SIZE: [number, number] = [300, 100];
 const SKY_Z = -50;
 
-const VARIANT_SPACING = 1.3;
-const CLASS_GAP_EXTRA = 0.9;
 // Wide enough that a group's close-up camera shot never shows a
 // neighboring group (see CameraRig).
 const GROUP_SPACING = 10;
@@ -45,17 +43,6 @@ function groupXForRace(race: RaceNames): number {
   return RACES.indexOf(race) * GROUP_SPACING;
 }
 
-// Lateral offsets for a group's variants: normal spacing within the same
-// class, an extra gap where it switches from Fighter to Mystic, centered on 0.
-function variantOffsets(variants: GalleryVariant[]): number[] {
-  const offsets: number[] = [0];
-  for (let i = 1; i < variants.length; i++) {
-    const gap = VARIANT_SPACING + (variants[i].baseClass !== variants[i - 1].baseClass ? CLASS_GAP_EXTRA : 0);
-    offsets.push(offsets[i - 1] + gap);
-  }
-  const mid = (offsets[0] + offsets[offsets.length - 1]) / 2;
-  return offsets.map((offset) => offset - mid);
-}
 
 interface SunLightProps {
   groupX: number;
@@ -118,9 +105,8 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
       return { position: [groupX, GROUP_SHOT.height, GROUP_SHOT.distance], lookAt: [groupX, GROUP_SHOT.lookHeight, 0] };
     }
 
-    const offsets = variantOffsets(group.variants);
     const inClass = group.variants
-      .map((variant, index) => ({ variant, x: groupX + offsets[index] }))
+      .map((variant, index) => ({ variant, x: groupX + group.slots[index].x }))
       .filter((entry) => entry.variant.baseClass === baseClass);
     // A race whose templates dropped the chosen class out from under the
     // selection: fall back to the group shot rather than aiming at nothing.
@@ -170,7 +156,6 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
 
         {RACE_GALLERY.map((group) => {
           const groupX = groupXForRace(group.race);
-          const offsets = variantOffsets(group.variants);
           const focused = group.race === race;
 
           return (
@@ -186,9 +171,9 @@ export function CharCreateScene({ race, baseClass, sex, appearance, onSelectVari
                 return (
                   <PlayerModel
                     key={`${variant.race}-${variant.baseClass}-${variant.sex}`}
-                    x={groupX + offsets[variantIndex]}
-                    z={0}
-                    angleToCenter={0}
+                    x={groupX + group.slots[variantIndex].x}
+                    z={group.slots[variantIndex].z}
+                    angleToCenter={group.slots[variantIndex].yaw}
                     variant={variant}
                     appearance={focused ? appearance : undefined}
                     selected={selected}
