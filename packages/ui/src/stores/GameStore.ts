@@ -1042,13 +1042,6 @@ export class GameStore {
    * pure bookkeeping, never read by a component.
    */
   pendingHotbarDeletes = new Map<number, number>();
-  /**
-   * slot -> Date.now() when it was registered locally ahead of the server's
-   * echo (see setHotbarSlot). Mirror of pendingHotbarDeletes: that one keeps
-   * a deleted slot from coming back, this one keeps a just-filled slot from
-   * being wiped by a snapshot that predates the registration.
-   */
-  pendingHotbarRegistrations = new Map<number, number>();
   private static readonly HOTBAR_DELETE_GRACE_MS = 8000;
 
   /**
@@ -1090,7 +1083,6 @@ export class GameStore {
     makeAutoObservable(this, {
       client: false,
       pendingHotbarDeletes: false,
-      pendingHotbarRegistrations: false,
       pickingUpUntil: false,
       castingUntil: false,
       standingUpUntil: false,
@@ -1115,22 +1107,14 @@ export class GameStore {
    * target slot (if anything) is moved back into the source slot instead of
    * being lost, i.e. a real swap rather than an overwrite.
    *
-   * When connected, sends RequestShortCutReg (registerShortcut) *and* fills
-   * the slot locally, rather than waiting for the server's echoed
-   * ShortCutRegister to do it. Waiting is what a confirmation is for, but it
-   * only works if one always arrives, and a server that quietly declines to
-   * register something leaves the drop looking like it did nothing at all --
-   * with no way for the player to tell that apart from a broken UI. The echo
-   * still lands and overwrites this a moment later (syncHotbar), and a later
-   * full ShortCutInit still corrects a slot the server never took; until
-   * then the grace window below keeps the optimistic entry from being wiped
-   * by an unrelated shortcut change. Same shape clearHotbarSlot already had
-   * for the opposite direction, which never waited either.
-   *
-   * A displaced slot from a hotbar-to-hotbar move gets its own
-   * registerShortcut call (moved to the source slot); an empty source
-   * instead goes through clearHotbarSlot, since a delete gets no server
-   * confirmation at all.
+   * When connected, sends RequestShortCutReg (registerShortcut) and relies
+   * on the server's echoed ShortCutRegister packet to actually update
+   * hotbarSlots (see bindToClient's syncHotbar) -- same "no local echo,
+   * server is authoritative" treatment as sendChatMessage. A displaced slot
+   * from a hotbar-to-hotbar move gets its own registerShortcut call (moved
+   * to the source slot); an empty source instead goes through
+   * clearHotbarSlot, since a delete gets no server confirmation at all.
+   * Offline/demo mode mutates hotbarSlots directly instead.
    */
   setHotbarSlot(slot: number, shortcut: L2Shortcut, source?: { from: "hotbar"; slot: number }) {
     const displaced = this.hotbarSlots[slot];
@@ -1140,18 +1124,17 @@ export class GameStore {
       // This slot is being actively reasserted -- no longer needs
       // protecting from a stale ShortCutInit resurrecting an old delete.
       this.pendingHotbarDeletes.delete(slot);
-      this.pendingHotbarRegistrations.set(slot, Date.now());
       this.client.registerShortcut(shortcut);
       if (source?.from === "hotbar" && source.slot !== slot) {
         if (displaced) {
           displaced.Slot = source.slot;
           this.pendingHotbarDeletes.delete(source.slot);
-          this.pendingHotbarRegistrations.set(source.slot, Date.now());
           this.client.registerShortcut(displaced);
         } else {
           this.clearHotbarSlot(source.slot);
         }
       }
+      return;
     }
 
     const next = [...this.hotbarSlots];
@@ -2124,20 +2107,6 @@ export class GameStore {
         }
         if (slots[pendingSlot]) {
           slots[pendingSlot] = undefined;
-        }
-      }
-
-      // And the same in reverse: a slot filled locally ahead of the server's
-      // echo survives a snapshot taken before it, rather than blinking out
-      // and back. Once the echo lands the slot is in `slots` on its own and
-      // this keeps nothing alive that the server hasn't confirmed.
-      for (const [pendingSlot, registeredAt] of this.pendingHotbarRegistrations) {
-        if (now - registeredAt > GameStore.HOTBAR_DELETE_GRACE_MS) {
-          this.pendingHotbarRegistrations.delete(pendingSlot);
-          continue;
-        }
-        if (!slots[pendingSlot]) {
-          slots[pendingSlot] = this.hotbarSlots[pendingSlot];
         }
       }
 
