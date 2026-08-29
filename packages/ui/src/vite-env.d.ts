@@ -10,7 +10,7 @@ interface ImportMetaEnv {
   readonly VITE_ACTION_ICON_BASE_URL: string;
   readonly VITE_CLASS_ICON_BASE_URL: string;
   readonly VITE_RACE_ICON_BASE_URL: string;
-  /** e.g. "http://localhost:4000/legacy/icons/game-menu/" -- folder of the game menu's own button icons ("character@64.png", ...), see config/icon-urls.ts's getGameMenuIconUrl. The menu falls back to plain glyphs when unset. */
+  /** e.g. "http://localhost:4000/highfive/icons/game-menu/" -- folder of the game menu's own button icons ("character@64.png", ...), see config/icon-urls.ts's getGameMenuIconUrl. The menu falls back to plain glyphs when unset. */
   readonly VITE_GAME_MENU_ICON_BASE_URL: string;
   /** e.g. "http://localhost:4000/legacy/images/titlescreens/{id}.jpg" -- "{id}" gets replaced with a random 1..N, N fetched from the server's sibling "count" endpoint. */
   readonly VITE_LOGIN_BACKGROUND_IMAGE_BASE_URL: string;

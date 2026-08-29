@@ -21,12 +21,10 @@ pitch; this file is for working in the code.
   copyrighted -- don't ever commit real icons, geodata or models here or
   anywhere else in this repo. Client-UI art belongs here too rather than in
   the UI bundle, under the same rule -- the game menu's own button icons are
-  `assets/legacy/icons/game-menu/<button>@64.png` (see the UI's
+  `assets/highfive/icons/game-menu/<button>@64.png` (see the UI's
   `config/icon-urls.ts`; every consumer needs a fallback for when the art
-  isn't served) -- though the deployed server holds them under
-  `highfive/icons/game-menu/` and the Pages variable points there, which is
-  drift from this layout rather than a second convention: whichever of the
-  two moves, the folder and the variable have to end up agreeing.
+  isn't served). `assets/legacy/` is only for the title screens, which have
+  routes of their own -- icons of any kind belong under `highfive`.
   Serves with `Cache-Control: max-age + must-revalidate` and
   an ETag from file size/mtime, so overwriting a file is enough to
   invalidate clients' caches (no URL versioning needed). `scripts/` holds

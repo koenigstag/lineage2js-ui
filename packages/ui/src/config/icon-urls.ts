@@ -130,7 +130,7 @@ export function getRaceIconUrl(
  * Icon URL for one of the game menu's grid buttons, by button name
  * ("character", "inventory", ...) -- the art is copyrighted client
  * material, so it lives on the assets server
- * (assets/legacy/icons/game-menu, gitignored) instead of being bundled,
+ * (assets/highfive/icons/game-menu, gitignored) instead of being bundled,
  * and the menu falls back to a plain glyph when it isn't served (see
  * game.menu.tsx).
  *
