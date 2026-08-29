@@ -47,17 +47,22 @@ export function getHairColor(index: number): string {
 }
 
 /**
- * Options for the creation screen's selects. Numbered labels rather than
- * names because that is what retail shows too -- there is nothing to call
- * "Face 2" but its number.
+ * Options for the creation screen's appearance selects.
+ *
+ * Lettered, and lettered the same way for all three: there is nothing to call
+ * one face or another but which one it is, and "Type A" is what retail's own
+ * creation screen shows. One string covers every select, so a rig that turns
+ * out to have another hair style needs no new one.
  */
-function numberedOptions(count: number, key: string): Array<{ value: string; label: string }> {
+function typeOptions(count: number): Array<{ value: string; label: string }> {
   return Array.from({ length: count }, (_, index) => ({
     value: String(index),
-    label: t(`charCreate.${key}${index + 1}`),
+    // Past Z there is no letter left; the number reads better than whatever
+    // punctuation follows it in the alphabet.
+    label: t("charCreate.typeOption", { type: index < 26 ? String.fromCharCode(65 + index) : index + 1 }),
   }));
 }
 
-export const faceOptions = () => numberedOptions(FACE_COUNT, "face");
-export const hairOptions = (count = HAIR_STYLE_COUNT) => numberedOptions(count, "hair");
-export const hairColorOptions = () => numberedOptions(HAIR_COLOR_COUNT, "color");
+export const faceOptions = () => typeOptions(FACE_COUNT);
+export const hairOptions = (count = HAIR_STYLE_COUNT) => typeOptions(count);
+export const hairColorOptions = () => typeOptions(HAIR_COLOR_COUNT);
