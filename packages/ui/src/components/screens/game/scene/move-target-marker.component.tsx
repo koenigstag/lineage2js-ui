@@ -24,8 +24,8 @@ function createMarkerTexture(): CanvasTexture {
   // No hard-edged disc/rim -- just a glow fading out over the full texture,
   // soft by construction (a continuous gradient, not a stroked boundary).
   const fill = ctx.createRadialGradient(cx, cy, 0, cx, cy, size / 2);
-  fill.addColorStop(0, "rgba(70, 140, 255, 0.8)");
-  fill.addColorStop(0.6, "rgba(70, 140, 255, 0.35)");
+  fill.addColorStop(0, "rgba(70, 140, 255, 0.9)");
+  fill.addColorStop(0.6, "rgba(70, 140, 255, 0.45)");
   fill.addColorStop(1, "rgba(70, 140, 255, 0)");
   ctx.fillStyle = fill;
   ctx.fillRect(0, 0, size, size);
