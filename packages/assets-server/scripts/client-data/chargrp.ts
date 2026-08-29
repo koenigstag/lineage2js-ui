@@ -46,12 +46,28 @@ export const CHAR_RIGS = [
 const RECORDS = CHAR_RIGS.length + 1;
 
 /**
- * The hair table: five styles for each of fifteen armour sets, row
- * `style * 15 + set`, because a helmet replaces the head and the table says
- * which one with what. Set 0 is what an unequipped body wears.
+ * The hair table, seventy-five rows of `[mode][page][style]`.
+ *
+ * The fast axis is the hair style, five to a page, and the pages continue one
+ * rig's list: every rig fills page 0 with m000..m004, and the female rigs fill
+ * two more slots on page 1, which is why creation offers them seven styles and
+ * the male rigs five. A style index is therefore `page * 5 + style`.
+ *
+ * The slow axis is what the head is currently wearing. Mode 0 is a bare head
+ * and the only one creation shows; mode 1 is the same five styles with the
+ * front piece dropped, for a helmet that covers the forehead; modes 2 and 3
+ * replace the hair outright with one head for every style (m009 and m008 on
+ * the human fighter). Mode 4 is empty in this client.
+ *
+ * The mode numbering is observed rather than documented -- what picks between
+ * them is a property of the equipped helmet, which nothing here reads yet.
  */
-const HAIR_STYLES = 5;
-const HAIR_SETS = 15;
+const HAIR_MODES = 5;
+const HAIR_PAGES = 3;
+const HAIR_PAGE_STYLES = 5;
+
+/** Bare-headed: the mode whose styles are the list character creation offers. */
+const HAIR_MODE_BARE = 0;
 
 /**
  * The equipment section is one slot per body part, of which only four are ever
@@ -67,10 +83,12 @@ export type EquipmentSlot = keyof typeof EQUIPMENT_SLOTS;
 /** The eleven weapon-stance voice lists, in file order. */
 const VOICE_LISTS = 11;
 
-/** One row of the hair table: a style's head for one armour set. */
+/** One row of the hair table: one style's head, in one wearing mode. */
 export interface HairRow {
+  /** `page * 5 + style` -- what creation calls the hairstyle, 0-based. */
   style: number;
-  set: number;
+  /** Which head this row is for: 0 bare, 1 fringe dropped, 2 and 3 replaced. See HAIR_MODES. */
+  mode: number;
   /** The front piece. On its own it is a fringe -- the female fighter's is forty-two vertices. */
   ahMesh: string;
   ahTexture: string;
@@ -99,7 +117,12 @@ export interface CharRecord {
   body: Partial<Record<EquipmentSlot, BodySlot>>;
   attackEffect: string;
   sounds: { attack: string[]; defense: string[]; damage: string[]; voice: string[][] };
-  /** Further head meshes and their textures, per record -- where the `m01` hair lives. */
+  /**
+   * A tail of further head meshes and textures, filled on four rigs only.
+   * What lands here is `_u` variants of a style and the `m01` texture set for
+   * the replaced heads -- the lists are not the same length and do not pair
+   * up, so nothing reads it yet.
+   */
   extra: { mesh: string[]; texture: string[] };
 }
 
@@ -116,17 +139,19 @@ function readSlot(reader: DatReader): BodySlot {
 
 function readRecord(reader: DatReader, rig: string): CharRecord {
   const hair: HairRow[] = [];
-  for (let style = 0; style < HAIR_STYLES; style++) {
-    for (let set = 0; set < HAIR_SETS; set++) {
-      const row = {
-        style,
-        set,
-        ahMesh: reader.string(),
-        ahTexture: reader.string(),
-        bhMesh: reader.string(),
-        bhTexture: reader.string(),
-      };
-      if (row.ahMesh || row.bhMesh) hair.push(row);
+  for (let mode = 0; mode < HAIR_MODES; mode++) {
+    for (let page = 0; page < HAIR_PAGES; page++) {
+      for (let index = 0; index < HAIR_PAGE_STYLES; index++) {
+        const row = {
+          style: page * HAIR_PAGE_STYLES + index,
+          mode,
+          ahMesh: reader.string(),
+          ahTexture: reader.string(),
+          bhMesh: reader.string(),
+          bhTexture: reader.string(),
+        };
+        if (row.ahMesh || row.bhMesh) hair.push(row);
+      }
     }
   }
 
@@ -205,16 +230,25 @@ export function readChargrp(file: string): CharRecord[] {
 }
 
 /**
- * The head pieces each style puts on a character wearing no armour.
+ * The hair styles character creation offers, in its own order.
  *
- * A style is not one mesh. Its row for the starting set holds an `ah` piece and
- * a `bh` one, and the client draws whichever are filled. The human fighter's
- * first style fills both, and it has to: her `ah` is a forty-two vertex fringe
- * across the front of the head, so drawn alone it leaves her bald.
+ * Only the bare-headed mode: the other modes hold the same styles as a helmet
+ * leaves them, which is not a choice anyone makes on this screen.
+ *
+ * A style is not one mesh. Its row holds an `ah` piece and a `bh` one and the
+ * client draws whichever are filled -- most styles fill both, where the `ah` is
+ * a fringe of a few dozen vertices over the head of hair beneath it, so drawing
+ * the pieces of a style is not optional. The orcs and the shamans fill only
+ * `bh`, in every style they have.
+ *
+ * The length is the rig's own: five for the male rigs, seven for the female
+ * ones, which is what the client's own screen offers.
  */
 export function bareHeads(record: CharRecord): { mesh: string; texture: string }[][] {
-  return Array.from({ length: HAIR_STYLES }, (_, style) => {
-    const row = record.hair.find((candidate) => candidate.style === style && candidate.set === 0);
+  const bare = record.hair.filter((row) => row.mode === HAIR_MODE_BARE);
+  const styles = Math.max(0, ...bare.map((row) => row.style + 1));
+  return Array.from({ length: styles }, (_, style) => {
+    const row = bare.find((candidate) => candidate.style === style);
     if (!row) return [];
     return [
       { mesh: row.ahMesh, texture: row.ahTexture },
