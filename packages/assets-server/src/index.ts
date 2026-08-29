@@ -23,15 +23,6 @@ app.use((_req, res, next) => {
   next();
 });
 
-async function countAssetFiles(relativeDir: string): Promise<number> {
-  try {
-    const entries = await fs.readdir(path.join(ASSETS_DIR, relativeDir), { withFileTypes: true });
-    return entries.filter((entry) => entry.isFile() && !entry.name.startsWith(".")).length;
-  } catch {
-    return 0;
-  }
-}
-
 /**
  * A short token per file that changes whenever the file does, from the same
  * size+mtime the ETag below is built from.
@@ -115,17 +106,9 @@ app.get("/highfive/textures/index.json", async (_req, res) => {
   res.json(manifest);
 });
 
-
 // Login screen background counts -- the UI picks a random id in [1, count]
 // and requests it as a regular static file (see below), so this only needs
 // to report how many numbered variants currently exist in each folder.
-app.get("/legacy/images/titlescreens/count", async (_req, res) => {
-  res.json({ count: await countAssetFiles("legacy/images/titlescreens") });
-});
-
-app.get("/legacy/videos/titlescreens/count", async (_req, res) => {
-  res.json({ count: await countAssetFiles("legacy/videos/titlescreens") });
-});
 
 // Serving assets/skills/{id}.png, assets/items/{id}.png, ... directly under
 // their matching URL path -- no extra routing needed, express.static resolves

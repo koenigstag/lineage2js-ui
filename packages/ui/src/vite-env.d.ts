@@ -12,10 +12,6 @@ interface ImportMetaEnv {
   readonly VITE_RACE_ICON_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/icons/game-menu/" -- folder of the game menu's own button icons ("character@64.png", ...), see config/icon-urls.ts's getGameMenuIconUrl. The menu falls back to plain glyphs when unset. */
   readonly VITE_GAME_MENU_ICON_BASE_URL: string;
-  /** e.g. "http://localhost:4000/legacy/images/titlescreens/{id}.jpg" -- "{id}" gets replaced with a random 1..N, N fetched from the server's sibling "count" endpoint. */
-  readonly VITE_LOGIN_BACKGROUND_IMAGE_BASE_URL: string;
-  /** e.g. "http://localhost:4000/legacy/videos/titlescreens/{id}.mp4" -- same "{id}" + "count" endpoint convention as the image variant. */
-  readonly VITE_LOGIN_BACKGROUND_VIDEO_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/geodata-tiles/{tileX}_{tileY}.bin" -- pre-baked geodata tile (see assets-server/scripts/convert-l2j-geodata.ts), "{tileX}"/"{tileY}" get replaced with the tile's coordinates. Deserialized directly, see geo-tile-parser.ts. */
   readonly VITE_GEODATA_TILE_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/models/" -- folder of converted character bodies (see assets-server/scripts/convert-client-rigs.ts), one `<rig>.glb` per race/sex. Unset (or a body that fails to load) leaves that character on the placeholder capsule, see config/character-models.ts. */

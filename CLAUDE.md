@@ -23,9 +23,8 @@ pitch; this file is for working in the code.
   the UI bundle, under the same rule -- the game menu's own button icons are
   `assets/highfive/icons/game-menu/<button>@64.png` (see the UI's
   `config/icon-urls.ts`; every consumer needs a fallback for when the art
-  isn't served). `assets/legacy/` is only for the title screens, which have
-  routes of their own -- icons of any kind belong under `highfive`.
-  Serves with `Cache-Control: max-age + must-revalidate` and
+  isn't served). Everything lives under `assets/highfive/`; there is no
+  second tree. Serves with `Cache-Control: max-age + must-revalidate` and
   an ETag from file size/mtime, so overwriting a file is enough to
   invalidate clients' caches (no URL versioning needed). `scripts/` holds
   the offline converters that produce those files from sources the user
