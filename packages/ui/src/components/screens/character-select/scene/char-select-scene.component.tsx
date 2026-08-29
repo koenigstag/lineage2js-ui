@@ -1,15 +1,40 @@
 import { Canvas } from "@react-three/fiber";
 import { Campfire } from "./campfire.component";
 import { PlayerModel } from "../../../core/scene/player-model.component";
-import { SkyLayer } from "../../login/atmosphere/sky-layer.component";
-import { StarField } from "../../login/atmosphere/star-field.component";
 import type { RaceNames, BaseClass, SexNames } from "../../../../config/character-races";
+import {
+  HALL_AMBIENT_COLOR,
+  HALL_AMBIENT_INTENSITY,
+  HALL_COLD_COLOR,
+  HALL_COLD_INTENSITY,
+  HALL_FOG_COLOR,
+  HALL_FOG_FAR,
+  HALL_BACKDROP_COLOR,
+  HALL_FOG_NEAR,
+  SELECT_ARC_RADIUS,
+  SELECT_ARC_SPREAD,
+  SELECT_FRONT_OFFSET,
+} from "../../../../config/client-scene-lighting";
 
-const SKY_SIZE: [number, number] = [70, 45];
-const SKY_Z = -25;
+/** Stands in for the hall's far wall: no sky, because the client's own selection scene is indoors. */
+const BACKDROP_SIZE: [number, number] = [70, 45];
+const BACKDROP_Z = -25;
 
-const CIRCLE_RADIUS = 2.6;
-const ARC_SPREAD = Math.PI * 0.85;
+/**
+ * A fill the hall's own ambient cannot give.
+ *
+ * The zone sets 20 of 255 and leans on ninety-two lights to do the rest; with
+ * a handful standing in for them, that alone leaves the bodies unreadable.
+ * Named separately so the client's number above stays the client's.
+ */
+const HALL_FILL_INTENSITY = 0.55;
+
+/**
+ * The arc's own centre, which the client puts in front of the ring rather
+ * than at its middle -- see SELECT_FRONT_OFFSET. Characters stand a radius
+ * away from it and turn to face it.
+ */
+const ARC_CENTER_Z = SELECT_FRONT_OFFSET;
 
 // Kept as constants rather than inline in the Canvas props because the
 // characters' facing is derived from the camera position below -- the two
@@ -37,11 +62,18 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
         camera={{ position: CAMERA_POSITION, fov: 42, near: 0.1, far: 60 }}
         onCreated={({ camera }) => camera.lookAt(...CAMERA_TARGET)}
       >
-        <ambientLight intensity={0.45} color="#5a6a8a" />
-        <directionalLight position={[3, 6, 2]} intensity={0.35} color="#a8c0ff" />
+        <fog attach="fog" args={[HALL_FOG_COLOR, HALL_FOG_NEAR, HALL_FOG_FAR]} />
 
-        <SkyLayer size={SKY_SIZE} z={SKY_Z} />
-        <StarField size={SKY_SIZE} z={SKY_Z + 1} />
+        <ambientLight color={HALL_AMBIENT_COLOR} intensity={HALL_AMBIENT_INTENSITY + HALL_FILL_INTENSITY} />
+        {/* The cold family, which in the hall washes down from above the arc. */}
+        <pointLight position={[-4, 7, -3]} color={HALL_COLD_COLOR} intensity={HALL_COLD_INTENSITY} distance={22} decay={2} />
+        <pointLight position={[4, 7, -3]} color={HALL_COLD_COLOR} intensity={HALL_COLD_INTENSITY} distance={22} decay={2} />
+        {/* The warm family is the flames, and the campfire below already is one. */}
+
+        <mesh position={[0, 0, BACKDROP_Z]} scale={[BACKDROP_SIZE[0], BACKDROP_SIZE[1], 1]}>
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial color={HALL_BACKDROP_COLOR} />
+        </mesh>
 
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
           <circleGeometry args={[12, 48]} />
@@ -51,24 +83,24 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
         <Campfire />
 
         {characters.map((character, index) => {
-          // Semicircle on the far side of the fire (away from the camera,
-          // which sits at +Z) -- nothing ever stands between the camera and
-          // the fire.
-          const count = characters.length;
-          const t = count > 1 ? index / (count - 1) - 0.5 : 0;
-          const angle = (Math.PI * 3) / 2 + ARC_SPREAD * t;
-          const x = Math.cos(angle) * CIRCLE_RADIUS;
-          const z = Math.sin(angle) * CIRCLE_RADIUS;
+          // The client's own arc: seven slots on a ring of SELECT_ARC_RADIUS
+          // spanning SELECT_ARC_SPREAD, centred on the spot in front of them.
+          // Its middle step is left empty there, so the positions are laid
+          // out as eight and the middle one skipped -- which is also why a
+          // character never stands between the viewer and that centre.
+          const SLOTS = 8;
+          const slot = index < SLOTS / 2 ? index : index + 1;
+          const t = slot / SLOTS - 0.5;
+          const angle = SELECT_ARC_SPREAD * t;
+          const x = Math.sin(angle) * SELECT_ARC_RADIUS;
+          const z = ARC_CENTER_Z - Math.cos(angle) * SELECT_ARC_RADIUS;
 
-          // Everyone turns towards the viewer rather than towards the fire
-          // they're standing around: on a select screen the point is to see
-          // the characters' faces. Aimed at the camera's own (x, z) instead
-          // of just flat +Z, so the ones out at the ends of the arc read as
-          // looking at the viewer too rather than past them -- at the middle
-          // of the arc it comes out as 0 anyway, same as char-create's lone
-          // centred model. A model's local forward is +Z, so a yaw of
-          // atan2(dx, dz) points it along (dx, dz).
-          const faceCamera = Math.atan2(CAMERA_POSITION[0] - x, CAMERA_POSITION[2] - z);
+          // Turned to the middle of the ring, which is what every one of the
+          // client's seven yaws does to within a degree -- and since the
+          // camera looks from beyond that middle, it reads as facing the
+          // viewer. A model's local forward is +Z, so a yaw of atan2(dx, dz)
+          // points it along (dx, dz).
+          const faceCamera = Math.atan2(-x, ARC_CENTER_Z - z);
 
           const race = character.race as RaceNames;
           const baseClass = character.baseClass as BaseClass;

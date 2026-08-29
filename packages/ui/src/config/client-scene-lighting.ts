@@ -1,7 +1,7 @@
 import { CHARACTER_MODEL_SCALE } from "../utils/models/character-model";
 
 /**
- * The lighting the retail client uses on its own character-creation scene.
+ * The lighting the retail client uses on its own character screens.
  *
  * Read out of the client's lobby level (`MAPS/Lobby02.unr`, the one the
  * creation screen's placements land in): one `NMovableSunLight`, the
@@ -87,3 +87,69 @@ export const FILL_INTENSITY = 1.1;
  */
 export const CLIENT_FOG_NEAR = 1500 * CHARACTER_MODEL_SCALE;
 export const CLIENT_FOG_FAR = 10000 * CHARACTER_MODEL_SCALE;
+
+/**
+ * The selection screen, which is the creation screen's opposite.
+ *
+ * It is a different map -- `MAPS/Lobby01.unr`, where `logongrp.dat` puts its
+ * eight character slots -- and an interior: the zone around those slots is
+ * tagged `lobby_CT_hall`, group `lobby_select`, and it sets `bSunAffect`
+ * false. So where creation is one sun and no light actors, selection is no
+ * sun and ninety-two of them, in two families: firelight and a cold cyan.
+ */
+
+/** `ZoneInfo3.AmbientVector` and `AmbientBrightness`, which is 20 of 255. */
+export const HALL_AMBIENT_COLOR = "#333333";
+export const HALL_AMBIENT_INTENSITY = 20 / 255;
+
+/**
+ * The hall's two light families, averaged.
+ *
+ * Ninety-two lights placed against hall geometry this scene does not have
+ * cannot be carried over one for one -- a point light means nothing without
+ * the wall it was hung on. What does carry is the pair of colours and which
+ * of them comes from where: the warm one is the flames at floor level (36
+ * lights, hue 27-34), the cold one washes the hall from above (45 lights,
+ * hue 125-143).
+ */
+export const HALL_FIRE_COLOR = "#ffc35d";
+export const HALL_COLD_COLOR = "#5dedff";
+export const HALL_COLD_INTENSITY = 1.5;
+
+/** `ZoneInfo3`'s distance fog, scaled the way bodies are. Close enough here to tint the floor. */
+export const HALL_FOG_COLOR = "#51777b";
+
+/**
+ * What stands behind the arc, where the client has the hall's far wall.
+ *
+ * Not the fog colour: fog is what a wall turns into with distance behind it,
+ * and painted flat it reads as a lit sky rather than as the back of a dark
+ * room. This is that colour taken most of the way down to black, so the fog
+ * above still resolves toward something of the hall's own hue.
+ */
+export const HALL_BACKDROP_COLOR = "#162124";
+export const HALL_FOG_NEAR = 600 * CHARACTER_MODEL_SCALE;
+export const HALL_FOG_FAR = 10000 * CHARACTER_MODEL_SCALE;
+
+/**
+ * Where the selection screen stands its characters, from `logongrp.dat`.
+ *
+ * Eight `LogPawn` slots: seven on an arc and one in front. Fitting a circle
+ * to the seven puts its centre within two units of that eighth slot and gives
+ * a radius of 131.1 client units, which is 5.00 in scene units -- so the
+ * front slot is not a ninth place off to the side, it is the middle of the
+ * ring, and the arc is drawn around it.
+ *
+ * The seven sit at even 13.4-degree steps except across the middle, where the
+ * step is exactly doubled: the arc keeps its centre slot empty rather than
+ * putting a body between the viewer and whoever has stepped forward.
+ *
+ * Every slot's yaw points at that centre, to within a degree on all seven.
+ * That is the rule to carry over rather than the numbers -- a character faces
+ * the middle of the ring, which is also where the camera looks from.
+ */
+export const SELECT_ARC_RADIUS = 5.0;
+/** Total angle the seven span, from the fitted circle: 36.3 to 130.5 degrees. */
+export const SELECT_ARC_SPREAD = (94.2 * Math.PI) / 180;
+/** How far in front of the arc the selected slot sits, along the camera's axis. */
+export const SELECT_FRONT_OFFSET = 4.18;
