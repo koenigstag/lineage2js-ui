@@ -16,7 +16,7 @@ import {
   FILL_INTENSITY,
   FILL_SKY_COLOR,
 } from "../../../../config/client-scene-lighting";
-import { DaySky } from "./day-sky.component";
+import { DaySky } from "../../../core/scene/day-sky.component";
 import { RACE_GALLERY } from "./race-gallery.utils";
 import { CameraRig, type CameraFocus } from "./camera-rig.component";
 

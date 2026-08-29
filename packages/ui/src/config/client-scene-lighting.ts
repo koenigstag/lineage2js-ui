@@ -89,47 +89,19 @@ export const CLIENT_FOG_NEAR = 1500 * CHARACTER_MODEL_SCALE;
 export const CLIENT_FOG_FAR = 10000 * CHARACTER_MODEL_SCALE;
 
 /**
- * The selection screen, which is the creation screen's opposite.
+ * The selection screen is lit as daylight here, which is *not* what the
+ * client does.
  *
- * It is a different map -- `MAPS/Lobby01.unr`, where `logongrp.dat` puts its
- * eight character slots -- and an interior: the zone around those slots is
- * tagged `lobby_CT_hall`, group `lobby_select`, and it sets `bSunAffect`
- * false. So where creation is one sun and no light actors, selection is no
- * sun and ninety-two of them, in two families: firelight and a cold cyan.
+ * Its own selection scene is a different map -- `MAPS/Lobby01.unr`, where
+ * `logongrp.dat` puts the eight character slots -- and an interior: the zone
+ * around them is tagged `lobby_CT_hall`, group `lobby_select`, sets
+ * `bSunAffect` false, and is lit by ninety-two lights of its own in two
+ * families, firelight low and a cold cyan from above, over an ambient of 20
+ * of 255 and teal distance fog. Copying that needs the hall's geometry, which
+ * is not exported; without walls to hang them on, ninety-two point lights are
+ * not the room. So the screen borrows the creation screen's sun instead,
+ * which is a deliberate departure rather than a gap in what was read.
  */
-
-/** `ZoneInfo3.AmbientVector` and `AmbientBrightness`, which is 20 of 255. */
-export const HALL_AMBIENT_COLOR = "#333333";
-export const HALL_AMBIENT_INTENSITY = 20 / 255;
-
-/**
- * The hall's two light families, averaged.
- *
- * Ninety-two lights placed against hall geometry this scene does not have
- * cannot be carried over one for one -- a point light means nothing without
- * the wall it was hung on. What does carry is the pair of colours and which
- * of them comes from where: the warm one is the flames at floor level (36
- * lights, hue 27-34), the cold one washes the hall from above (45 lights,
- * hue 125-143).
- */
-export const HALL_FIRE_COLOR = "#ffc35d";
-export const HALL_COLD_COLOR = "#5dedff";
-export const HALL_COLD_INTENSITY = 1.5;
-
-/** `ZoneInfo3`'s distance fog, scaled the way bodies are. Close enough here to tint the floor. */
-export const HALL_FOG_COLOR = "#51777b";
-
-/**
- * What stands behind the arc, where the client has the hall's far wall.
- *
- * Not the fog colour: fog is what a wall turns into with distance behind it,
- * and painted flat it reads as a lit sky rather than as the back of a dark
- * room. This is that colour taken most of the way down to black, so the fog
- * above still resolves toward something of the hall's own hue.
- */
-export const HALL_BACKDROP_COLOR = "#162124";
-export const HALL_FOG_NEAR = 600 * CHARACTER_MODEL_SCALE;
-export const HALL_FOG_FAR = 10000 * CHARACTER_MODEL_SCALE;
 
 /**
  * Where the selection screen stands its characters, from `logongrp.dat`.

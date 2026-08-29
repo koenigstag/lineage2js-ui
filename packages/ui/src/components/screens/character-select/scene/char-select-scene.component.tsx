@@ -2,32 +2,26 @@ import { Canvas } from "@react-three/fiber";
 import { Campfire } from "./campfire.component";
 import { PlayerModel } from "../../../core/scene/player-model.component";
 import type { RaceNames, BaseClass, SexNames } from "../../../../config/character-races";
+import { DaySky } from "../../../core/scene/day-sky.component";
 import {
-  HALL_AMBIENT_COLOR,
-  HALL_AMBIENT_INTENSITY,
-  HALL_COLD_COLOR,
-  HALL_COLD_INTENSITY,
-  HALL_FOG_COLOR,
-  HALL_FOG_FAR,
-  HALL_BACKDROP_COLOR,
-  HALL_FOG_NEAR,
+  CLIENT_AMBIENT_INTENSITY,
+  CLIENT_FOG_FAR,
+  CLIENT_FOG_NEAR,
+  CLIENT_SUN_DIRECTION,
+  CLIENT_SUN_INTENSITY,
+  FILL_GROUND_COLOR,
+  FILL_INTENSITY,
+  FILL_SKY_COLOR,
   SELECT_ARC_RADIUS,
   SELECT_ARC_SPREAD,
   SELECT_FRONT_OFFSET,
 } from "../../../../config/client-scene-lighting";
 
-/** Stands in for the hall's far wall: no sky, because the client's own selection scene is indoors. */
-const BACKDROP_SIZE: [number, number] = [70, 45];
-const BACKDROP_Z = -25;
+const SKY_SIZE: [number, number] = [70, 45];
+const SKY_Z = -25;
 
-/**
- * A fill the hall's own ambient cannot give.
- *
- * The zone sets 20 of 255 and leans on ninety-two lights to do the rest; with
- * a handful standing in for them, that alone leaves the bodies unreadable.
- * Named separately so the client's number above stays the client's.
- */
-const HALL_FILL_INTENSITY = 0.55;
+/** How far along its own direction to put the sun. Any distance does, for a light with no falloff. */
+const SUN_DISTANCE = 14;
 
 /**
  * The arc's own centre, which the client puts in front of the ring rather
@@ -62,18 +56,17 @@ export function CharSelectScene({ characters, selectedCharacterId, onSelect }: C
         camera={{ position: CAMERA_POSITION, fov: 42, near: 0.1, far: 60 }}
         onCreated={({ camera }) => camera.lookAt(...CAMERA_TARGET)}
       >
-        <fog attach="fog" args={[HALL_FOG_COLOR, HALL_FOG_NEAR, HALL_FOG_FAR]} />
+        <fog attach="fog" args={["#8fa8c8", CLIENT_FOG_NEAR, CLIENT_FOG_FAR]} />
 
-        <ambientLight color={HALL_AMBIENT_COLOR} intensity={HALL_AMBIENT_INTENSITY + HALL_FILL_INTENSITY} />
-        {/* The cold family, which in the hall washes down from above the arc. */}
-        <pointLight position={[-4, 7, -3]} color={HALL_COLD_COLOR} intensity={HALL_COLD_INTENSITY} distance={22} decay={2} />
-        <pointLight position={[4, 7, -3]} color={HALL_COLD_COLOR} intensity={HALL_COLD_INTENSITY} distance={22} decay={2} />
-        {/* The warm family is the flames, and the campfire below already is one. */}
+        <ambientLight intensity={CLIENT_AMBIENT_INTENSITY} />
+        <hemisphereLight args={[FILL_SKY_COLOR, FILL_GROUND_COLOR, FILL_INTENSITY]} />
+        <directionalLight
+          position={CLIENT_SUN_DIRECTION.map((axis) => axis * SUN_DISTANCE) as [number, number, number]}
+          intensity={CLIENT_SUN_INTENSITY}
+          color="#fff4e0"
+        />
 
-        <mesh position={[0, 0, BACKDROP_Z]} scale={[BACKDROP_SIZE[0], BACKDROP_SIZE[1], 1]}>
-          <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial color={HALL_BACKDROP_COLOR} />
-        </mesh>
+        <DaySky size={SKY_SIZE} z={SKY_Z} />
 
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
           <circleGeometry args={[12, 48]} />

@@ -11,7 +11,7 @@ const vertexShader = /* glsl */ `
 `;
 
 // Same gradient the login screen's night sky draws, in daylight: pale at the
-// horizon, deepening overhead. The client lights this scene with a sun 34
+// horizon, deepening overhead. The sun these scenes use is the client's, 34
 // degrees up (see config/client-scene-lighting), and a night sky under it
 // read as a mistake.
 const fragmentShader = /* glsl */ `
@@ -42,13 +42,12 @@ export interface DaySkyProps {
 }
 
 /**
- * The creation screen's own sky.
+ * The daylight sky behind the character screens.
  *
- * Deliberately not the login screen's `SkyLayer` with a palette switch: the
- * two screens want different skies and share nothing else, and having the
- * creation screen reach into the login screen's atmosphere folder for a
- * component it then had to parameterise made one screen's look a hostage of
- * the other's.
+ * Shared by the creation and selection screens, and deliberately not the
+ * login screen's `SkyLayer` with a palette switch: that screen wants a night
+ * sky and shares nothing else with these two, and parameterising one
+ * component across both made either screen's look a hostage of the other's.
  */
 export function DaySky({ size, z }: DaySkyProps) {
   const materialRef = useRef<ShaderMaterial>(null);
