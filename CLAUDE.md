@@ -23,7 +23,11 @@ pitch; this file is for working in the code.
   the UI bundle, under the same rule -- the game menu's own button icons are
   `assets/legacy/icons/game-menu/<button>@64.png` (see the UI's
   `config/icon-urls.ts`; every consumer needs a fallback for when the art
-  isn't served). Serves with `Cache-Control: max-age + must-revalidate` and
+  isn't served) -- though the deployed server holds them under
+  `highfive/icons/game-menu/` and the Pages variable points there, which is
+  drift from this layout rather than a second convention: whichever of the
+  two moves, the folder and the variable have to end up agreeing.
+  Serves with `Cache-Control: max-age + must-revalidate` and
   an ETag from file size/mtime, so overwriting a file is enough to
   invalidate clients' caches (no URL versioning needed). `scripts/` holds
   the offline converters that produce those files from sources the user
