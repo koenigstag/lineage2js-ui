@@ -148,3 +148,6 @@ dist/
 .DS_Store
 
 .envrc
+
+# Scratch git worktrees Claude Code creates for isolated agent runs
+.claude/worktrees/
