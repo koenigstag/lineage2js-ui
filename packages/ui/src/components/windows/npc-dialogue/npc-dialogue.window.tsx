@@ -10,7 +10,20 @@ import type { NpcAction } from "../../../lib/npc-html/npc-html-elements";
 // next closest is 76), which content authors have to match or their own
 // dialogue would get clipped in the real client.
 const WIDTH = 270;
-const MAX_HEIGHT = 480;
+// A genuinely fixed height, not a cap -- the real client's dialogue window is
+// a fixed-size frame that doesn't reflow with its content (short text just
+// leaves blank space below it), so a height that changes with each message
+// makes the window visibly resize/jump on screen every time its content
+// swaps. Height has no equivalent of WIDTH's clean signal though: unlike
+// width=270, which is the dominant convention across hundreds of unrelated
+// plain-text dialogues, a `<table height=...>` attribute in the datapack
+// only shows up on windows with their own custom background texture (eg.
+// height=358 is L2UI_CH3.refinewnd_back_Pattern's own fixed size, reused by
+// several unrelated feature popups) -- there's no equally authoritative
+// number for the plain default chat frame this window renders. 480 keeps the
+// prior cap's value as the fixed height rather than inventing an unverified
+// one.
+const HEIGHT = 480;
 
 // Shown while GameStore.npcDialogue is set (an NpcHtmlMessage) -- windows-root.tsx
 // collapses this window entirely when there's none, same hide-when-empty
@@ -66,7 +79,7 @@ export const NpcDialogueContent = observer(function NpcDialogueContent() {
       ref={containerRef}
       style={{
         width: WIDTH,
-        maxHeight: MAX_HEIGHT,
+        height: HEIGHT,
         overflowY: "auto",
         color: "#d7d7d7",
         fontSize: 12,
