@@ -65,6 +65,8 @@ export interface GltfCharacterModelProps {
    */
   speed?: number;
   nickname?: string;
+  /** Drawn above the nickname, see NicknameLabel. */
+  title?: string;
   selected?: boolean;
   onSelect?: () => void;
   /** CSS cursor shown while hovering the model, e.g. "crosshair" for an attackable mob. Unset leaves the browser default. */
@@ -205,6 +207,7 @@ export function GltfCharacterModel({
   animationStartedAt,
   speed,
   nickname,
+  title,
   selected = false,
   onSelect,
   cursor,
@@ -353,7 +356,7 @@ export function GltfCharacterModel({
   return (
     <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
       {nickname && (
-        <NicknameLabel text={nickname} position={[0, 1.95 * LEGACY_SCENE_SCALE, 0]} height={0.16 * LEGACY_SCENE_SCALE} />
+        <NicknameLabel text={nickname} title={title} position={[0, 1.95 * LEGACY_SCENE_SCALE, 0]} height={0.16 * LEGACY_SCENE_SCALE} />
       )}
 
       <primitive object={model.root} scale={CHARACTER_MODEL_SCALE} />

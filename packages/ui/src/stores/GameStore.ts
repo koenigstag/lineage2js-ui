@@ -69,6 +69,8 @@ import type { BaseClass, SexNames } from "../config/character-races";
 export interface WorldCreatureSnapshot {
   objectId: number;
   name: string;
+  /** NpcInfo/CharInfo's title, drawn above the name the way the retail client stacks them. Undefined when the creature has none -- most players, and npc templates with an empty title. */
+  title?: string;
   x: number;
   y: number;
   z: number;
@@ -698,6 +700,10 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
     // the client to resolve it locally (see NpcInfo.ts's comment) -- fall
     // back to the id->name table for those.
     name: creature.Name || getNpcName(creature.Id, isAttackable),
+    // NpcInfo carries a title for npcs too (the template's rank, e.g.
+    // "Blacksmith") -- it was only being read off the L2Character branch
+    // above, so every npc target dropped it.
+    title: creature.Title || undefined,
     creatureKind: isAttackable ? "mob" : creature instanceof L2Summon ? "summon" : "npc",
     npcRace: getNpcRace(creature.Id),
     level: getNpcLevel(creature.Id),
@@ -739,6 +745,11 @@ function worldCreatureSnapshotFromCreature(
     // all, rather than a raw id (see tryGetNpcName's comment). It still shows
     // that placeholder in the target-select window once actually targeted.
     name: creature instanceof L2Character ? creature.Name : creature.Name || tryGetNpcName(creature.Id) || "",
+    // Server-sent either way (NpcInfo/CharInfo both carry it) -- for an npc
+    // it is the template's rank, e.g. Pinter's "Blacksmith"; for a mob it may
+    // instead be whatever the server generated into it (level, aggro mark),
+    // which is the server's business, not this snapshot's.
+    title: creature.Title || undefined,
     heading: creature.Heading,
     kind,
     isDead: creature.IsDead,

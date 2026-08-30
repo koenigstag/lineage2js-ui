@@ -22,6 +22,8 @@ interface PlayerModelProps {
   /** World units/second while moving, so the walk/run cycle keeps pace. */
   speed?: number;
   nickname?: string;
+  /** Drawn above the nickname, see NicknameLabel. */
+  title?: string;
   selected?: boolean;
   onSelect?: () => void;
   isDead?: boolean;
@@ -32,6 +34,7 @@ export function PlayerModel({
   variant,
   appearance,
   nickname,
+  title,
   selected,
   onSelect,
   isDead,
@@ -51,6 +54,7 @@ export function PlayerModel({
       animationStartedAt={animationStartedAt}
       speed={speed}
       nickname={nickname}
+      title={title}
       selected={selected}
       onSelect={onSelect}
       isDead={isDead}

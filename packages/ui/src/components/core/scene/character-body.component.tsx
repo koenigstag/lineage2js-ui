@@ -45,6 +45,8 @@ export interface CharacterBodyProps {
    */
   appearance?: CharacterAppearance;
   nickname?: string;
+  /** Drawn above the nickname, see NicknameLabel. */
+  title?: string;
   selected?: boolean;
   onSelect?: () => void;
   /** CSS cursor shown while hovering the model, e.g. "crosshair" for an attackable mob. Unset leaves the browser default. */
@@ -90,6 +92,7 @@ export function CharacterBody({ modelUrl, animation, animationStartedAt, speed, 
       animationStartedAt={animationStartedAt}
       speed={speed}
       nickname={body.nickname}
+      title={body.title}
       selected={body.selected}
       onSelect={body.onSelect}
       cursor={body.cursor}

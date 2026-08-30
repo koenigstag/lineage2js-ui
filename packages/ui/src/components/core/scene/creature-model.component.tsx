@@ -111,6 +111,7 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
         // non-players, TS just can't see the kind-based guarantee.
         variant={{ race: creature.race as RaceNames, baseClass: creature.baseClass, sex: creature.sex }}
         nickname={creature.name}
+        title={creature.title}
         animation={animationFor(creature)}
         animationStartedAt={creature.gestureStartedAt}
         speed={creature.speed}
@@ -133,6 +134,7 @@ export function CreatureModel({ creature, selected, ...position }: CreatureModel
       speed={creature.speed}
       color={color}
       nickname={creature.name}
+      title={creature.title}
       cursor={cursor}
       isDead={creature.isDead}
     />

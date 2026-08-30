@@ -25,6 +25,8 @@ interface CharacterModelProps {
   /** Draped cloak hanging from the shoulder (Kamael). Defaults to false. */
   hasCape?: boolean;
   nickname?: string;
+  /** Drawn above the nickname, see NicknameLabel. */
+  title?: string;
   selected?: boolean;
   onSelect?: () => void;
   /** CSS cursor shown while hovering the model, e.g. "crosshair" for an attackable mob. Unset leaves the browser default. */
@@ -56,6 +58,7 @@ export function CharacterModel({
   widthScale = 1,
   hasCape = false,
   nickname,
+  title,
   selected = false,
   onSelect,
   cursor,
@@ -64,7 +67,7 @@ export function CharacterModel({
   return (
     <group position={[x, y, z]} rotation={[0, angleToCenter, 0]}>
       {nickname && (
-        <NicknameLabel text={nickname} position={[0, 1.95 * heightScale * LEGACY_SCENE_SCALE, 0]} />
+        <NicknameLabel text={nickname} title={title} position={[0, 1.95 * heightScale * LEGACY_SCENE_SCALE, 0]} />
       )}
 
       {/*
