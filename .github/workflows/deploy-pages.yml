@@ -70,6 +70,12 @@ jobs:
           # swaps rather than different meshes.
           VITE_CHARACTER_TEXTURE_BASE_URL: ${{ vars.VITE_CHARACTER_TEXTURE_BASE_URL }}
 
+          # Tables converted out of the client's own system/*.dat, so far just
+          # npcstring. Npc dialogue refers to strings by id --
+          # `<fstring>1001004</fstring>` rather than "Oren" -- and unset
+          # leaves those ids rendering as the bare numbers they arrive as.
+          VITE_CLIENT_DATA_BASE_URL: ${{ vars.VITE_CLIENT_DATA_BASE_URL }}
+
           # Real cursor art (.cur files) -- see config/cursor-urls.ts. Unset
           # leaves the browser's native cursor in place everywhere.
           VITE_CURSOR_BASE_URL: ${{ vars.VITE_CURSOR_BASE_URL }}

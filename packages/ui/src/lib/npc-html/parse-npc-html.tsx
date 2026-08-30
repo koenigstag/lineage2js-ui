@@ -1,4 +1,5 @@
 import { createElement, type ReactNode } from "react";
+import { rootStore } from "../../stores/RootStore";
 
 // Structural tags with real HTML/CSS equivalents in L2's html dialect --
 // passed through as the real element, with their (legacy, but still
@@ -107,6 +108,22 @@ function walk(node: ChildNode, key: number): ReactNode {
       createElement("br", { key: `${key}-br` }),
       createElement("span", { key: `${key}-spacer`, style: { display: "block", height: PARAGRAPH_SPACING_PX } }),
     ];
+  }
+
+  if (tagName === "fstring") {
+    // Not markup around text -- the element *is* the id, and the text it
+    // resolves to replaces it whole. The server writes territory and castle
+    // pages this way (lineage2ts's CastleOwnerStatus builds
+    // `Name: <fstring>1001004</fstring> Manor of <fstring>1001000</fstring>`),
+    // so without this the dialogue reads "Name: 1001004 Manor of 1001000".
+    //
+    // Resolved during the walk rather than by a custom element because the
+    // lookup is a plain observable read: the window renders inside an
+    // observer, so a table that arrives after the dialogue did still
+    // re-renders it. Falls back to the id, which is what showed before and
+    // is what a client with no assets server configured still sees.
+    const id = element.getAttribute("id") ?? (element.textContent ?? "").trim();
+    return rootStore.datapack.npcStrings[id] ?? id;
   }
 
   if (STRUCTURAL_TAGS.has(tagName)) {

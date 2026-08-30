@@ -31,8 +31,9 @@ pitch; this file is for working in the code.
   supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles),
   `convert:client-rigs` (an installed game client, read with umodel -> one
   `.glb` per race/sex plus its textures under
-  `assets/highfive/textures/<rig>/`) and `convert:armorgrp` / `convert:chargrp` (the
-  client's `system/*.dat` tables -> `assets/highfive/data/`). `convert:models`, which
+  `assets/highfive/textures/<rig>/`) and `convert:armorgrp` / `convert:chargrp` /
+  `convert:npcstring` (the client's `system/*.dat` tables ->
+  `assets/highfive/data/`). `convert:models`, which
   built the ten non-orc bodies out of a Unity port of the client, is
   superseded by `convert:client-rigs` -- kept for now, but nothing depends
   on its output any more.
@@ -43,7 +44,14 @@ pitch; this file is for working in the code.
   says which mesh and texture each rig wears with a slot empty, so the rig
   converter no longer guesses that from texture names. Don't go back to
   guessing: the guesses were wrong for the mystics' legs and boots and
-  could not find the Kamael's gloves at all. `chargrp.ts` reads the
+  could not find the Kamael's gloves at all. `convert-npcstring.ts` reads the string table
+  npc dialogue is written against -- the server sends
+  `<fstring>1001004</fstring>` and expects the client to draw "Oren" -- and
+  is the one place `DatReader.fstring` matters: those strings are Unreal
+  FStrings whose compact-index length carries the *encoding* in its sign
+  (negative = UTF-16, and it counts characters, not bytes). The table mixes
+  both freely, so assuming either one drifts a byte and then reads garbage.
+  `chargrp.ts` reads the
   appearance table the same way, and reads all of it: hair styles, faces, the
   body each empty equipment slot wears, effects and sounds. Both readers hold
   the same line -- the parse must consume the table exactly, ending on its

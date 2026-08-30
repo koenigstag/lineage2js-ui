@@ -27,6 +27,7 @@ export const App = observer(function App() {
     loadIconMaps();
     datapack.loadNpcRaces();
     datapack.loadNpcLevels();
+    datapack.loadNpcStrings();
     datapack.loadSkillEffectFields();
     datapack.loadCharacterBaseStats();
     datapack.loadItemGrades();

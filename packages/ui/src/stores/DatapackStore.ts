@@ -1,5 +1,6 @@
 import { makeAutoObservable } from "mobx";
 import { fetchDatapack } from "../lib/datapack-cache";
+import { clientDataUrl } from "../config/client-data-urls";
 import type { ItemGrade } from "@lineage2js/network";
 import type { LANG } from "../lang/lang";
 import type { BaseStats, BaseClass, RaceNames, SexNames } from "../config/character-races";
@@ -94,6 +95,21 @@ export class DatapackStore {
    */
   npcTitles: Record<string, string> = {};
   private npcTitlesCache: Partial<Record<LANG, Record<string, string>>> = {};
+  /**
+   * NpcString id -> text, see lib/npc-html's <fstring> handling. The server
+   * sends these by number rather than by value -- a territory page arrives
+   * as `Name: <fstring>1001004</fstring> Manor of <fstring>1001000</fstring>`
+   * and a client that can't resolve them shows the digits.
+   *
+   * Unlike every other table here this one is *not* in public/: it comes
+   * straight out of the client's own npcstring dat, so it lives on the
+   * assets server with the models and textures (see
+   * config/client-data-urls.ts). It is therefore routinely absent -- no
+   * assets server is configured by default -- and an unresolved id has to
+   * degrade to showing the number, which is no worse than today.
+   */
+  npcStrings: Record<string, string> = {};
+  private npcStringsRequested = false;
   /** npcId -> race code (e.g. "UNDEAD"), see config/npc-race-mapping.ts. Not localized -- these are enum codes, not display strings. */
   npcRaces: Record<string, string> = {};
   private npcRacesRequested = false;
@@ -316,6 +332,33 @@ export class DatapackStore {
       this.setNpcRaces(races);
     } catch {
       this.npcRacesRequested = false;
+    }
+  }
+
+  setNpcStrings(strings: Record<string, string>) {
+    this.npcStrings = strings;
+  }
+
+  /**
+   * Fetches the npcstring table off the assets server once. Not through
+   * fetchDatapack(): that versions public/ paths against the build's own
+   * manifest, and this file isn't part of the build -- the assets server
+   * hands out its own ETag from file size/mtime, so overwriting the file is
+   * enough to invalidate a client's cache.
+   */
+  async loadNpcStrings() {
+    const url = clientDataUrl("npcstring-e.json");
+    if (!url || this.npcStringsRequested) return;
+    this.npcStringsRequested = true;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`${response.status}`);
+      }
+      this.setNpcStrings(await response.json());
+    } catch {
+      // leave npcStrings empty -- <fstring> falls back to showing the raw id
+      this.npcStringsRequested = false;
     }
   }
 

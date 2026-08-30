@@ -20,6 +20,8 @@ interface ImportMetaEnv {
   readonly VITE_CHARACTER_MODEL_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/textures/" -- folder of converted character textures (see assets-server/scripts/convert-client-rigs.ts), laid out as `<rig>/<part>-<variant>.png` beside an index.json saying how many variants each rig ships. Unset leaves every body on the flat per-part tints, see config/character-textures.ts. */
   readonly VITE_CHARACTER_TEXTURE_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/data/" -- folder of tables converted out of the client's own `system/*.dat` (see assets-server/scripts/convert-npcstring.ts and config/client-data-urls.ts). Currently just npcstring, which resolves the `<fstring>` ids npc dialogue is written in; unset leaves those showing as bare numbers. */
+  readonly VITE_CLIENT_DATA_BASE_URL: string;
   /** @lineage2js/network Logger verbosity bitmask (NONE=0, INFO=1, WARNING=2, ERROR=4, DEBUG=8). Defaults to INFO. */
   readonly VITE_L2JSC_LOG_LEVEL: string;
   /**

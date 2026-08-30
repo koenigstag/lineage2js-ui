@@ -179,6 +179,46 @@ export class DatReader {
     return value.replace(/\u0000+$/u, "");
   }
 
+  /**
+   * Unreal's variable-length signed integer -- sign in bit 7 of the first
+   * byte, "another byte follows" in bit 6, then 6 value bits; each further
+   * byte carries 7 value bits and its own continuation flag.
+   */
+  compactIndex(): number {
+    let byte = this.data[this.at++];
+    const negative = (byte & 0x80) !== 0;
+    let value = byte & 0x3f;
+    if (byte & 0x40) {
+      let shift = 6;
+      do {
+        byte = this.data[this.at++];
+        value |= (byte & 0x7f) << shift;
+        shift += 7;
+      } while (byte & 0x80);
+    }
+    return negative ? -value : value;
+  }
+
+  /**
+   * Unreal's FString: a compact-index length, then that many NUL-terminated
+   * characters. A *negative* length means the characters are UTF-16 rather
+   * than single-byte -- the sign is the encoding flag, and its magnitude
+   * counts characters, not bytes. npcstring mixes both freely, so reading it
+   * as one or the other drifts a byte at a time until the stream is garbage.
+   */
+  fstring(): string {
+    const length = this.compactIndex();
+    if (length === 0) {
+      return "";
+    }
+    const bytes = length < 0 ? -length * 2 : length;
+    const value = this.data
+      .subarray(this.at, this.at + bytes)
+      .toString(length < 0 ? "utf16le" : "latin1");
+    this.at += bytes;
+    return value.slice(0, -1); // drop the terminator the length counted
+  }
+
   u16(): number {
     const value = this.data.readUInt16LE(this.at);
     this.at += 2;

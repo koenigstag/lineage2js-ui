@@ -13,6 +13,7 @@
     "convert:client-rigs": "tsx scripts/convert-client-rigs.ts",
     "convert:armorgrp": "tsx scripts/convert-armorgrp.ts",
     "convert:chargrp": "tsx scripts/convert-chargrp.ts",
+    "convert:npcstring": "tsx scripts/convert-npcstring.ts",
     "extract:icons": "tsx scripts/extract-client-icons.ts",
     "extract:cursors": "tsx scripts/extract-cursors.ts",
     "lint": "eslint src/**",
