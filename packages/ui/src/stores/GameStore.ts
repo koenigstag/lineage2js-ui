@@ -46,6 +46,7 @@ import { getClassLabel } from "../config/class-tree";
 import { getNpcLevel } from "../config/npc-level-mapping";
 import { getWeaponClass, type WeaponClass } from "../config/weapon-class-mapping";
 import { getNpcName, tryGetNpcName } from "../config/npc-name-mapping";
+import { tryGetNpcTitle } from "../config/npc-title-mapping";
 import {
   CANNOT_MOVE_WHILE_SITTING_MESSAGE_ID,
   formatSystemMessage,
@@ -702,8 +703,10 @@ function targetSnapshotFromCreature(creature: L2Creature, pledgeCache: Map<numbe
     name: creature.Name || getNpcName(creature.Id, isAttackable),
     // NpcInfo carries a title for npcs too (the template's rank, e.g.
     // "Blacksmith") -- it was only being read off the L2Character branch
-    // above, so every npc target dropped it.
-    title: creature.Title || undefined,
+    // above, so every npc target dropped it. In practice the wire field is
+    // empty for npcs and the id->title table is what actually fills this,
+    // for the same reason `name` above needs its own fallback.
+    title: creature.Title || tryGetNpcTitle(creature.Id),
     creatureKind: isAttackable ? "mob" : creature instanceof L2Summon ? "summon" : "npc",
     npcRace: getNpcRace(creature.Id),
     level: getNpcLevel(creature.Id),
@@ -745,11 +748,12 @@ function worldCreatureSnapshotFromCreature(
     // all, rather than a raw id (see tryGetNpcName's comment). It still shows
     // that placeholder in the target-select window once actually targeted.
     name: creature instanceof L2Character ? creature.Name : creature.Name || tryGetNpcName(creature.Id) || "",
-    // Server-sent either way (NpcInfo/CharInfo both carry it) -- for an npc
-    // it is the template's rank, e.g. Pinter's "Blacksmith"; for a mob it may
-    // instead be whatever the server generated into it (level, aggro mark),
-    // which is the server's business, not this snapshot's.
-    title: creature.Title || undefined,
+    // A player's title is genuinely server-sent (CharInfo carries whatever
+    // they set); an npc's is not -- NpcInfo's field comes back empty and the
+    // id->title table stands in, e.g. Pinter's "Blacksmith". Whatever the
+    // server did generate into it wins either way, so a mob's server-side
+    // title (level, aggro mark) still shows as sent.
+    title: creature.Title || (creature instanceof L2Character ? undefined : tryGetNpcTitle(creature.Id)),
     heading: creature.Heading,
     kind,
     isDead: creature.IsDead,

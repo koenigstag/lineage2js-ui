@@ -80,6 +80,20 @@ export class DatapackStore {
    */
   npcNames: Record<string, string> = {};
   private npcNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
+  /**
+   * npcId -> title ("Blacksmith", ...) for the current lang, see
+   * config/npc-title-mapping.ts. Same gap as npcNames -- NpcInfo's title
+   * field is deliberately sent empty and the retail client resolves it from
+   * its own table. Unlike every other table here it is *not* from
+   * adrenalinebot.com, which has no title data: en.json is lineage2ts's own
+   * npcProperties.csv, and ru.json is that run through a hand-written
+   * 474-entry translation table (scripts/npc-titles-ru.ts), since no
+   * localized source exists -- no RU client ships an NpcName-ru.dat to read
+   * the official strings out of. Town names in it are at least the real
+   * localization, lifted from item-names/ru.json's Scroll of Escape entries.
+   */
+  npcTitles: Record<string, string> = {};
+  private npcTitlesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /** npcId -> race code (e.g. "UNDEAD"), see config/npc-race-mapping.ts. Not localized -- these are enum codes, not display strings. */
   npcRaces: Record<string, string> = {};
   private npcRacesRequested = false;
@@ -152,6 +166,7 @@ export class DatapackStore {
     this.loadSkillNames(lang);
     this.loadItemNames(lang);
     this.loadNpcNames(lang);
+    this.loadNpcTitles(lang);
     this.loadQuestNames(lang);
     this.loadSystemMessages(lang);
   }
@@ -301,6 +316,27 @@ export class DatapackStore {
       this.setNpcRaces(races);
     } catch {
       this.npcRacesRequested = false;
+    }
+  }
+
+  setNpcTitles(titles: Record<string, string>) {
+    this.npcTitles = titles;
+  }
+
+  /** Fetches public/npc-titles/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadNpcNames(). */
+  async loadNpcTitles(lang: LANG) {
+    const cached = this.npcTitlesCache[lang];
+    if (cached) {
+      this.setNpcTitles(cached);
+      return;
+    }
+    try {
+      const response = await fetchDatapack(`npc-titles/${lang}.json`);
+      const titles: Record<string, string> = await response.json();
+      this.npcTitlesCache[lang] = titles;
+      this.setNpcTitles(titles);
+    } catch {
+      // leave npcTitles as-is -- an npc just shows its name with no title line
     }
   }
 

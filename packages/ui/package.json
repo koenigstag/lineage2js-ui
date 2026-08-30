@@ -10,6 +10,7 @@
     "build:pages": "tsc --noEmit && vite build --base=/lineage2js-ui/",
     "preview": "vite preview",
     "convert:items": "tsx scripts/convert-items-csv.ts",
+    "convert:npc-titles": "tsx scripts/convert-npc-titles.ts",
     "lint": "eslint src/**",
     "clean": "rm -rf dist"
   },
