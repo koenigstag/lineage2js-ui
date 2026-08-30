@@ -1,0 +1,30 @@
+{
+  "name": "@lineage2js/unreal-l2js-render",
+  "version": "0.0.1",
+  "description": "Unreal Engine 2 asset object model for Lineage 2 (terrain, static meshes, textures, materials, lights) plus the three.js renderer it was written for",
+  "license": "ISC",
+  "author": "Ratchet",
+  "contributors": [
+    "koenigstag"
+  ],
+  "main": "dist/index.js",
+  "types": "src/unreal-index.ts",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lineage2js/unreal-l2js-core": "workspace:*",
+    "gmp-wasm": "^1.1.0",
+    "pako": "^2.1.0",
+    "three": "^0.169.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/three": "^0.185.1",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}

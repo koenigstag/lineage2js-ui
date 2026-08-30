@@ -1,0 +1,377 @@
+import * as dat from "dat.gui";
+import RenderManager from "./rendering/render-manager";
+import { Box3, Vector3, Object3D, BoxHelper, PlaneGeometry, Mesh, SphereGeometry, MeshBasicMaterial, Box3Helper, Color, BoxGeometry, AxesHelper, DirectionalLight, PointLight, DirectionalLightHelper, PointLightHelper, Euler, SpotLight, SpotLightHelper, AmbientLight, SkeletonHelper } from "three";
+
+import AssetManager from "@client/assets/asset-manager";
+import runSectorPrecache from "@client/sector-precache";
+// import { ensureWasmInitialized } from "@lineage2js/unreal-l2js-core";
+
+
+
+
+async function startCore() {
+    // await ensureWasmInitialized();
+
+    if ("storage" in navigator)
+        await navigator.storage.persist();
+
+    const startTime = performance.now();
+
+    const loadSettings: GD.LoadSettings_T = {
+        helpersZoneBounds: false,
+        batching: {
+            terrain: true,
+            staticMeshes: true
+        },
+        cache: {
+            enabled: true,
+            version: 6 // bump when decode logic changes, invalidates all previously cached sectors
+        },
+        decodeWorkerPoolSize: 3, // num workers, 0 will run on main thread
+        textures: "auto",
+        loadTerrain: true,
+        loadBaseModel: true,
+        loadStaticModels: true,
+        loadEmitters: true,
+        loadAudio: true,
+        _loadEmitterList: [],
+        _loadStaticModelList: [
+            // 1441,
+            // 1770,
+            // 1802,
+            // 1804,
+            // 4284,
+            // 10253, // scluptures
+            // 10254, // scluptures
+            // 8028,
+            // 1370, // wall object
+            // 9742, // some ground from cruma loaded first, fails lighting
+            // ...[9742, 9646, 10157, 9675], // some ground from cruma loaded first, fails lighting
+            // 5680, // floor near wall objects
+            // ...[6157, 6101, 6099, 6096, 6095, 6128, 8386, 7270, 9861, 1759, 7273, 9046, 1370, 1195, 10242, 9628, 5665, 5668, 9034, 10294, 9219, 7312, 5662, 5663] // wall objects
+            // 555,// elven ruins colon
+            // 47, // rock with ambient light
+            // 2369,
+            // 2011, // cruma: ceiling fixture that's too red
+            // "StaticMeshActor2028", "StaticMeshActor2030", "StaticMeshActor2119", "StaticMeshActor1792", // cruma: why is this black
+            // 2774, // necropolis entrance
+            //4718, // cruma base
+            // 4609, // transparency issue
+            // ...[2011, /*6100, 6130*/], // ceiling fixture that's too red with 0xe lights
+            // ...[1463, 1500, 2011, 2012, 6100, 6127, 6129, 6130, 7290, 7334, 1380, 1386,], // all ceiling fixture that's too red
+            // 610, // light fixture with 2 lights near elven ruins
+            // 591,
+            // 602 // 0x42
+            // "StaticMeshActor613",
+            // "StaticMeshActor9", // elven ruins colon thats flipped improperly
+            // "StaticMeshActor1484", // elven ruins entrance
+            // "StaticMeshActor338", // fallen elven ruins colon beneath the StaticMeshActor9
+            // // "StaticMeshActor6", // talking island church (3705 vertices)
+            // 470,    // first object with scene lights near elven ruins
+            // 1755, // light fixture with 3 lights near elven ruins
+            // ...[608, 610, 1755, 1781] // elven ruins light fixtures
+
+            // ...[/*2092,*/ /*3052,*/ 2517], // talking island collision
+            // ...["StaticMeshActor475"] // talking island village broken rock
+            // "StaticMeshActor684", // cruma light
+            // "StaticMeshActor2841"
+            // "StaticMeshActor517", // cruma too dark
+            // "StaticMeshActor1893" // cruma: broken floating platform light
+
+            // "StaticMeshActor495", /*"StaticMeshActor188",*/ //"StaticMeshActor6",
+            // "StaticMeshActor1042"
+
+            // "StaticMeshActor4596", /* too bright */ //"StaticMeshActor4195", /* okay */
+
+            "StaticMeshActor49", /* church indoors too dark */ "StaticMeshActor6", /* church outdoors */
+        ]
+    } as const;
+
+    if (new URLSearchParams(location.search).has("precacheSectors")) {
+        await runSectorPrecache(loadSettings);
+        return;
+    }
+
+    // debugger;
+    const viewport = document.querySelector("viewport") as HTMLViewportElement;
+    const assetList = await (await fetch("asset-list.json")).json();
+    const assetManager = new AssetManager(loadSettings, assetList.supported);
+    const renderManager = new RenderManager(viewport, assetManager);
+
+    (global as any).renderManager = renderManager;
+
+    const objectGroup = renderManager.objectGroup;
+
+    // await _decodeDatFile("assets/system/Npcgrp.dat");
+
+    await assetManager.initialize(renderManager);
+
+    renderManager.addClippingRangeControls();
+    renderManager.addDisplayGammaControls();
+    
+
+    // await _decodeCharacter(renderManager, assetLoader, "Fighter", "FFighter");
+    // await _decodeMonster(renderManager, assetLoader, "LineageMonsters");
+
+
+    
+
+    // const classess = [];
+
+    // for (const { index } of pkgCore.exportGroups["Class"]) {
+
+    //     const _UClass = await pkgCore.fetchObject<UClass>(index + 1);
+
+    //     await _UClass.onDecodeReady();
+
+    //     // debugger;
+
+    //     // await _UClass.constructClass();
+
+    //     classess.push(_UClass);
+
+    //     // debugger;
+    // }
+
+    // debugger;
+
+    // const structs = [];
+
+    // for (const { index } of pkgCore.exportGroups["Struct"]) {
+
+    //     const _UStruct = await pkgCore.fetchObject<UStruct>(index + 1);
+
+    //     // debugger;
+
+    //     await _UStruct.onDecodeReady();
+
+    //     console.log(_UStruct.friendlyName);
+
+    //     structs.push(_UStruct);
+    // }
+
+
+    // debugger;
+
+
+    
+    // pkgEngine.loadNativeClasses();
+
+
+    // const sound = await assetLoader.load(assetLoader.getPackage("MonSound3", "Sound"));
+    // const ants = sound.exports.filter(x=>x.objectName.toLowerCase().includes("antaras"))
+
+    // ants.slice(1).forEach(s=>sound.fetchObject(s.index+1).loadSelf());
+
+    // // const antWait = sound.fetchObject(4).loadSelf();
+
+    // debugger;
+
+    // // const fnObjectMain = await pkgCore.fetchObject(741);
+    // // await fnObjectMain.onDecodeReady();
+
+    // // const fltObjectMin = await pkgCore.fetchObject(13);
+    // // await fltObjectMin.onDecodeReady();
+
+
+    // // const fnObjectRandRng = await pkgCore.fetchObject(716);
+
+
+    // // await fnObjectRandRng.onDecodeReady();
+
+    // // debugger;
+
+    // // const textBuffers = [];
+
+    // // for (const { index } of pkgCore.exportGroups.TextBuffer) {
+    // //     const object = await pkgCore.fetchObject<UTextBuffer>(index + 1);
+
+    // //     await object.onDecodeReady();
+
+    // //     textBuffers.push(object);
+    // // }
+
+    // debugger;
+
+    // for (const { index } of pkgCore.exportGroups.Class) {
+    //     const object = await pkgCore.fetchObject<UClass>(index + 1);
+
+    //     await object.onDecodeReady();
+
+    //     debugger;
+    // }
+
+    // debugger;
+
+    // for (const { index } of pkgCore.exportGroups.Struct) {
+    //     const object = await pkgCore.fetchObject<UStruct>(index + 1);
+
+    //     // debugger;
+
+    //     await object.onDecodeReady();
+
+    //     // debugger;
+
+    //     // UClassRegistry.register(object);
+    // }
+
+    // const registered = UClassRegistry.structs;
+
+    // debugger;
+
+    // for (const { index } of pkgEngine.exportGroups.Struct) {
+    //     debugger;
+
+    //     const object = await pkgEngine.fetchObject<UStruct>(index + 1);
+
+    //     await object.onDecodeReady();
+
+    //     debugger;
+
+    //     UClassRegistry.register(object);
+
+    //     debugger;
+    // }
+
+    // const structs = UClassRegistry.structs;
+
+    // debugger;
+
+
+
+    // debugger;
+
+    // const UWeaponId = pkgEngine.exports.find(e => e.objectName === "Weapon").index + 1;
+    // const UWeapon = await pkgEngine.fetchObject(UWeaponId);
+
+    // await UWeapon.onDecodeReady();
+
+    // debugger;
+
+    // const fn1 = await pkgCore.fetchObject<UFunction>(721); // first function read when starting the game
+    // const fn3 = await pkgCore.fetchObject<UFunction>(716); // third function read when starting the game
+
+    // debugger;
+
+    // const objs = [] as UFunction[];
+    // const _pkg = pkgEngine;
+
+    // const groups = [
+    //     ..._pkg.exportGroups.Function,
+    //     ..._pkg.exportGroups.Class,
+    //     ..._pkg.exportGroups.Struct
+    // ]
+
+    // debugger;
+
+    // for(let {index} of groups.filter(x=>![/*674, 739, 991, 994, 1305, 1308, 1376, 1407, 1417, 1857, 1859, 1905*/].includes(x.index))) {
+    //     const a = await _pkg.fetchObject<UFunction>(index+1);
+    //     objs.push(a);
+
+    //     // debugger;
+    // };
+
+    // console.log(objs)
+
+    // debugger;
+
+    // const pkgEffects = await assetLoader.load(assetLoader.getPackage("lineageeffect", "Script"));
+
+    // const uMortalBlow = pkgEffects.fetchObject<UClass>(21);
+    // const MortalBlow = uMortalBlow.buildClass<UEmitter>(assetLoader.getPackage("native", "Script") as UNativePackage);
+    // const mortalBlow = new MortalBlow();
+    // const decodedMortalBlow = mortalBlow.getDecodeInfo(new DecodeLibrary());
+
+    // const uRapidShot = pkgEffects.fetchObject<UClass>(657);
+    // const RapidShot = uRapidShot.buildClass<UEmitter>(assetLoader.getPackage("native", "Script") as UNativePackage);
+    // const rapidShot = new RapidShot();
+    // const decodedRapidshot = rapidShot.getDecodeInfo(new DecodeLibrary());
+
+    // debugger;
+
+
+    // working (or mostly working)
+    // await assetManager.setAlwaysLoaded(renderManager, assetLoader.getPackage("20_21", "Level")); // cruma tower
+    // await assetManager.setAlwaysLoaded(renderManager, assetLoader.getPackage("20_22", "Level")); // dion
+
+
+    
+
+    
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "20_21", loadSettings));  
+
+    // assetLoader.free(assetLoader.getPackage("20_21", "Level"));
+
+    // debugger;
+
+    // await _decodePackage(renderManager, assetLoader, "20_21", loadSettings)
+
+    // debugger;
+
+    // debugger;
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "19_17", loadSettings));  // olympiad
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "20_20", loadSettings));  // elven fortress
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "20_19", loadSettings));  // elven forest
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "21_22", loadSettings));  // execution grounds
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "19_21", loadSettings));  // gludio
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "22_22", loadSettings));  // giran
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "19_22", loadSettings));  // ruins of despair
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "19_23", loadSettings));  // ants nest
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "22_21", loadSettings));  // death pass
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "23_22", loadSettings));  // giran castle
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "21_20", loadSettings));  // iris lake
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "21_19", loadSettings));  // elven village
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "25_21", loadSettings));  // antharas lair
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "24_17", loadSettings));  // blazing swamp
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "20_18", loadSettings));  // dark elf village
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "24_18", loadSettings));  // aden castle town
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "23_20", loadSettings));  // hunters village
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "23_18", loadSettings));  // tower of insolence
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "23_21", loadSettings));  // dragon valley
+
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "15_24", loadSettings));  // TI
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "16_24", loadSettings));  // TI - north of talking island
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "17_24", loadSettings));  // TI
+
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "15_25", loadSettings));  // TI
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "16_25", loadSettings));  // TI - elven ruins
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "17_25", loadSettings));  // TI - talking island village
+
+
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "16_23", loadSettings));
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "16_22", loadSettings));
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "17_22", loadSettings));
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "18_22", loadSettings));
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "18_21", loadSettings));
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "19_21", loadSettings));
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "20_21", loadSettings));
+
+
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "25_19", loadSettings));  // giants cave
+
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "15_26", loadSettings));  // TI
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "16_26", loadSettings));  // TI
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "17_26", loadSettings));  // TI
+
+    // crashing
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "17_22", loadSettings));  // gludin
+
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "lobby", loadSettings));  // lobby
+    // renderManager.addSector(await _decodePackage(renderManager, assetLoader, "lobby", loadSettings));  // lobby
+
+    // Load global sky level
+
+    
+
+    console.info(`System has loaded in ${(performance.now() - startTime) / 1000}s!`);
+
+    // debugger;
+
+    // renderManager.enableZoneCulling = false;
+    renderManager.scene.add(objectGroup);
+    renderManager.scene.add(new BoxHelper(objectGroup));
+    renderManager.startRendering();
+}
+
+export default startCore;
+export { startCore };

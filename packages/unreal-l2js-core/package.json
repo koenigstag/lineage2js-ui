@@ -1,0 +1,40 @@
+{
+  "name": "@lineage2js/unreal-l2js-core",
+  "version": "0.0.1",
+  "description": "Unreal Engine 2 package reader for Lineage 2 client files (name/import/export tables, tagged properties, L2 decryption)",
+  "license": "ISC",
+  "author": "Ratchet",
+  "contributors": [
+    "koenigstag"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./src/*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "gmp-wasm": "^1.1.0",
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/pako": "^2.0.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    // Vendored third-party source (see README) -- kept as close to upstream as
+    // possible so a re-sync stays a copy. It predates this repo's strict
+    // settings, so the two that would rewrite hundreds of lines of someone
+    // else's code are off here and nowhere else.
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    // src/supported-extensions.js is deliberately plain JS upstream ("used in
+    // some webpack configurations"), so the build has to accept it.
+    "allowJs": true,
+    // Upstream is transpiled by babel, which erases types per file the same way
+    // isolatedModules requires; a handful of its re-exports still need the
+    // `export type` form, which the H5 patches add where the compiler asks.
+    "isolatedModules": true
+  },
+  "include": ["src", "global.d.ts", "index.d.ts"]
+}
