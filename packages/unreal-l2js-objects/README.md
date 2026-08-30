@@ -80,6 +80,13 @@ Upstream targets **Chronicle 4**. Each patch is commented in place and marked
   Nothing reads them; they only have to be constructible. These two are the
   complete set -- found by letting the default branch collect names instead of
   throwing, then running the whole client through it.
+- **`unreal-l2js-core`'s `findObjectRef`** -- name lookup is now
+  case-insensitive, which is what Unreal's `FName` comparison has always been.
+  This client's own packages disagree on the case of a group name:
+  `20_18.unr`'s name table spells it `Darkelf` where `Oren_tree_S.usx` spells
+  it `DarkElf`. A case-sensitive compare resolved every mesh in that group to
+  None -- silently, because Unreal treats an unresolvable reference as None --
+  which is how a map quietly loses all its trees.
 - **three's exports map** -- `three/src/math/MathUtils` and
   `three/src/renderers/webgl/WebGLCapabilities` are no longer reachable, and
   `generateUUID` / `RAD2DEG` / `clamp` / `lerp` / `mapLinear` are not root
@@ -94,3 +101,12 @@ Upstream targets **Chronicle 4**. Each patch is commented in place and marked
 - **`@l2js/core` renamed to `@lineage2js/unreal-l2js-core`** throughout, so the
   fork does not squat the upstream package name. A pure scope rename -- 102
   specifiers, mechanical to re-apply after a re-sync.
+
+## Known gap
+
+`UStaticMesh.doLoad` does not consume a High Five static mesh exactly -- it
+trips its own `readHead === readTail` assertion. The bounding box survives
+(`UPrimitive` reads it first, before the divergence), so actor placement and
+sizes are already usable, but the geometry is not. This is the next thing to
+reverse before static meshes can be rendered, and it has to be right rather
+than approximately right: it is vertex data.

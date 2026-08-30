@@ -19,6 +19,14 @@ import { flagBitsToDict } from "../utils/flags";
 import { pathToPkgName } from "../asset-loader";
 
 
+/**
+ * Patched for High Five (see README): Unreal compares FNames without regard to
+ * case, and this client's own packages disagree on the case of a group name.
+ */
+function namesEqual(a: string, b: string): boolean {
+    return a === b || a.toLowerCase() === b.toLowerCase();
+}
+
 abstract class APackage extends UEncodedFile {
     public readonly loader: C.AAssetLoader;
 
@@ -460,29 +468,36 @@ abstract class APackage extends UEncodedFile {
         // exports can grow between calls (registerNativeClass pushes while resolving), only index the newly appended ones
         for (let i = this.exportsByNameCount, len = this.exports.length; i < len; i++) {
             const exp = this.exports[i];
-            const list = this.exportsByName.get(exp.objectName);
+            // Patched for High Five (see README): keyed case-insensitively,
+            // because Unreal's FName comparison is. Two packages of the same
+            // client really do spell one group differently -- 20_18.unr's name
+            // table has "Darkelf" where Oren_tree_S.usx has "DarkElf" -- and a
+            // case-sensitive lookup silently resolves every mesh in that group
+            // to None, which is how a map loses its trees.
+            const key = exp.objectName.toLowerCase();
+            const list = this.exportsByName.get(key);
 
             if (list) list.push(exp);
-            else this.exportsByName.set(exp.objectName, [exp]);
+            else this.exportsByName.set(key, [exp]);
         }
 
         this.exportsByNameCount = this.exports.length;
 
-        const candidates = this.exportsByName.get(objectName) ?? [];
+        const candidates = this.exportsByName.get(objectName.toLowerCase()) ?? [];
 
         for (const exp of candidates) {
             if (groupName !== "None") {
                 if (exp.idPackage > 0) {
                     const pkg = this.exports[exp.idPackage - 1];
 
-                    if (pkg && groupName !== pkg.objectName) {
+                    if (pkg && !namesEqual(groupName, pkg.objectName)) {
                         continue;
                     }
 
                 } else if (exp.idPackage < 0) {
                     const outer = this.imports[-exp.idPackage - 1];
 
-                    if (outer && groupName !== outer.objectName) {
+                    if (outer && !namesEqual(groupName, outer.objectName)) {
                         continue;
                     }
 
