@@ -1,4 +1,4 @@
-# @lineage2js/unreal-l2js-render
+# @lineage2js/unreal-l2js-objects
 
 The Unreal Engine 2 **asset object model** for Lineage 2 -- terrain, static
 meshes, BSP, textures, materials, lights, zones, emitters -- plus the three.js

@@ -1,5 +1,5 @@
 {
-  "name": "@lineage2js/unreal-l2js-render",
+  "name": "@lineage2js/unreal-l2js-objects",
   "version": "0.0.1",
   "description": "Unreal Engine 2 asset object model for Lineage 2 (terrain, static meshes, textures, materials, lights) plus the three.js renderer it was written for",
   "license": "ISC",

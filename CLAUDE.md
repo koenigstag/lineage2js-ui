@@ -13,7 +13,7 @@ pitch; this file is for working in the code.
   extending a packet.
 - `packages/ui` (`@lineage2js/ui`) — the web client. Vite + React + TypeScript
   + MobX (`mobx-react-lite`). This is where almost all UI work happens.
-- `packages/unreal-l2js-core` + `packages/unreal-l2js-render` — **vendored
+- `packages/unreal-l2js-core` + `packages/unreal-l2js-objects` — **vendored
   forks** (ISC, realratchet's l2js-core and Lineage2JS) that read the client's
   Unreal Engine 2 packages: `.unr` maps, `.utx` textures, `.usx` static
   meshes. This is the one thing no off-the-shelf tool does — umodel covers the
@@ -24,7 +24,7 @@ pitch; this file is for working in the code.
   marked `Patched for High Five` in the source. **Read those READMEs before
   editing either package** — the divergence is kept deliberately small so a
   re-sync stays a copy plus the recorded patches. The core builds with `tsc`
-  and typechecks clean; the render package builds with esbuild (webpack
+  and typechecks clean; the objects package builds with esbuild (webpack
   aliases) and its `typecheck` is advisory with a recorded baseline. Its
   `smoke.mjs`, pointed at a real client, is the regression test for the
   patches.

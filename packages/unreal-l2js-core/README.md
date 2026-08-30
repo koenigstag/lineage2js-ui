@@ -10,7 +10,7 @@ objects from, and L2's own file encryption.
 LICENSE file; its `package.json` declares ISC, and the standard text with the
 author's copyright is reproduced in `LICENSE.txt`.
 
-The companion package is [`@lineage2js/unreal-l2js-render`](../unreal-l2js-render),
+The companion package is [`@lineage2js/unreal-l2js-objects`](../unreal-l2js-objects),
 vendored from the same author's renderer; between them they are what reads the
 world out of `.unr` maps, which no off-the-shelf tool does (see
 [`packages/assets-server/README.md`](../assets-server/README.md) for what
@@ -30,10 +30,10 @@ these". Every patch is commented in place, and each one is marked in the
 source so `git log -S` finds it.
 
 - **`src/unreal/un-object.ts`** -- declared the `make` / `class` statics that
-  `un-object-mixin.ts` (in the render package) installs on every subclass at
+  `un-object-mixin.ts` (in the objects package) installs on every subclass at
   runtime. Upstream declares them only in a `declare module` augmentation,
   which cannot merge onto an existing class, so several hundred call sites in
-  the render package had no types for them. Declaration only; emits nothing.
+  the objects package had no types for them. Declaration only; emits nothing.
 - **`src/crypto/decryption/decrypt-rsa.ts`** -- one `as ArrayBuffer` cast.
   Newer TypeScript lib types a typed array's `.buffer` as `ArrayBufferLike`,
   which admits `SharedArrayBuffer`; pako never allocates one.
@@ -42,12 +42,12 @@ Nothing else in `src/` is modified.
 
 ## Build
 
-`tsc` per file into `dist/`, with declarations -- the render package's bundler
+`tsc` per file into `dist/`, with declarations -- the objects package's bundler
 resolves deep subpaths (`.../src/unreal/un-array`) through the `exports` map,
 which points them at the built output. The emitted JavaScript keeps
 extension-less relative imports (upstream is transpiled by babel and bundled
 by webpack), so **Node cannot import `dist/` directly** -- a bundler has to
-resolve it. The render package does exactly that and re-exports what a Node
+resolve it. The objects package does exactly that and re-exports what a Node
 consumer needs.
 
 The tsconfig turns off `strictNullChecks`, `strictPropertyInitialization` and

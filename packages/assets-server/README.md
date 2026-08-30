@@ -31,7 +31,7 @@ TypeScript, verified against a disassembly of the retail client (its terrain
 shader cites `ATerrainInfo::Render (0x9bdfb8)` for the `Modulate2X` pass). Both
 are **vendored into this workspace** as
 [`@lineage2js/unreal-l2js-core`](../unreal-l2js-core) and
-[`@lineage2js/unreal-l2js-render`](../unreal-l2js-render), with the High Five
+[`@lineage2js/unreal-l2js-objects`](../unreal-l2js-objects), with the High Five
 patches applied -- read those READMEs before touching either. Upstream targets
 **C4**; the deltas are listed under "High Five vs C4" below.
 
@@ -182,7 +182,7 @@ Deltas found so far against Lineage2JS's readers, which were written for C4:
   (`float4 texcolor0=tex2D(s[0], ...)`) -- each string preceded by a one-byte
   tag -- and a four-byte trailer reading `08 00 26 03`. High Five ships a
   per-texture shader snippet C4 does not have. Patched in
-  `unreal-l2js-render`'s `un-texture.ts` and verified against upstream's own
+  `unreal-l2js-objects`'s `un-texture.ts` and verified against upstream's own
   "consumed exactly" assertion over 109 textures in 6 packages, in all three
   formats present (`G16`, `DXT1`, `P8`).
 - **Two structs C4 does not declare**: `INT64` and `ParamMap`, which

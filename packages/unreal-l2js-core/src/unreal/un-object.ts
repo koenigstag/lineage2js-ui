@@ -162,7 +162,7 @@ abstract class UObject implements C.ISerializable {
     public static UNREAD_AS_NATIVE = false;
 
     // Patched for this fork (see README). `un-object-mixin.ts` in
-    // @lineage2js/unreal-l2js-render installs these two statics on every
+    // @lineage2js/unreal-l2js-objects installs these two statics on every
     // subclass through onClassCreated, and several hundred call sites there
     // rely on them. Upstream only declared them in a `declare module`
     // augmentation, which cannot merge onto an existing class -- so to the
