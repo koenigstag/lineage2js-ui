@@ -1260,14 +1260,17 @@ export class GameStore {
     if (!creature) {
       return;
     }
-    // Same geodata gate as a move order: selecting something in the 3D scene
-    // is the first half of "walk over and act on it" (see the click handling
-    // in GameCreaturesField), so a creature the straight line can't reach --
-    // across a canyon, on a bridge deck above us -- isn't selected at all
-    // rather than selected and then never actually reached.
-    if (!this.isStraightPathClear(creature.X, creature.Y, creature.Z, "target at")) {
-      return;
-    }
+    // Deliberately no isStraightPathClear gate here (unlike moveTo/chase
+    // to): that gate is a *walking* concern, not a targeting one, and
+    // reusing it here made every NPC standing behind a counter or other
+    // low fixture -- geodata correctly sees no straight walkable line
+    // through the counter -- impossible to ever select at all, since
+    // selecting is what sends the Action/hit packet the server uses to
+    // open its dialogue. The real client lets you target/talk to those
+    // just fine; only actually walking to a target's exact tile needs a
+    // real path, and act() (attack/talkToNpc) already walks into range
+    // itself via queueActionInRange, which will surface a genuinely
+    // unreachable target there instead, without also blocking selection.
     this.client?.hit(objectId);
     this.target = targetSnapshotFromCreature(creature, this.pledgeCache);
     this.pendingAction = undefined;
