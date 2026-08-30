@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { useGameStore } from "../../../stores/StoreContext";
 import { parseNpcHtml } from "../../../lib/npc-html/parse-npc-html";
+import type { NpcAction } from "../../../lib/npc-html/npc-html-elements";
 
 // 270 is the real client's own NPC dialogue window content width -- confirmed
 // against the lineage2ts datapack's actual .htm sources (cli/overrides/html):
@@ -21,7 +22,10 @@ const MAX_HEIGHT = 480;
 // parseNpcHtml is the actual safety boundary for the server-sent html string
 // (see packages/ui/src/lib/npc-html) -- this component just mounts its
 // result and forwards the l2-link "l2npcbypass" CustomEvent to the network
-// layer via GameStore.sendNpcBypass.
+// layer via GameStore.sendNpcBypass/sendNpcLink, picking whichever the event
+// says the link actually was -- "bypass" and "link" are different packets
+// server-side (see npc-html-elements.ts's NpcAction comment), not two
+// spellings of the same thing.
 export const NpcDialogueContent = observer(function NpcDialogueContent() {
   const game = useGameStore();
   const dialogue = game.npcDialogue;
@@ -40,13 +44,17 @@ export const NpcDialogueContent = observer(function NpcDialogueContent() {
       return;
     }
 
-    function handleBypass(event: Event) {
-      const { action } = (event as CustomEvent<{ action: string }>).detail;
-      game.sendNpcBypass(action);
+    function handleAction(event: Event) {
+      const { kind, command } = (event as CustomEvent<NpcAction>).detail;
+      if (kind === "link") {
+        game.sendNpcLink(command);
+      } else {
+        game.sendNpcBypass(command);
+      }
     }
 
-    container.addEventListener("l2npcbypass", handleBypass);
-    return () => container.removeEventListener("l2npcbypass", handleBypass);
+    container.addEventListener("l2npcbypass", handleAction);
+    return () => container.removeEventListener("l2npcbypass", handleAction);
   }, [game, dialogue]);
 
   if (!dialogue) {

@@ -1520,6 +1520,11 @@ export class GameStore {
     this.client?.requestBypass(action);
   }
 
+  /** Same as sendNpcBypass, but for a link-kind action (`<a action="link ...">`) -- a distinct packet server-side (RequestLinkHtml, not RequestBypassToServer), see npc-html-elements.ts's NpcAction comment. */
+  sendNpcLink(link: string) {
+    this.client?.requestLinkHtml(link);
+  }
+
   acceptPartyInvite() {
     this.client?.acceptJoinParty();
     this.partyInviteRequest = undefined;

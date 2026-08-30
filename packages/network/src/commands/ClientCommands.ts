@@ -325,6 +325,15 @@ export default interface ClientCommands {
    */
   requestBypass(text: string): void;
   /**
+   * Send a link string to the server (RequestLinkHtml) -- a distinct NPC
+   * dialogue link kind from bypass: `<a action="link ...">` names another
+   * html page to load rather than a server-side command to run, and the
+   * server only recognizes it on this opcode (0x22), not
+   * RequestBypassToServer's (0x23) -- see l2-link's "l2npcbypass"
+   * CustomEvent in the UI package, which tags which of the two a click was.
+   */
+  requestLinkHtml(link: string): void;
+  /**
    * Send logout request
    */
   logout(): void;

@@ -40,6 +40,7 @@ import CommandRequestBypass from "./CommandRequestBypass";
 import CommandRequestDuel from "./CommandRequestDuel";
 import CommandRequestCharacterTemplates from "./CommandRequestCharacterTemplates";
 import CommandRequestJoinParty from "./CommandRequestJoinParty";
+import CommandRequestLinkHtml from "./CommandRequestLinkHtml";
 import CommandRequestTrade from "./CommandRequestTrade";
 import CommandRestart from "./CommandRestart";
 import CommandRevive from "./CommandRevive";
@@ -102,6 +103,7 @@ import CommandValidatePosition from "./CommandValidatePosition";
   requestCharacterTemplates: CommandRequestCharacterTemplates.prototype,
   requestDuel: CommandRequestDuel.prototype,
   requestJoinParty: CommandRequestJoinParty.prototype,
+  requestLinkHtml: CommandRequestLinkHtml.prototype,
   requestTrade: CommandRequestTrade.prototype,
   restart: CommandRestart.prototype,
   revive: CommandRevive.prototype,

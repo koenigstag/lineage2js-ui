@@ -50,7 +50,50 @@ class L2FontElement extends HTMLElement {
   }
 }
 
-// <a action="bypass -h npc_%objectId%_Chat 0">text</a> -- not navigation.
+// <a action="bypass -h npc_%objectId%_Chat 0">text</a> and
+// <a action="link somefile.htm">text</a> -- neither is navigation. Both
+// carry a local-execution prefix that is not part of the payload: the
+// server's own HtmlActionCache strips it the same way before caching each
+// link's real action (and, once a dialogue has been through its
+// obfuscation pass, before matching an incoming click against that cache)
+// -- lineage2ts's HtmlActionCache.validateHtmlAction() looks up the text
+// verbatim, so sending the prefix along with it is just a cache miss: the
+// server returns bypassOriginId -1 and silently drops the request, no
+// error, no reply. Confirmed against lineage2ts's own reference client
+// (server-testing/source/client/systems/HtmlBrowser.ts), which strips the
+// identical "bypass -h "/"bypass " prefix before sending.
+//
+// "link" is not just a spelling variant of "bypass": it is a genuinely
+// different packet on the wire (RequestLinkHtml, opcode 0x22, vs
+// RequestBypassToServer's 0x23) that names another html page to load
+// rather than a server-side command to run -- confirmed live: a dialogue's
+// numbered "Chat N"-style continuation link used action="link ..." while
+// its sibling keyword bypasses ("Quest", "TerritoryStatus") used
+// "bypass -h ...", and only the latter reached the server at all before
+// this was handled, since both were being sent as a bypass regardless of
+// which prefix they carried.
+const LINK_PREFIX = "link ";
+const BYPASS_H_PREFIX = "bypass -h ";
+const BYPASS_PREFIX = "bypass ";
+
+export interface NpcAction {
+  kind: "bypass" | "link";
+  command: string;
+}
+
+function parseNpcAction(action: string): NpcAction {
+  if (action.startsWith(LINK_PREFIX)) {
+    return { kind: "link", command: action.slice(LINK_PREFIX.length) };
+  }
+  if (action.startsWith(BYPASS_H_PREFIX)) {
+    return { kind: "bypass", command: action.slice(BYPASS_H_PREFIX.length) };
+  }
+  if (action.startsWith(BYPASS_PREFIX)) {
+    return { kind: "bypass", command: action.slice(BYPASS_PREFIX.length) };
+  }
+  return { kind: "bypass", command: action };
+}
+
 // Dispatches a bubbling CustomEvent instead of taking a callback prop: React
 // 18 passes non-standard custom-element props to the DOM as string
 // attributes only (not JS properties the way React 19 does), so a function
@@ -62,8 +105,8 @@ class L2LinkElement extends HTMLElement {
       return;
     }
     this.dispatchEvent(
-      new CustomEvent<{ action: string }>("l2npcbypass", {
-        detail: { action },
+      new CustomEvent<NpcAction>("l2npcbypass", {
+        detail: parseNpcAction(action),
         bubbles: true,
         composed: true,
       })
