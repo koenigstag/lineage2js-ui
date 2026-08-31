@@ -1,7 +1,7 @@
 import { BufferGeometry, Material, Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, WebGLRenderer } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
-import { getStaticMeshMaterialsUrl, getStaticMeshTextureUrl, getStaticMeshUrl } from "../../config/world-assets";
+import { getMeshTableUrl, getStaticMeshTextureUrl, getStaticMeshUrl } from "../../config/world-assets";
 
 /**
  * One drawable part of a static mesh: a geometry and the material it is drawn
@@ -45,21 +45,31 @@ export function initStaticMeshTextures(renderer: WebGLRenderer): void {
 const cache = new Map<string, StaticMeshPart[] | null>();
 const inFlight = new Map<string, Promise<StaticMeshPart[] | null>>();
 
-/** Qualified mesh name -> the texture each of its material slots wears. */
-let materialsRequest: Promise<Record<string, (string | null)[]>> | undefined;
+/** What the converter knows about a mesh that its glTF does not carry. */
+export interface MeshInfo {
+  /** Per material slot, the qualified texture it wears. */
+  textures: (string | null)[];
+  /** The client's own simplified versions, nearest first. Only trees have them. */
+  lods?: string[];
+  /** Bounding radius in client units. */
+  radius: number;
+}
 
-function meshMaterials(): Promise<Record<string, (string | null)[]>> {
-  materialsRequest ??= (async () => {
-    const url = getStaticMeshMaterialsUrl();
+let tableRequest: Promise<Record<string, MeshInfo>> | undefined;
+
+/** The whole table, fetched once. */
+export function meshTable(): Promise<Record<string, MeshInfo>> {
+  tableRequest ??= (async () => {
+    const url = getMeshTableUrl();
     if (!url) return {};
     try {
       const response = await fetch(url);
-      return response.ok ? ((await response.json()) as Record<string, (string | null)[]>) : {};
+      return response.ok ? ((await response.json()) as Record<string, MeshInfo>) : {};
     } catch {
       return {};
     }
   })();
-  return materialsRequest;
+  return tableRequest;
 }
 
 export function getCachedStaticMesh(name: string): StaticMeshPart[] | null | undefined {
@@ -106,7 +116,7 @@ export function loadStaticMesh(name: string): Promise<StaticMeshPart[] | null> {
 const textures = new Map<string, Promise<unknown>>();
 
 async function applyTextures(meshName: string, parts: StaticMeshPart[]): Promise<void> {
-  const slots = (await meshMaterials())[meshName];
+  const slots = (await meshTable())[meshName]?.textures;
   if (!slots) return;
 
   for (const part of parts) {

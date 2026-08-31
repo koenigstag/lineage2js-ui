@@ -9,7 +9,7 @@
  * that geometry wears:
  *
  *   assets/highfive/static-meshes/<Package>/    glTF per mesh, via umodel
- *   assets/highfive/static-meshes/materials.json  mesh -> its textures, per slot
+ *   assets/highfive/static-meshes/meshes.json   per mesh: its textures, LOD chain, size
  *   assets/highfive/static-mesh-textures/<Package>/<Name>.ktx2
  *
  * This is the one part of the client nothing off the shelf reads. umodel
@@ -304,7 +304,7 @@ async function referencedMeshes(mapNames?: string[]): Promise<Set<string>> {
  * being read: a mesh is referenced by many maps and its materials do not
  * depend on where it stands.
  */
-async function collectMaterials(loader: ClientLoader, meshes: Set<string>): Promise<Record<string, (string | null)[]>> {
+async function collectMeshInfo(loader: ClientLoader, meshes: Set<string>): Promise<Record<string, MeshInfo>> {
   const byPackage = new Map<string, string[]>();
   for (const name of meshes) {
     const pkg = name.split(".")[0].toLowerCase();
@@ -313,7 +313,7 @@ async function collectMaterials(loader: ClientLoader, meshes: Set<string>): Prom
     byPackage.set(pkg, list);
   }
 
-  const materials: Record<string, (string | null)[]> = {};
+  const info: Record<string, MeshInfo> = {};
   let failed = 0;
 
   for (const [pkgName, names] of byPackage) {
@@ -338,7 +338,7 @@ async function collectMaterials(loader: ClientLoader, meshes: Set<string>): Prom
           continue;
         }
         try {
-          materials[name] = meshTextures(pkg.fetchObject(entry.index + 1).loadSelf(), qualifiedName);
+          info[name] = meshInfo(pkg.fetchObject(entry.index + 1).loadSelf(), qualifiedName);
         } catch {
           failed++;
         }
@@ -346,12 +346,29 @@ async function collectMaterials(loader: ClientLoader, meshes: Set<string>): Prom
     });
   }
 
-  console.log(`materials: ${Object.keys(materials).length} meshes resolved, ${failed} could not be read`);
-  return materials;
+  const withLod = Object.values(info).filter((entry) => entry.lods).length;
+  console.log(`meshes: ${Object.keys(info).length} resolved (${withLod} with LOD), ${failed} could not be read`);
+  return info;
+}
+
+/** What the UI needs about a mesh beyond its geometry. */
+interface MeshInfo {
+  /** Per material slot, the texture it wears. */
+  textures: (string | null)[];
+  /**
+   * The client's own simplified versions, nearest first. Only some meshes have
+   * them -- 35 of 603 in one package, and they are the trees, which is also
+   * where they pay: LOD1 is about 40% of the base triangle count and LOD2 is a
+   * four-triangle crossed billboard.
+   */
+  lods?: string[];
+  /** Bounding sphere radius in client units, for picking a LOD and a load distance. */
+  radius: number;
 }
 
 /**
- * The texture each of a mesh's material slots resolves to, fully qualified.
+ * The texture each of a mesh's material slots resolves to, fully qualified,
+ * plus its LOD chain and size.
  *
  * A slot is a `StaticMeshMaterial` wrapping either the texture directly or a
  * `Shader` that wraps it (which is what the client uses for anything masked --
@@ -359,8 +376,8 @@ async function collectMaterials(loader: ClientLoader, meshes: Set<string>): Prom
  * which *package* it lives in: umodel names a glTF material after the texture
  * object alone, and the same name occurs in more than one package.
  */
-function meshTextures(mesh: any, qualify: (o: any) => string | null): (string | null)[] {
-  const slots: (string | null)[] = [];
+function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
+  const textures: (string | null)[] = [];
 
   for (let i = 0; i < (mesh.materials?.length ?? 0); i++) {
     let node = mesh.materials[i];
@@ -378,10 +395,24 @@ function meshTextures(mesh: any, qualify: (o: any) => string | null): (string | 
       node = node.material ?? node.diffuse;
     }
 
-    slots.push(texture);
+    textures.push(texture);
   }
 
-  return slots;
+  const lods: string[] = [];
+  if (mesh.hasStaticMeshLod) {
+    for (const lod of [mesh.staticMeshLod1, mesh.staticMeshLod2]) {
+      const name = lod && qualify(lod);
+      if (name) lods.push(name);
+    }
+  }
+
+  const sphere = mesh.boundingSphere;
+  const box = mesh.boundingBox;
+  const radius =
+    sphere?.w ??
+    (box ? Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z) / 2 : 0);
+
+  return { textures, radius: Math.round(radius), ...(lods.length > 0 ? { lods } : {}) };
 }
 
 /** Qualified name -> `<Package>/<Name>`, the path this project stores a texture under. */
@@ -399,10 +430,10 @@ function texturePath(qualifiedName: string): string {
  * each one is rewritten here to reference its textures through
  * KHR_texture_basisu.
  */
-function exportTextures(umodel: string, ktx: string, client: string, materials: Record<string, (string | null)[]>): void {
+function exportTextures(umodel: string, ktx: string, client: string, meshes: Record<string, MeshInfo>): void {
   const wanted = new Set<string>();
-  for (const slots of Object.values(materials)) {
-    for (const name of slots) if (name) wanted.add(name);
+  for (const entry of Object.values(meshes)) {
+    for (const name of entry.textures) if (name) wanted.add(name);
   }
 
   const packages = new Set([...wanted].map((name) => name.split(".")[0].toLowerCase()));
@@ -621,9 +652,12 @@ ${maps.length - failed}/${maps.length} maps, ${packages.size} mesh packages refe
 }
 
 /**
- * Writes the mesh -> texture map, and (when an encoder is available) the KTX2
- * textures themselves. The map is written either way: it is what a later run,
- * or a different pipeline, needs to know which texture belongs where.
+ * Writes the per-mesh table, and (when an encoder is available) the KTX2
+ * textures themselves. The table is written either way: it is what a later
+ * run, or a different pipeline, needs to know which texture belongs where.
+ *
+ * LOD meshes need no separate export -- they are ordinary meshes in the same
+ * package, which whole-package export already wrote.
  */
 async function bakeTextures(
   loader: ClientLoader,
@@ -633,21 +667,21 @@ async function bakeTextures(
   canEncode: boolean,
   mapNames?: string[]
 ): Promise<void> {
-  const materials = await collectMaterials(loader, await referencedMeshes(mapNames));
+  const meshes = await collectMeshInfo(loader, await referencedMeshes(mapNames));
 
   // Merged rather than replaced: a run may cover part of the world, and what
   // an earlier run resolved is still true.
-  const target = path.join(MESHES_OUT, "materials.json");
-  let existing: Record<string, (string | null)[]> = {};
+  const target = path.join(MESHES_OUT, "meshes.json");
+  let existing: Record<string, MeshInfo> = {};
   try {
     existing = JSON.parse(await fs.readFile(target, "utf8"));
   } catch {
     // first run
   }
-  await fs.writeFile(target, JSON.stringify({ ...existing, ...materials }));
+  await fs.writeFile(target, JSON.stringify({ ...existing, ...meshes }));
   if (canEncode) {
     await fs.mkdir(TEXTURES_OUT, { recursive: true });
-    exportTextures(umodel, ktx, client, materials);
+    exportTextures(umodel, ktx, client, meshes);
   }
 }
 

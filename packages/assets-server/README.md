@@ -15,8 +15,10 @@ pnpm --filter @lineage2js/assets-server convert:maps --client="D:\Games\Lineage2
 Writes, per map:
 
 ```
-assets/highfive/maps/<x>_<y>/scene.json     terrain metadata + actor placement
-assets/highfive/maps/<x>_<y>/heightmap.bin  256x256 16-bit heights, raw
+assets/highfive/maps/<x>_<y>/scene.json       terrain metadata + actor placement
+assets/highfive/maps/<x>_<y>/heightmap.bin    256x256 16-bit heights, raw
+assets/highfive/static-meshes/meshes.json     per mesh: textures, LOD chain, size
+assets/highfive/static-mesh-textures/...      KTX2, one per texture
 ```
 
 and, with `--meshes`, the geometry those actors point at, into
@@ -25,9 +27,27 @@ restricts to named maps; without `--meshes` it needs no umodel at all.
 
 Over the whole client that is **203 maps, 196791 actor placements, 15780 mesh
 references resolving to 216 packages**, 14 MB of scene files and 25 MB of
-heightmaps. The geometry is much larger -- one map's ten packages come out at
-256 MB, since umodel exports every mesh in a package plus its textures, and
-packages are shared between maps.
+heightmaps.
+
+What a client fetches for one map, measured on 20_18:
+
+| | |
+| --- | --- |
+| scene.json + heightmap | 190 kB |
+| geometry, the 131 meshes it uses | 5.6 MB (2 MB compressed) |
+| textures, 199 of them | **3.8 MB** as KTX2, against 38.3 MB as the TGA umodel writes |
+
+Textures dominate because umodel *decompresses* them: the client ships DXT1 and
+umodel writes RGB(A). KTX2 with Basis puts that back (10.1x on this map) and,
+unlike PNG or WebP, stays block-compressed on the GPU rather than expanding to
+RGBA in video memory.
+
+`meshes.json` carries what a glTF cannot: which texture each material slot
+wears (umodel puts no images in its exports, only material names, and the same
+name occurs in several packages), the client's own LOD chain, and the mesh's
+radius. LODs need no separate export -- they are ordinary meshes in the same
+package, and only 35 of 603 meshes have them: the trees, where LOD1 is ~40% of
+the triangles and LOD2 is a four-triangle billboard.
 
 Positions stay in **L2 world units, exactly as the client stores them**, and
 rotations in Unreal rotator units (65536 to the turn). The UI converts to
