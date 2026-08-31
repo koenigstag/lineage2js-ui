@@ -52,7 +52,8 @@ abstract class UStaticMesh extends UPrimitive {
     declare protected collisionModelId: number;
     declare protected collisionModel: GA.UModel;
 
-    declare protected unkInt_Dx1: number; // maybe boolean
+    declare protected unkInt_Dx1: number;
+    declare protected unkInt_Lic37: number; // maybe boolean
 
     declare protected internalVersion: number;
     declare protected kPhysicsProps: number;
@@ -209,6 +210,17 @@ abstract class UStaticMesh extends UPrimitive {
         }
 
         if (14 < verLicense) this.isUsingBillboard = pkg.read("int32") !== 0;
+
+        // Patched for High Five (see README). Static mesh packages carry their
+        // own licensee version, and this client ships every value from 12 to
+        // 37 -- packages saved years apart and never re-saved. Licensee 37
+        // appends one more int32 here, following the same pattern as every
+        // gate above it (each licensee bump adds a field at the end). Without
+        // it the triangle array that follows starts four bytes early, its
+        // count reads as garbage, and the mesh fails to load. The boundary is
+        // exact and was found by bisecting real packages: 36 parses, 37 does
+        // not, and no package in this client uses 34.
+        if (36 < verLicense) this.unkInt_Lic37 = pkg.read("int32");
 
         if (verArchive < 92) {
             console.warn("Not supported yet");

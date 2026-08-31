@@ -36,7 +36,7 @@ class NodeAssetLoader extends AAssetLoader {
 /** Every package the client ships, keyed the way the loader expects. */
 async function scanClient() {
   const list = {};
-  for (const dir of ["system", "MAPS", "Textures", "StaticMeshes", "Animations", "Sounds"]) {
+  for (const dir of ["system", "MAPS", "Textures", "SysTextures", "StaticMeshes", "Animations", "Sounds"]) {
     let names;
     try {
       names = await readdir(path.join(CLIENT, dir));
@@ -135,3 +135,50 @@ for (const name of texPackages) {
 }
 console.log(`  ${ok} textures read, ${failed} failed, ${shaderBlocks} carried a High Five shader block`);
 console.log("  formats:", [...formats].map(([f, n]) => `${n}x fmt${f}`).join(", "));
+
+// --- static meshes -----------------------------------------------------
+// The format gates on the *package's* licensee version, and this client ships
+// every value from 11 to 37 -- packages saved years apart and never re-saved.
+// One package per version is what actually exercises the gates; pass
+// SMOKE_ALL_MESHES=1 to read all 258 instead (needs a bigger heap).
+console.log("");
+console.log("== static meshes ==");
+
+const usx = [];
+for (const [key, rel] of Object.entries(await scanClient())) {
+  if (key.endsWith(".usx")) usx.push(key.replace(/\.usx$/, ""));
+}
+
+const seenLicensee = new Map();
+let meshTotal = 0, meshExact = 0, meshThrew = 0;
+
+for (const name of usx) {
+  let pkg;
+  try {
+    pkg = await loader.load(loader.getPackage(name, "StaticMesh"));
+  } catch {
+    continue;
+  }
+  const lic = pkg.header.getLicenseeVersion();
+  if (!process.env.SMOKE_ALL_MESHES && seenLicensee.has(lic)) continue;
+
+  let exact = 0, total = 0;
+  for (const entry of pkg.exportGroups["StaticMesh"] ?? []) {
+    total++;
+    try {
+      const mesh = pkg.fetchObject(entry.index + 1).loadSelf();
+      if (mesh.readTail - mesh.readHead === 0) exact++;
+    } catch {
+      meshThrew++;
+    }
+  }
+  meshTotal += total;
+  meshExact += exact;
+  const prev = seenLicensee.get(lic) ?? { exact: 0, total: 0 };
+  seenLicensee.set(lic, { exact: prev.exact + exact, total: prev.total + total });
+}
+
+for (const [lic, s] of [...seenLicensee].sort((a, b) => a[0] - b[0])) {
+  console.log(`  licensee ${String(lic).padStart(2)}: ${String(s.exact).padStart(4)}/${String(s.total).padStart(4)} consumed exactly`);
+}
+console.log(`  total ${meshExact}/${meshTotal}, ${meshThrew} threw`);

@@ -55,9 +55,15 @@ several packages. It is the actual regression test for the High Five patches:
 node smoke.mjs "D:/Games/Lineage2/L2_HighFive_Client"
 ```
 
+It reads one static mesh package per distinct licensee version, which is what
+actually exercises the version gates; `SMOKE_ALL_MESHES=1` reads all 258
+instead (give Node a bigger heap for that).
+
 Last run: 4902 exports, terrain scale `(128, 128, 76)`, a 256x256 `TEXF_G16`
-heightmap decoding to world Z `-8870.9 .. 2482.8`, all 8 terrain layers, and
-109 textures across 6 packages read with 0 failures.
+heightmap decoding to world Z `-8870.9 .. 2482.8`, all 8 terrain layers, 109
+textures across 6 packages with 0 failures, and 490 of 491 static meshes
+spanning all 18 licensee versions consumed exactly. Over the whole client that
+is 11566 of 11596.
 
 ## High Five patches
 
@@ -80,6 +86,15 @@ Upstream targets **Chronicle 4**. Each patch is commented in place and marked
   Nothing reads them; they only have to be constructible. These two are the
   complete set -- found by letting the default branch collect names instead of
   throwing, then running the whole client through it.
+- **`src/assets/unreal/static-mesh/un-static-mesh.ts`** -- one more `int32` at
+  the end of the flag block when the package's licensee version is above 36.
+  Static mesh packages carry their *own* licensee version, and this client
+  ships every value from 11 to 37: packages saved years apart and never
+  re-saved. Licensee 37 appends a field, following the same pattern as every
+  gate above it. Without it the triangle array that follows starts four bytes
+  early and its count reads as garbage. The boundary was found by bisecting
+  real packages -- 36 parses, 37 does not -- and it moved licensee 37 from
+  83.2% of its meshes readable to 99.9%.
 - **`unreal-l2js-core`'s `findObjectRef`** -- name lookup is now
   case-insensitive, which is what Unreal's `FName` comparison has always been.
   This client's own packages disagree on the case of a group name:
@@ -102,11 +117,15 @@ Upstream targets **Chronicle 4**. Each patch is commented in place and marked
   fork does not squat the upstream package name. A pure scope rename -- 102
   specifiers, mechanical to re-apply after a re-sync.
 
-## Known gap
+## What still fails
 
-`UStaticMesh.doLoad` does not consume a High Five static mesh exactly -- it
-trips its own `readHead === readTail` assertion. The bounding box survives
-(`UPrimitive` reads it first, before the divergence), so actor placement and
-sizes are already usable, but the geometry is not. This is the next thing to
-reverse before static meshes can be rendered, and it has to be right rather
-than approximately right: it is vertex data.
+30 of the client's 11596 static meshes, in 8 packages -- `e_waterfall`,
+`water`, `lineageeffectsstaticmeshes` and a few others. They are effect and
+water meshes whose materials reference FX classes this reader does not
+implement (`TexOscillatorTriggered` and friends), so they fail resolving a
+material, not parsing geometry. **No mesh anywhere fails on an offset**: every
+one that loads consumes its export exactly.
+
+Note for whoever wires up the converter: `SysTextures/` has to be in the asset
+list. Leaving it out does not fail loudly -- it costs ~500 meshes that resolve
+a texture package to nothing and throw well after the geometry is read.
