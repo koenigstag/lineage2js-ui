@@ -5,9 +5,12 @@
  *   assets/highfive/maps/<x>_<y>/scene.json     terrain metadata + actor placement
  *   assets/highfive/maps/<x>_<y>/heightmap.bin  256x256 16-bit heights, raw
  *
- * and, with `--meshes`, the geometry those actors point at:
+ * and, with `--meshes`, the geometry those actors point at, plus the textures
+ * that geometry wears:
  *
  *   assets/highfive/static-meshes/<Package>/    glTF per mesh, via umodel
+ *   assets/highfive/static-meshes/materials.json  mesh -> its textures, per slot
+ *   assets/highfive/static-mesh-textures/<Package>/<Name>.ktx2
  *
  * This is the one part of the client nothing off the shelf reads. umodel
  * covers the assets -- it is what exports the meshes here -- but it has no
@@ -28,9 +31,20 @@
  *
  * `--only=20_18,22_22` restricts to named maps; without `--meshes` it writes
  * the scene files alone, which needs no umodel and takes seconds per map.
+ *
+ * Textures are the whole weight of this: one map is ~5.6MB of geometry against
+ * ~38MB of textures, because umodel *decompresses* them -- the client ships
+ * DXT1, umodel writes RGB(A). Re-encoding to KTX2 gets that back and then some
+ * (measured on one package: 15.2MB of TGA against 6.2MB of the original DXT,
+ * and ~12% of TGA as a modern codec), and unlike PNG or WebP a KTX2 stays
+ * block-compressed on the GPU instead of expanding to RGBA in video memory --
+ * which matters at fifteen thousand instances. Needs Khronos KTX-Software's
+ * `ktx` on PATH (or `--ktx=<path>`).
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openClient, quietly, type ClientLoader } from "./unreal/node-loader";
@@ -39,6 +53,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const MAPS_OUT = path.join(__dirname, "../assets/highfive/maps");
 const MESHES_OUT = path.join(__dirname, "../assets/highfive/static-meshes");
+const TEXTURES_OUT = path.join(__dirname, "../assets/highfive/static-mesh-textures");
 
 /**
  * A map covers exactly one geodata region: 256 terrain quads of 128 units.
@@ -63,6 +78,11 @@ interface ActorInfo {
   pos: [number, number, number];
   rot?: [number, number, number];
   scale?: [number, number, number];
+}
+
+/** The tail of a tool's output, which is where its complaint is. */
+function lastLines(output: string | undefined, count: number): string {
+  return (output ?? "").trim().split(/\r?\n/).slice(-count).join(" ");
 }
 
 function readArg(flag: string): string | undefined {
@@ -257,6 +277,200 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
 }
 
 /**
+ * Every mesh name the written scene files refer to, restricted to the maps
+ * this run covered -- otherwise a `--only` run would go and encode textures
+ * for every map ever baked.
+ */
+async function referencedMeshes(mapNames?: string[]): Promise<Set<string>> {
+  const wanted = mapNames ? new Set(mapNames) : null;
+  const meshes = new Set<string>();
+  for (const entry of await fs.readdir(MAPS_OUT)) {
+    if (wanted && !wanted.has(entry)) continue;
+    let scene: { meshes?: string[] };
+    try {
+      scene = JSON.parse(await fs.readFile(path.join(MAPS_OUT, entry, "scene.json"), "utf8"));
+    } catch {
+      continue;
+    }
+    for (const mesh of scene.meshes ?? []) meshes.add(mesh);
+  }
+  return meshes;
+}
+
+/**
+ * Resolves every referenced mesh's material slots to the textures they wear.
+ *
+ * Done as its own pass, a package at a time, rather than while the maps are
+ * being read: a mesh is referenced by many maps and its materials do not
+ * depend on where it stands.
+ */
+async function collectMaterials(loader: ClientLoader, meshes: Set<string>): Promise<Record<string, (string | null)[]>> {
+  const byPackage = new Map<string, string[]>();
+  for (const name of meshes) {
+    const pkg = name.split(".")[0].toLowerCase();
+    const list = byPackage.get(pkg) ?? [];
+    list.push(name);
+    byPackage.set(pkg, list);
+  }
+
+  const materials: Record<string, (string | null)[]> = {};
+  let failed = 0;
+
+  for (const [pkgName, names] of byPackage) {
+    let pkg: any;
+    try {
+      pkg = await loader.load(loader.getPackage(pkgName, "StaticMesh"));
+    } catch {
+      failed += names.length;
+      continue;
+    }
+
+    const exports = new Map<string, any>();
+    for (const entry of pkg.exportGroups["StaticMesh"] ?? []) {
+      exports.set(String(entry.export.objectName).toLowerCase(), entry);
+    }
+
+    quietly(() => {
+      for (const name of names) {
+        const entry = exports.get(name.split(".").pop()!.toLowerCase());
+        if (!entry) {
+          failed++;
+          continue;
+        }
+        try {
+          materials[name] = meshTextures(pkg.fetchObject(entry.index + 1).loadSelf(), qualifiedName);
+        } catch {
+          failed++;
+        }
+      }
+    });
+  }
+
+  console.log(`materials: ${Object.keys(materials).length} meshes resolved, ${failed} could not be read`);
+  return materials;
+}
+
+/**
+ * The texture each of a mesh's material slots resolves to, fully qualified.
+ *
+ * A slot is a `StaticMeshMaterial` wrapping either the texture directly or a
+ * `Shader` that wraps it (which is what the client uses for anything masked --
+ * foliage, chains, grates). Walking to the texture is the only way to learn
+ * which *package* it lives in: umodel names a glTF material after the texture
+ * object alone, and the same name occurs in more than one package.
+ */
+function meshTextures(mesh: any, qualify: (o: any) => string | null): (string | null)[] {
+  const slots: (string | null)[] = [];
+
+  for (let i = 0; i < (mesh.materials?.length ?? 0); i++) {
+    let node = mesh.materials[i];
+    let texture: string | null = null;
+
+    for (let depth = 0; node && depth < 6; depth++) {
+      node = node.loadSelf?.() ?? node;
+      const name = qualify(node);
+      // A texture is where the walk stops; anything else is a wrapper whose
+      // own `material` is the next link.
+      if (node.mipmaps) {
+        texture = name;
+        break;
+      }
+      node = node.material ?? node.diffuse;
+    }
+
+    slots.push(texture);
+  }
+
+  return slots;
+}
+
+/** Qualified name -> `<Package>/<Name>`, the path this project stores a texture under. */
+function texturePath(qualifiedName: string): string {
+  const parts = qualifiedName.split(".");
+  return `${parts[0]}/${parts[parts.length - 1]}`;
+}
+
+/**
+ * Re-encodes the textures a map's meshes wear, and points the meshes at them.
+ *
+ * umodel writes PNG; `ktx` turns that into a KTX2 with Basis supercompression,
+ * which is what makes it both small to fetch and cheap in video memory. The
+ * glTF files umodel wrote carry no images at all -- just material names -- so
+ * each one is rewritten here to reference its textures through
+ * KHR_texture_basisu.
+ */
+function exportTextures(umodel: string, ktx: string, client: string, materials: Record<string, (string | null)[]>): void {
+  const wanted = new Set<string>();
+  for (const slots of Object.values(materials)) {
+    for (const name of slots) if (name) wanted.add(name);
+  }
+
+  const packages = new Set([...wanted].map((name) => name.split(".")[0].toLowerCase()));
+  // Intermediates go to the OS temp directory, not under assets/ -- everything
+  // there is served, and the decompressed PNGs are an order of magnitude
+  // larger than the KTX2 files they become (137MB against 3.8MB for one map).
+  const staging = path.join(os.tmpdir(), "lineage2js-static-mesh-textures");
+
+  console.log(`textures: ${wanted.size} referenced from ${packages.size} packages`);
+
+  for (const name of [...packages].sort()) {
+    const result = spawnSync(
+      umodel,
+      [`-path=${client}`, "-game=l2", "-export", "-png", `-out=${staging}`, "-nooverwrite", `${name}.utx`],
+      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }
+    );
+    if (result.status !== 0) {
+      console.warn(`  umodel failed on ${name}.utx: ${lastLines(result.stderr || result.stdout, 2)}`);
+    }
+  }
+
+  let encoded = 0;
+  let missing = 0;
+  for (const name of [...wanted].sort()) {
+    const source = findExportedPng(staging, name);
+    if (!source) {
+      missing++;
+      continue;
+    }
+    const target = path.join(TEXTURES_OUT, `${texturePath(name)}.ktx2`);
+    fsSync.mkdirSync(path.dirname(target), { recursive: true });
+    if (fsSync.existsSync(target)) {
+      encoded++;
+      continue;
+    }
+    // basis-lz is the small, universally transcodable encoding; the alternative
+    // (uastc) is several times larger and is for textures whose quality has to
+    // survive, which scenery colour maps do not.
+    const result = spawnSync(
+      ktx,
+      ["create", "--format", "R8G8B8A8_SRGB", "--encode", "basis-lz", "--generate-mipmap", "--assign-oetf", "srgb", source, target],
+      { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
+    );
+    if (result.status !== 0) {
+      console.warn(`  ktx failed on ${name}: ${(result.stderr || result.stdout || "").trim().split("\n").slice(-2).join(" ")}`);
+      continue;
+    }
+    encoded++;
+  }
+
+  console.log(`textures: ${encoded} encoded to KTX2, ${missing} had no exported image`);
+}
+
+/** umodel lays a texture out by class, and the class differs (Texture, Shader, ...). */
+function findExportedPng(staging: string, qualifiedName: string): string | undefined {
+  const parts = qualifiedName.split(".");
+  const pkg = parts[0];
+  const file = `${parts[parts.length - 1]}.png`;
+  const root = path.join(staging, pkg);
+  if (!fsSync.existsSync(root)) return undefined;
+  for (const dir of fsSync.readdirSync(root)) {
+    const candidate = path.join(root, dir, file);
+    if (fsSync.existsSync(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+/**
  * One umodel call per package, never per object -- whole-package export is the
  * difference between seconds and minutes, and every map that reuses a package
  * reuses the same output.
@@ -339,6 +553,18 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Textures ride along with --meshes when an encoder is available. Without
+  // one the geometry still converts, and every mesh wears umodel's own
+  // placeholder colours -- which is a legible state, not a broken one.
+  const ktx = readArg("--ktx") ?? process.env.KTX ?? "ktx";
+  const canEncode = wantMeshes && spawnSync(ktx, ["--version"], { encoding: "utf8" }).status === 0;
+  if (wantMeshes && !canEncode) {
+    console.warn(
+      `No usable '${ktx}' found -- skipping textures. Install Khronos KTX-Software ` +
+        "(https://github.com/KhronosGroup/KTX-Software/releases) or pass --ktx=<path>."
+    );
+  }
+
   const loader = await openClient(client);
 
   const only = readArg("--only")?.split(",").map((name) => name.trim().toLowerCase());
@@ -365,6 +591,7 @@ ${written}/${maps.length} maps, ${referenced.size} mesh packages referenced`);
     if (wantMeshes) {
       await fs.mkdir(MESHES_OUT, { recursive: true });
       exportMeshes(umodel!, client, referenced);
+      await bakeTextures(loader, umodel!, ktx, client, canEncode, maps);
     }
     return;
   }
@@ -389,6 +616,38 @@ ${maps.length - failed}/${maps.length} maps, ${packages.size} mesh packages refe
   if (wantMeshes) {
     await fs.mkdir(MESHES_OUT, { recursive: true });
     exportMeshes(umodel!, client, packages);
+    await bakeTextures(loader, umodel!, ktx, client, canEncode, maps);
+  }
+}
+
+/**
+ * Writes the mesh -> texture map, and (when an encoder is available) the KTX2
+ * textures themselves. The map is written either way: it is what a later run,
+ * or a different pipeline, needs to know which texture belongs where.
+ */
+async function bakeTextures(
+  loader: ClientLoader,
+  umodel: string,
+  ktx: string,
+  client: string,
+  canEncode: boolean,
+  mapNames?: string[]
+): Promise<void> {
+  const materials = await collectMaterials(loader, await referencedMeshes(mapNames));
+
+  // Merged rather than replaced: a run may cover part of the world, and what
+  // an earlier run resolved is still true.
+  const target = path.join(MESHES_OUT, "materials.json");
+  let existing: Record<string, (string | null)[]> = {};
+  try {
+    existing = JSON.parse(await fs.readFile(target, "utf8"));
+  } catch {
+    // first run
+  }
+  await fs.writeFile(target, JSON.stringify({ ...existing, ...materials }));
+  if (canEncode) {
+    await fs.mkdir(TEXTURES_OUT, { recursive: true });
+    exportTextures(umodel, ktx, client, materials);
   }
 }
 

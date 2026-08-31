@@ -1,3 +1,4 @@
+import compression from "compression";
 import express from "express";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -14,6 +15,12 @@ const ASSETS_DIR = process.env.ASSETS_DIR ?? path.join(__dirname, "../assets");
 const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS ?? 60 * 60);
 
 const app = express();
+
+// Measured on real world data: a mesh's .gltf compresses to 18% of itself and
+// its .bin to 36%, and the mesh -> texture table goes from 2.2MB to 161kB.
+// Everything else served here is already compressed (PNG, KTX2, the geodata
+// tiles' packed ints), and compression's own filter leaves those alone.
+app.use(compression());
 
 // Public, read-only static assets meant to be pulled from a different origin
 // (the UI dev server, a CDN, ...), so every response -- including the JSON

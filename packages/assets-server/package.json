@@ -22,9 +22,11 @@
   },
   "dependencies": {
     "@lineage2js/unreal-l2js-objects": "workspace:^",
+    "compression": "^1.8.1",
     "express": "^4.21.0"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/three": "^0.185.1",

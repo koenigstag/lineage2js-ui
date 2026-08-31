@@ -12,6 +12,7 @@ import { L2_TO_THREE_SCALE } from "../utils/coords";
 
 const WORLD_MAP_BASE_URL = import.meta.env.VITE_WORLD_MAP_BASE_URL;
 const STATIC_MESH_BASE_URL = import.meta.env.VITE_STATIC_MESH_BASE_URL;
+const STATIC_MESH_TEXTURE_BASE_URL = import.meta.env.VITE_STATIC_MESH_TEXTURE_BASE_URL;
 
 /** One `.unr` map covers exactly one geodata region -- see the assets-server README. */
 export const MAP_SIZE = GEO_REGION_SIZE;
@@ -58,6 +59,27 @@ export function getStaticMeshUrl(qualifiedName: string): string | undefined {
   const pkg = parts[0];
   const name = parts[parts.length - 1];
   return `${withSlash(STATIC_MESH_BASE_URL)}${pkg}/StaticMesh/${name}.gltf`;
+}
+
+/**
+ * The mesh -> texture table `convert:maps` writes beside the geometry.
+ *
+ * umodel puts no images in the glTF files it exports -- a material there is a
+ * name and a placeholder colour -- so which texture a mesh's slot wears is
+ * resolved from the package by the converter and looked up here. Fetched once
+ * and shared; 2.2MB of very repetitive JSON, 161kB over the wire.
+ */
+export function getStaticMeshMaterialsUrl(): string | undefined {
+  if (!STATIC_MESH_BASE_URL) return undefined;
+  return `${withSlash(STATIC_MESH_BASE_URL)}materials.json`;
+}
+
+/** KTX2 for a qualified texture name, e.g. "Oren_tree_T.DarkElf.Oren_Darkelf_bark004". */
+export function getStaticMeshTextureUrl(qualifiedName: string): string | undefined {
+  if (!STATIC_MESH_TEXTURE_BASE_URL) return undefined;
+  const parts = qualifiedName.split(".");
+  if (parts.length < 2) return undefined;
+  return `${withSlash(STATIC_MESH_TEXTURE_BASE_URL)}${parts[0]}/${parts[parts.length - 1]}.ktx2`;
 }
 
 function withSlash(base: string): string {

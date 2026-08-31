@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { useThree } from "@react-three/fiber";
 import { Matrix4 } from "three";
 import { actorMatrix } from "../../../../utils/world/actor-transform";
-import { getCachedStaticMesh, loadStaticMesh, type StaticMeshPart } from "../../../../utils/world/static-mesh-cache";
+import {
+  getCachedStaticMesh,
+  initStaticMeshTextures,
+  loadStaticMesh,
+  type StaticMeshPart,
+} from "../../../../utils/world/static-mesh-cache";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
 import type { MapActor } from "../../../../utils/world/map-scene.types";
 
@@ -28,6 +34,11 @@ interface MeshPlacements {
  * looked before it existed.
  */
 export function StaticMeshField({ scenes }: StaticMeshFieldProps) {
+  // KTX2 has to be told what the GPU can decode before it can transcode
+  // anything, and only the renderer knows.
+  const renderer = useThree((state) => state.gl);
+  useEffect(() => initStaticMeshTextures(renderer), [renderer]);
+
   // Actors grouped by mesh across every loaded map. Grouping across maps
   // rather than within one is the point -- a forest that spans a map border is
   // still one instanced draw.

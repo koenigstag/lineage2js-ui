@@ -1,6 +1,7 @@
-import { BufferGeometry, Material, Mesh, Object3D } from "three";
+import { BufferGeometry, Material, Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, WebGLRenderer } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { getStaticMeshUrl } from "../../config/world-assets";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
+import { getStaticMeshMaterialsUrl, getStaticMeshTextureUrl, getStaticMeshUrl } from "../../config/world-assets";
 
 /**
  * One drawable part of a static mesh: a geometry and the material it is drawn
@@ -10,9 +11,29 @@ import { getStaticMeshUrl } from "../../config/world-assets";
 export interface StaticMeshPart {
   geometry: BufferGeometry;
   material: Material;
+  /** Which of the mesh's material slots this part belongs to. */
+  slot: number;
 }
 
 const loader = new GLTFLoader();
+
+/**
+ * KTX2 keeps a texture block-compressed all the way onto the GPU, which is the
+ * reason it was chosen over PNG or WebP: at fifteen thousand instances the
+ * video memory a decompressed RGBA atlas would take matters as much as the
+ * download. Transcoding to whatever format the GPU actually speaks needs
+ * three's Basis transcoder, served at /basis/ (see vite.config.ts).
+ */
+const textureLoader = new KTX2Loader().setTranscoderPath(`${import.meta.env.BASE_URL}basis/`);
+
+/**
+ * KTX2Loader has to know the GPU's capabilities before it can pick a
+ * transcode target, and it learns them from the renderer. Called once the
+ * canvas exists -- until then no texture request is started.
+ */
+export function initStaticMeshTextures(renderer: WebGLRenderer): void {
+  textureLoader.detectSupport(renderer);
+}
 
 /**
  * Meshes are shared across every actor that places them and across maps --
@@ -23,6 +44,23 @@ const loader = new GLTFLoader();
  */
 const cache = new Map<string, StaticMeshPart[] | null>();
 const inFlight = new Map<string, Promise<StaticMeshPart[] | null>>();
+
+/** Qualified mesh name -> the texture each of its material slots wears. */
+let materialsRequest: Promise<Record<string, (string | null)[]>> | undefined;
+
+function meshMaterials(): Promise<Record<string, (string | null)[]>> {
+  materialsRequest ??= (async () => {
+    const url = getStaticMeshMaterialsUrl();
+    if (!url) return {};
+    try {
+      const response = await fetch(url);
+      return response.ok ? ((await response.json()) as Record<string, (string | null)[]>) : {};
+    } catch {
+      return {};
+    }
+  })();
+  return materialsRequest;
+}
 
 export function getCachedStaticMesh(name: string): StaticMeshPart[] | null | undefined {
   return cache.get(name);
@@ -44,9 +82,13 @@ export function loadStaticMesh(name: string): Promise<StaticMeshPart[] | null> {
 
   const request = loader
     .loadAsync(url)
-    .then((gltf) => {
+    .then(async (gltf) => {
       const parts = collectParts(gltf.scene);
       cache.set(name, parts.length > 0 ? parts : null);
+      // Textures land after the geometry is already on screen. Doing it the
+      // other way round would hold every mesh back for its images, and an
+      // untextured mesh in the right place reads far better than nothing.
+      if (parts.length > 0) void applyTextures(name, parts);
       return cache.get(name)!;
     })
     .catch(() => {
@@ -61,9 +103,39 @@ export function loadStaticMesh(name: string): Promise<StaticMeshPart[] | null> {
   return request;
 }
 
+const textures = new Map<string, Promise<unknown>>();
+
+async function applyTextures(meshName: string, parts: StaticMeshPart[]): Promise<void> {
+  const slots = (await meshMaterials())[meshName];
+  if (!slots) return;
+
+  for (const part of parts) {
+    const textureName = slots[part.slot];
+    const url = textureName ? getStaticMeshTextureUrl(textureName) : undefined;
+    if (!url) continue;
+
+    let request = textures.get(url);
+    if (!request) {
+      request = textureLoader.loadAsync(url).catch(() => null);
+      textures.set(url, request);
+    }
+
+    const texture = (await request) as { colorSpace?: string } | null;
+    if (!texture) continue;
+
+    texture.colorSpace = SRGBColorSpace;
+    const material = part.material as MeshStandardMaterial;
+    material.map = texture as never;
+    // umodel writes a flat placeholder colour into every material it exports;
+    // left in place it would tint the real texture.
+    material.color?.setRGB(1, 1, 1);
+    material.needsUpdate = true;
+  }
+}
+
 /**
  * Flattens a loaded glTF into geometry/material pairs in the file's own root
- * space.
+ * space, keeping each one's material slot.
  *
  * umodel writes one node per mesh with the primitives split by material, so in
  * practice the transform is the identity -- but baking whatever transform is
@@ -88,16 +160,17 @@ function collectParts(root: Object3D): StaticMeshPart[] {
     // its own material, so it becomes its own instanced part.
     if (materials.length > 1 && geometry.groups.length > 0) {
       for (const group of geometry.groups) {
+        const slot = group.materialIndex ?? 0;
         const slice = geometry.clone();
         slice.clearGroups();
         slice.setDrawRange(group.start, group.count);
-        parts.push({ geometry: slice, material: materials[group.materialIndex ?? 0] });
+        parts.push({ geometry: slice, material: materials[slot], slot });
       }
       geometry.dispose();
       return;
     }
 
-    parts.push({ geometry, material: materials[0] });
+    parts.push({ geometry, material: materials[0], slot: parts.length });
   });
 
   return parts;
