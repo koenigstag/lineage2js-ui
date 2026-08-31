@@ -11,10 +11,17 @@
 export interface MapTerrainLayer {
   /** Qualified texture name, e.g. "T_oren.Obase_1". */
   texture: string | null;
-  /** Its alpha mask; layer 0 is the unmasked base. */
+  /** Its mask over the map; layer 0 is the unmasked base. */
   alphaMap: string | null;
-  uScale: number;
-  vScale: number;
+  /**
+   * World position -> this layer's texture UV: `uv = (world - uvOffset) * uvScale`,
+   * over the two axes `axis` names. Precomputed by the converter from the
+   * terrain's own world->heightmap transform and the layer's scale.
+   */
+  uvScale: [number, number];
+  uvOffset: [number, number];
+  /** Which world plane the texture projects down: 0 = XY, 1 = XZ, 2 = YZ. */
+  axis: number;
 }
 
 export interface MapTerrain {

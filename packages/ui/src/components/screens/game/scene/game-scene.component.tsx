@@ -14,6 +14,7 @@ import { useGameStore } from "../../../../stores/StoreContext";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 import { StaticMeshField } from "./static-mesh-field.component";
+import { TerrainField } from "./terrain-field.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
 import { DroppedItemsField } from "./dropped-items-field.component";
 import { MoveTargetMarker } from "./move-target-marker.component";
@@ -146,6 +147,9 @@ export const GameScene = observer(function GameScene() {
   // The client's own scenery, streamed a whole .unr map at a time -- see
   // useMapScenes for why that grid and not the geodata one.
   const mapScenes = useMapScenes(worldX, worldY);
+  // Once a map with terrain is loaded the wireframe stops being the thing
+  // clicked on, and stops being drawn over the ground it stood in for.
+  const hasTerrain = mapScenes.some(({ scene }) => scene.terrain);
 
   useEffect(() => {
     const keys = new Set<string>();
@@ -338,7 +342,19 @@ export const GameScene = observer(function GameScene() {
             steal ground-click hits meant for the terrain mesh underneath it. */}
         <gridHelper args={[GROUND_GRID_SIZE_M, 40, "#3a4a3f", "#25302a"]} raycast={() => null} />
 
-        <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} orbitDragActiveRef={orbitDragActiveRef} />
+        {/* The real ground, where a map has been baked for it. Geodata stays
+            the walkable surface movement is checked against -- it just stops
+            being what the player looks at. */}
+        <TerrainField scenes={mapScenes} onGroundClick={handleGroundClick} />
+
+        {/* Only until the real ground is there. Geodata never stops being the
+            walkable surface -- movement and gravity read it through
+            geo-tile-index, not through this mesh -- but drawn over terrain it
+            is a green net across the picture, and clicks belong to the ground
+            the player can actually see. */}
+        {!hasTerrain && (
+          <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} orbitDragActiveRef={orbitDragActiveRef} />
+        )}
 
         {/* Trees, rocks and buildings out of the retail client -- see StaticMeshField. */}
         <StaticMeshField scenes={mapScenes} />

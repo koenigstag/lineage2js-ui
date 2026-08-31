@@ -35,6 +35,11 @@ export function initStaticMeshTextures(renderer: WebGLRenderer): void {
   textureLoader.detectSupport(renderer);
 }
 
+/** The same loader, for the terrain's layer textures -- they are KTX2 too. */
+export function ktx2Loader(): KTX2Loader {
+  return textureLoader;
+}
+
 /**
  * Meshes are shared across every actor that places them and across maps --
  * one map's 797 actors resolve to 131 meshes, and neighbouring maps reuse the

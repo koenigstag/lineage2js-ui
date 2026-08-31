@@ -68,9 +68,25 @@ const MAP_FILE_PATTERN = /^(\d+)_(\d+)$/;
 
 interface TerrainLayerInfo {
   texture: string | null;
+  /** Its mask over the map; layer 0 is the unmasked base. */
   alphaMap: string | null;
-  uScale: number;
-  vScale: number;
+  /**
+   * World position -> this layer's texture UV: `uv = (world - offset) * scale`,
+   * over the two axes `axis` names.
+   *
+   * Worked out here rather than in the client because it comes from the
+   * terrain's own world->heightmap transform divided by the layer's scale,
+   * which is what the engine does (see calcLayerTexCoords in the vendored
+   * reader). Pan is folded in; across all 205 maps exactly one layer uses it.
+   */
+  uvScale: [number, number];
+  uvOffset: [number, number];
+  /**
+   * Which world plane the texture projects down: 0 = XY (the ground, 932 of
+   * 974 layers across the client), 1 = XZ, 2 = YZ -- the vertical projections
+   * used on cliff faces.
+   */
+  axis: number;
 }
 
 interface ActorInfo {
@@ -121,15 +137,26 @@ function readTerrain(pkg: any): Record<string, unknown> | null {
 
   const terrain = pkg.fetchObject(entry.index + 1).loadSelf();
 
+  // World -> heightmap index. A layer's texture UV is that index divided by
+  // the layer's own scale.
+  const toHeightMap = terrain.toHeightMap;
+
   const layers: TerrainLayerInfo[] = [];
   for (let i = 0; i < (terrain.layers?.length ?? 0); i++) {
     const layer = terrain.layers[i];
     if (!layer?.map) continue;
+
+    const uScale = layer.scaleW || 1;
+    const vScale = layer.scaleH || 1;
     layers.push({
       texture: qualifiedName(layer.map),
       alphaMap: qualifiedName(layer.alphaMap),
-      uScale: round(layer.uScale ?? 1),
-      vScale: round(layer.vScale ?? 1),
+      uvScale: [round(toHeightMap.xAxis.x / uScale, 9), round(toHeightMap.yAxis.y / vScale, 9)],
+      uvOffset: [
+        round(toHeightMap.origin.x - (layer.panW ?? 0) * uScale, 3),
+        round(toHeightMap.origin.y - (layer.panH ?? 0) * vScale, 3),
+      ],
+      axis: layer.mapAxis ?? 0,
     });
   }
 
@@ -274,6 +301,26 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
   );
 
   return packages;
+}
+
+/** Every terrain layer texture and mask the written scene files name. */
+async function referencedTerrainTextures(mapNames?: string[]): Promise<Set<string>> {
+  const wanted = new Set(mapNames);
+  const textures = new Set<string>();
+  for (const entry of await fs.readdir(MAPS_OUT)) {
+    if (mapNames && !wanted.has(entry)) continue;
+    let scene: { terrain?: { layers?: { texture?: string | null; alphaMap?: string | null }[] } };
+    try {
+      scene = JSON.parse(await fs.readFile(path.join(MAPS_OUT, entry, "scene.json"), "utf8"));
+    } catch {
+      continue;
+    }
+    for (const layer of scene.terrain?.layers ?? []) {
+      if (layer.texture) textures.add(layer.texture);
+      if (layer.alphaMap) textures.add(layer.alphaMap);
+    }
+  }
+  return textures;
 }
 
 /**
@@ -430,8 +477,16 @@ function texturePath(qualifiedName: string): string {
  * each one is rewritten here to reference its textures through
  * KHR_texture_basisu.
  */
-function exportTextures(umodel: string, ktx: string, client: string, meshes: Record<string, MeshInfo>): void {
-  const wanted = new Set<string>();
+function exportTextures(
+  umodel: string,
+  ktx: string,
+  client: string,
+  meshes: Record<string, MeshInfo>,
+  terrain: Set<string>
+): void {
+  // The terrain's own layer textures and masks go through the same encode --
+  // they are ordinary textures in the map's .utx, and they are the ground.
+  const wanted = new Set<string>(terrain);
   for (const entry of Object.values(meshes)) {
     for (const name of entry.textures) if (name) wanted.add(name);
   }
@@ -681,7 +736,7 @@ async function bakeTextures(
   await fs.writeFile(target, JSON.stringify({ ...existing, ...meshes }));
   if (canEncode) {
     await fs.mkdir(TEXTURES_OUT, { recursive: true });
-    exportTextures(umodel, ktx, client, meshes);
+    exportTextures(umodel, ktx, client, meshes, await referencedTerrainTextures(mapNames));
   }
 }
 
