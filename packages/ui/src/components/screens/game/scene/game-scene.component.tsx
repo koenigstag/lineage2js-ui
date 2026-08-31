@@ -8,10 +8,12 @@ import { IS_DEMO_MODE } from "../../../../config/env";
 import { l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
 import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
+import { useMapScenes } from "../../../../utils/world/use-map-scenes";
 import { ARRIVE_EPSILON, interpolatedCreaturePosition } from "../../../../utils/creature-movement";
 import { useGameStore } from "../../../../stores/StoreContext";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
+import { StaticMeshField } from "./static-mesh-field.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
 import { DroppedItemsField } from "./dropped-items-field.component";
 import { MoveTargetMarker } from "./move-target-marker.component";
@@ -141,6 +143,9 @@ export const GameScene = observer(function GameScene() {
   const yaw = realPlayer ? l2HeadingToThreeYaw(realPlayer.heading) : character.yaw;
 
   const tiles = useGeoTiles(worldX, worldY);
+  // The client's own scenery, streamed a whole .unr map at a time -- see
+  // useMapScenes for why that grid and not the geodata one.
+  const mapScenes = useMapScenes(worldX, worldY);
 
   useEffect(() => {
     const keys = new Set<string>();
@@ -334,6 +339,9 @@ export const GameScene = observer(function GameScene() {
         <gridHelper args={[GROUND_GRID_SIZE_M, 40, "#3a4a3f", "#25302a"]} raycast={() => null} />
 
         <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} orbitDragActiveRef={orbitDragActiveRef} />
+
+        {/* Trees, rocks and buildings out of the retail client -- see StaticMeshField. */}
+        <StaticMeshField scenes={mapScenes} />
 
         {/* Local placeholder avatar -- only shown before a real player entry
             exists (no live session yet). Once gameStore.creatures has us,
