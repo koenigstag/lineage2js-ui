@@ -61,6 +61,54 @@ app.get("/highfive/models/versions.json", async (_req, res) => {
   res.json(await assetVersions("highfive/models"));
 });
 
+/**
+ * The same per-file token, for a tree rather than one folder: the datapack
+ * tables sit a level down (`item-names/en.json`), so the flat readdir above
+ * would see the folders and none of the files.
+ *
+ * Keys are relative to `relativeDir`, which is what the UI asks for them by.
+ */
+async function assetVersionsDeep(relativeDir: string, prefix = ""): Promise<Record<string, string>> {
+  const versions: Record<string, string> = {};
+  let entries;
+  try {
+    entries = await fs.readdir(path.join(ASSETS_DIR, relativeDir), { withFileTypes: true });
+  } catch {
+    return versions;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const relative = `${relativeDir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      Object.assign(versions, await assetVersionsDeep(relative, `${prefix}${entry.name}/`));
+    } else if (entry.isFile()) {
+      const stats = await fs.stat(path.join(ASSETS_DIR, relative));
+      versions[`${prefix}${entry.name}`] = `${stats.size.toString(36)}-${Math.round(stats.mtimeMs).toString(36)}`;
+    }
+  }
+  return versions;
+}
+
+/**
+ * The datapack manifest: a token per reference table (item names, npc names,
+ * skill descriptions, system messages -- about 5MB of JSON that every session
+ * reads), so a client can cache them hard and still never hold a stale one.
+ * The UI hangs each token off its table's URL, so a re-converted table arrives
+ * under a URL the browser has never seen. See the UI's lib/datapack-cache.ts.
+ *
+ * These tables used to ship inside the UI bundle, out of packages/ui/public.
+ * They live here now so third-party reference data stops sitting in the git
+ * repository -- the same line the icons, models and client tables are on.
+ *
+ * Uncacheable itself, like the two manifests above, and for the sharper of
+ * their reasons: a client holding a stale copy keeps requesting tables under
+ * tokens that no longer exist, and 404s its way to having no names at all.
+ */
+app.get("/highfive/datapack/versions.json", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(await assetVersionsDeep("highfive/datapack"));
+});
+
 /** A token for a whole folder, changing whenever any file in it does -- the textures of one rig move together. */
 async function directoryVersion(relativeDir: string): Promise<string> {
   const versions = await assetVersions(relativeDir);

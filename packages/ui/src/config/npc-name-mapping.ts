@@ -3,7 +3,7 @@ import { rootStore } from "../stores/RootStore";
 // Reactive read, not baked onto the entity: DatapackStore.npcNames loads
 // asynchronously (see DatapackStore.loadNpcNames()), same treatment as
 // item-mapping.ts's getItemName(). Sourced from adrenalinebot.com's HighFive
-// database (public/npc-names/<lang>.json), since not every NpcInfo packet
+// database (datapack/npc-names/<lang>.json), since not every NpcInfo packet
 // carries a real name on the wire -- see NpcInfo.ts's own comment: some
 // templates deliberately send an empty name string and expect the client to
 // resolve it locally (lineage2ts's isUsingServerSideName() flag), same as a

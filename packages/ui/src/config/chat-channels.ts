@@ -158,7 +158,8 @@ export const CHANNELS_IN_EVERY_TAB = new Set<number>([
 ]);
 
 /**
- * Taken from the retail palette in {packages/ui/public/chat-colors/default.json},
+ * Taken from the retail palette in
+ * {packages/assets-server/assets/highfive/datapack/chat-colors/default.json},
  * whose keys are the client's own channel names: CHAT_NORMAL, CHAT_SHOUT,
  * CHAT_TELL, CHAT_PARTY, CHAT_CLAN, CHAT_MARKET (trade), CHAT_ALLIANCE,
  * CHAT_ANNOUNCE, CHAT_HERO, CHAT_CRITICAL_ANNOUNCE, CHAT_SYSTEM.

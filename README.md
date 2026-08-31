@@ -89,6 +89,12 @@ The UI runs without any of the asset pipelines below: missing icons fall back
 to coloured gradients, missing bodies to a placeholder capsule, and missing
 geodata to a flat grid. Nothing is a hard dependency.
 
+The one worth setting up anyway is the assets server, because the reference
+tables that turn ids into words live there (see below). Without it the client
+works but shows raw ids -- `item.name.57` rather than "Wooden Breastplate" --
+so `pnpm dev:assets-server` alongside `pnpm dev:ui` is the normal way to work
+on anything with names in it.
+
 ## Scripts
 
 Root-level scripts operate across every package via Turborepo:
@@ -107,7 +113,6 @@ Shortcuts for working on a single package without `--filter`:
 | ------------------------ | ----------------------------------------------------------- |
 | `pnpm dev:ui`             | Start the UI package's Vite dev server                     |
 | `pnpm build:ui`           | Typecheck + build the UI package                            |
-| `pnpm build:ui:pages`     | Build the UI package with the GitHub Pages base path        |
 | `pnpm dev:network`        | Watch-build the network package                             |
 | `pnpm build:network`      | Build the network package                                   |
 | `pnpm dev:assets-server`  | Run the assets server with hot reload                        |
@@ -130,10 +135,23 @@ locally (see below):
 
 `packages/assets-server` serves everything under
 `packages/assets-server/assets/highfive/` — icons, `geodata-tiles/`,
-`models/`, `textures/` and the decoded client tables in `data/` — without any
-of it ever being committed. That whole tree is gitignored except for its
-folder structure and `.gitkeep` files; see the nested `.gitignore` there for
-exactly what's excluded.
+`models/`, `textures/`, the decoded client tables in `data/` and the
+reference tables in `datapack/` — without any of it ever being committed.
+That whole tree is gitignored except for its folder structure and `.gitkeep`
+files; see the nested `.gitignore` there for exactly what's excluded.
+
+`datapack/` is the one that changes what the UI looks like when it's missing,
+rather than merely how it's decorated: it holds the tables that map ids to
+words (item and npc names, skill descriptions, system messages, the stat
+tables tooltips read), laid out as `<table>/<lang>.json`, or
+`<table>/data.json` where a table isn't translated. These used to ship inside
+the UI bundle out of `packages/ui/public/`, and were moved here so
+third-party reference data stays out of the git repository — the same rule
+the icons, models and client tables already followed. The client fetches them
+through `VITE_DATAPACK_BASE_URL` and caches them in Cache Storage, keyed by a
+token the server derives from each file's size and mtime and hands out at
+`highfive/datapack/versions.json`, so a table survives redeploys in the cache
+until the file behind it actually changes.
 
 ```bash
 cp .env.example .env   # inside packages/assets-server
@@ -167,3 +185,26 @@ reads a source you already have and writes into the gitignored tree:
 
 Every converter's own header comment documents its flags and output layout;
 start there rather than guessing.
+
+## Deploying
+
+The client is a static bundle, served from your own host alongside the assets
+server. Screens live in the URL hash, so there is no server-side routing to
+arrange and any static host will do. A deploy is one command:
+
+```bash
+ssh myhost '~/lineage2/lineage2js-ui/deploy/deploy-ui.sh'
+```
+
+The build happens on that host rather than in CI, because `VITE_*` vars are
+baked into the bundle at build time — so the machine that builds is the one
+that has to hold them, and there they live in a gitignored
+`packages/ui/.env.production`.
+
+That file is also where the deployment's real domain belongs: no host, domain
+or address of a running deployment appears anywhere in this repository, and
+the deploy docs and nginx template use `example.com` and `myhost` as
+placeholders throughout.
+
+See [deploy/README.md](./deploy/README.md) for the nginx vhost, the
+first-time setup and how to verify a deploy landed.

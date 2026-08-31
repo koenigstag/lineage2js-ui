@@ -22,6 +22,8 @@ interface ImportMetaEnv {
   readonly VITE_CHARACTER_TEXTURE_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/data/" -- folder of tables converted out of the client's own `system/*.dat` (see assets-server/scripts/convert-npcstring.ts and config/client-data-urls.ts). Currently just npcstring, which resolves the `<fstring>` ids npc dialogue is written in; unset leaves those showing as bare numbers. */
   readonly VITE_CLIENT_DATA_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/datapack/" -- folder of the reference tables that turn ids into words: item and npc names, skill descriptions, system messages, the stat tables tooltips read (see config/datapack-urls.ts and lib/datapack-cache.ts). These shipped in the bundle out of public/ until they moved to the assets server to keep third-party data out of the repository; unset leaves every one of them empty, so the UI shows raw ids. */
+  readonly VITE_DATAPACK_BASE_URL: string;
   /** @lineage2js/network Logger verbosity bitmask (NONE=0, INFO=1, WARNING=2, ERROR=4, DEBUG=8). Defaults to INFO. */
   readonly VITE_L2JSC_LOG_LEVEL: string;
   /**
@@ -55,7 +57,7 @@ interface ImportMetaEnv {
   readonly VITE_LOGIN_SERVER_IP: string;
   /** L2 login server port, e.g. "2106". Defaults to 2106 if unset. */
   readonly VITE_LOGIN_SERVER_PORT: string;
-  /** "true" connects via wss:// instead of ws://. Required when this app itself is served over https (e.g. GitHub Pages) -- browsers block a plain ws:// connection from an https page as mixed content. The login server (and whatever game server it hands off to, see MMOConfig.Secure) must actually terminate TLS for this to work, e.g. via a reverse proxy in front of it. */
+  /** "true" connects via wss:// instead of ws://. Required when this app itself is served over https, which any real deploy is -- browsers block a plain ws:// connection from an https page as mixed content. The login server (and whatever game server it hands off to, see MMOConfig.Secure) must actually terminate TLS for this to work, e.g. via a reverse proxy in front of it. */
   readonly VITE_LOGIN_SERVER_SECURE: string;
 }
 

@@ -19,7 +19,14 @@ pitch; this file is for working in the code.
   `assets/highfive/{icons,geodata-tiles,models}/` and are gitignored (only
   the folder structure + `.gitkeep` are tracked) since that art is
   copyrighted -- don't ever commit real icons, geodata or models here or
-  anywhere else in this repo. Client-UI art belongs here too rather than in
+  anywhere else in this repo. `assets/highfive/datapack/` follows the same
+  rule for a different reason: it holds the third-party reference tables
+  (item/npc/skill names, system messages, stat tables) that used to ship in
+  the UI bundle out of `packages/ui/public/`, and were moved here to keep
+  that data out of the repository. It is the one asset folder whose absence
+  changes what the UI *says* rather than how it looks -- every name degrades
+  to its raw id -- so `pnpm dev:assets-server` is part of normal UI work now,
+  not just art work. Client-UI art belongs here too rather than in
   the UI bundle, under the same rule -- the game menu's own button icons are
   `assets/highfive/icons/game-menu/<button>@64.png` (see the UI's
   `config/icon-urls.ts`; every consumer needs a fallback for when the art
@@ -67,7 +74,6 @@ pitch; this file is for working in the code.
 Root-level shortcuts (see package.json):
 
 - `pnpm dev:ui` / `pnpm build:ui` — run/build only the UI package
-- `pnpm build:ui:pages` — production build with the GitHub Pages base path
 - `pnpm dev:network` / `pnpm build:network` — same for the network package
 - `pnpm dev:assets-server` / `pnpm build:assets-server` /
   `pnpm start:assets-server` — same for the assets server
@@ -123,16 +129,20 @@ treat a failing typecheck as a build failure, not just a lint nit.
 - Env vars are Vite-style (`VITE_*` prefix, see `.env.example` and
   `vite-env.d.ts`), and get baked into the client bundle at build time —
   don't put anything secret in a `VITE_*` var, it ends up in the public JS.
-  Adding one means touching four places, not one: `vite-env.d.ts` (typed +
-  documented), `.env.example`, wherever it's read, and
-  `.github/workflows/deploy-pages.yml`'s `env:` block, which passes every
-  `VITE_*` the client reads through from a repository variable. A var missing
-  from the workflow isn't a build error — the feature just silently falls
-  back on the deployed site, which is how the game-menu icons shipped
-  art-less. The only vars deliberately kept out of it are
-  `VITE_DEV_LOGIN_USERNAME`/`VITE_DEV_LOGIN_PASSWORD` and `VITE_IS_DEMO_MODE`;
-  if a new one belongs in that category, say so in a comment there rather
-  than just leaving it out.
+  Adding one means touching four places, not three: `vite-env.d.ts` (typed +
+  documented), `.env.example`, wherever it's read, and — the one that isn't in
+  this repository — the gitignored `packages/ui/.env.production` on the host
+  that builds the deploy. The build happens there rather than in CI precisely
+  because `VITE_*` is baked in at build time, so that file is the only place
+  the deployment's real URLs exist; nothing in this repo names a real host or
+  domain, and the deploy docs use `example.com`/`myhost` placeholders. A var
+  missing from it isn't a build error — the feature just silently falls back
+  on the deployed site, which is how the game-menu icons once shipped
+  art-less. `VITE_DATAPACK_BASE_URL` is the one whose absence is loud rather
+  than subtle: every name in the UI degrades to a raw id. The vars that
+  deliberately never go there are `VITE_DEV_LOGIN_USERNAME`/
+  `VITE_DEV_LOGIN_PASSWORD` and `VITE_IS_DEMO_MODE`; if a new one belongs in
+  that category, say so in a comment rather than just leaving it out.
 - No test suite yet. Verification is: `pnpm --filter @lineage2js/ui build`
   (typecheck + build) plus manual visual testing — run the Vite dev server
   and drive it with a real browser (Playwright is a reasonable way to script

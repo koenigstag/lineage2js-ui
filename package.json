@@ -20,7 +20,6 @@
     "clean": "turbo run clean",
     "dev:ui": "pnpm --filter @lineage2js/ui dev",
     "build:ui": "pnpm --filter @lineage2js/ui build",
-    "build:ui:pages": "pnpm --filter @lineage2js/ui build:pages",
     "dev:network": "pnpm --filter @lineage2js/network dev",
     "build:network": "pnpm --filter @lineage2js/network build",
     "dev:assets-server": "pnpm --filter @lineage2js/assets-server dev",

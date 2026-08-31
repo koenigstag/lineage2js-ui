@@ -145,14 +145,14 @@ export const CLASS_TREE: Partial<Record<ClassId, ClassTreeEntry>> = {
 // Normalizes that string key name back to the numeric id, needed to index
 // into UiStore.classNames (keyed numerically,
 // straight off adrenalinebot.com's HighFive Classes table -- see
-// public/class-names/*.json).
+// datapack/class-names/*.json).
 function classIdNumeric(classId: ClassId): number | undefined {
   if (typeof classId === "number") return classId;
   const numeric = ClassId[classId as keyof typeof ClassId];
   return typeof numeric === "number" ? numeric : undefined;
 }
 
-// Sourced entirely from public/class-names/<lang>.json (loaded by
+// Sourced entirely from datapack/class-names/<lang>.json (loaded by
 // DatapackStore.loadClassNames() -- see its own comment for provenance:
 // adrenalinebot.com's HighFive Classes table, which covers every real
 // ClassId 1:1, confirmed against this project's own enum). No derived

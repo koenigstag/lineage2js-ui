@@ -52,7 +52,7 @@ export class DatapackStore {
    * id -> name for the current lang, see lang.ts's "item.name.<id>" special
    * case. The server never sends item name strings (ItemList/InventoryUpdate
    * are id/count/etc only) -- sourced from adrenalinebot.com's HighFive
-   * database instead (public/item-names/<lang>.json), same per-language
+   * database instead (datapack/item-names/<lang>.json), same per-language
    * caching as skillNames/actionNames/classNames.
    */
   itemNames: Record<string, string> = {};
@@ -61,7 +61,7 @@ export class DatapackStore {
    * id -> name for the current lang, see lang.ts's "skill.name.<id>" special
    * case. The server never sends skill name strings (SkillList/
    * AcquireSkillInfo are id/level only) -- sourced from adrenalinebot.com's
-   * HighFive database instead (public/skill-names/<lang>.json), same
+   * HighFive database instead (datapack/skill-names/<lang>.json), same
    * per-language caching as actionNames/classNames.
    */
   skillNames: Record<string, string> = {};
@@ -69,7 +69,7 @@ export class DatapackStore {
   /** id -> name for the current lang, see lang.ts's "action.name.<id>" special case. Same source/caching as itemNames/skillNames. */
   actionNames: Record<string, string> = {};
   private actionNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
-  /** classId -> name for the current lang (public/class-names/<lang>.json, sourced from adrenalinebot.com's HighFive database -- see class-tree.ts's getClassLabel()). Same per-language caching as actionNames. */
+  /** classId -> name for the current lang (datapack/class-names/<lang>.json, sourced from adrenalinebot.com's HighFive database -- see class-tree.ts's getClassLabel()). Same per-language caching as actionNames. */
   classNames: Record<string, string> = {};
   private classNamesCache: Partial<Record<LANG, Record<string, string>>> = {};
   /**
@@ -101,12 +101,12 @@ export class DatapackStore {
    * as `Name: <fstring>1001004</fstring> Manor of <fstring>1001000</fstring>`
    * and a client that can't resolve them shows the digits.
    *
-   * Unlike every other table here this one is *not* in public/: it comes
-   * straight out of the client's own npcstring dat, so it lives on the
-   * assets server with the models and textures (see
-   * config/client-data-urls.ts). It is therefore routinely absent -- no
-   * assets server is configured by default -- and an unresolved id has to
-   * degrade to showing the number, which is no worse than today.
+   * Comes straight out of the client's own npcstring dat rather than the
+   * third-party database the datapack tables come from, so it sits in its own
+   * folder on the assets server (see config/client-data-urls.ts) and is
+   * fetched directly rather than through fetchDatapack(). It is routinely
+   * absent -- no assets server is configured by default -- and an unresolved
+   * id has to degrade to showing the number, which is no worse than today.
    */
   npcStrings: Record<string, string> = {};
   private npcStringsRequested = false;
@@ -121,7 +121,7 @@ export class DatapackStore {
    * datapack source/gap as npcRaces -- no item packet (ItemList/
    * InventoryUpdate/TradeStart/...) ever sends grade/crystal_type over the
    * wire (confirmed against lineage2ts's and L2J_Mobius's writeItem, see
-   * TODO.md). Source data (public/item-grades/data.json) is grouped by grade
+   * TODO.md). Source data (datapack/item-grades/data.json) is grouped by grade
    * ({ [gradeIndex]: itemId[] }, far fewer grades than items) and inverted
    * into this id->grade lookup once at load time.
    */
@@ -191,7 +191,7 @@ export class DatapackStore {
     this.itemNames = names;
   }
 
-  /** Fetches public/item-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  /** Fetches datapack/item-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
   async loadItemNames(lang: LANG) {
     const cached = this.itemNamesCache[lang];
     if (cached) {
@@ -212,7 +212,7 @@ export class DatapackStore {
     this.skillNames = names;
   }
 
-  /** Fetches public/skill-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  /** Fetches datapack/skill-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
   async loadSkillNames(lang: LANG) {
     const cached = this.skillNamesCache[lang];
     if (cached) {
@@ -233,7 +233,7 @@ export class DatapackStore {
     this.actionNames = names;
   }
 
-  /** Fetches public/action-names/<lang>.json for `lang`, caching each language in memory once loaded. */
+  /** Fetches datapack/action-names/<lang>.json for `lang`, caching each language in memory once loaded. */
   async loadActionNames(lang: LANG) {
     const cached = this.actionNamesCache[lang];
     if (cached) {
@@ -254,7 +254,7 @@ export class DatapackStore {
     this.classNames = names;
   }
 
-  /** Fetches public/class-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  /** Fetches datapack/class-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
   async loadClassNames(lang: LANG) {
     const cached = this.classNamesCache[lang];
     if (cached) {
@@ -275,7 +275,7 @@ export class DatapackStore {
     this.npcNames = names;
   }
 
-  /** Fetches public/npc-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  /** Fetches datapack/npc-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
   async loadNpcNames(lang: LANG) {
     const cached = this.npcNamesCache[lang];
     if (cached) {
@@ -296,7 +296,7 @@ export class DatapackStore {
     this.questNames = names;
   }
 
-  /** Fetches public/quest-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
+  /** Fetches datapack/quest-names/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadActionNames(). */
   async loadQuestNames(lang: LANG) {
     const cached = this.questNamesCache[lang];
     if (cached) {
@@ -318,7 +318,7 @@ export class DatapackStore {
   }
 
   /**
-   * Fetches public/npc-races/data.json once, same treatment as
+   * Fetches datapack/npc-races/data.json once, same treatment as
    * loadItemNames(). Built from L2J_Mobius's HighFive datapack (dist/game/
    * data/stats/npcs/*.xml's <race> per npc id) -- the wire protocol never
    * sends a monster's race, only its template id (see NpcInfo.ts).
@@ -341,10 +341,10 @@ export class DatapackStore {
 
   /**
    * Fetches the npcstring table off the assets server once. Not through
-   * fetchDatapack(): that versions public/ paths against the build's own
-   * manifest, and this file isn't part of the build -- the assets server
-   * hands out its own ETag from file size/mtime, so overwriting the file is
-   * enough to invalidate a client's cache.
+   * fetchDatapack(): that resolves paths under the datapack folder and keys
+   * them by that folder's manifest, and this table lives in `data/` instead.
+   * One file needs no manifest anyway -- the assets server hands out an ETag
+   * from its size and mtime, so overwriting it invalidates a client's cache.
    */
   async loadNpcStrings() {
     const url = clientDataUrl("npcstring-e.json");
@@ -366,7 +366,7 @@ export class DatapackStore {
     this.npcTitles = titles;
   }
 
-  /** Fetches public/npc-titles/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadNpcNames(). */
+  /** Fetches datapack/npc-titles/<lang>.json for `lang`, caching each language in memory once loaded -- same treatment as loadNpcNames(). */
   async loadNpcTitles(lang: LANG) {
     const cached = this.npcTitlesCache[lang];
     if (cached) {
@@ -387,7 +387,7 @@ export class DatapackStore {
     this.npcLevels = levels;
   }
 
-  /** Fetches public/npc-levels/data.json once, same source/treatment as loadNpcRaces(). */
+  /** Fetches datapack/npc-levels/data.json once, same source/treatment as loadNpcRaces(). */
   async loadNpcLevels() {
     if (this.npcLevelsRequested) return;
     this.npcLevelsRequested = true;
@@ -404,7 +404,7 @@ export class DatapackStore {
     this.itemGrades = grades;
   }
 
-  /** Fetches public/item-grades/data.json once, same treatment as loadNpcRaces() -- inverts the grouped-by-grade source shape into an id->grade lookup. */
+  /** Fetches datapack/item-grades/data.json once, same treatment as loadNpcRaces() -- inverts the grouped-by-grade source shape into an id->grade lookup. */
   async loadItemGrades() {
     if (this.itemGradesRequested) return;
     this.itemGradesRequested = true;
@@ -427,7 +427,7 @@ export class DatapackStore {
     this.itemStats = stats;
   }
 
-  /** Fetches public/item-stats/data.json once, same treatment as loadItemGrades() -- already keyed by item id, so no inversion needed. */
+  /** Fetches datapack/item-stats/data.json once, same treatment as loadItemGrades() -- already keyed by item id, so no inversion needed. */
   async loadItemStats() {
     if (this.itemStatsRequested) return;
     this.itemStatsRequested = true;
@@ -444,7 +444,7 @@ export class DatapackStore {
   }
 
   /**
-   * Fetches public/skill-effect-fields/data.json once, same treatment as
+   * Fetches datapack/skill-effect-fields/data.json once, same treatment as
    * loadNpcRaces(). Generated from lineage2ts's own datapack CSV
    * (cli/overrides/data/csv/skills/skills.csv's magicClass/operateType/
    * isDebuff columns, one row per skill id -- taking each id's lowest-level
@@ -467,7 +467,7 @@ export class DatapackStore {
     this.characterBaseStats = stats;
   }
 
-  /** Fetches public/character-base-stats/data.json once, same treatment as loadNpcRaces(). */
+  /** Fetches datapack/character-base-stats/data.json once, same treatment as loadNpcRaces(). */
   async loadCharacterBaseStats() {
     if (this.characterBaseStatsRequested) return;
     this.characterBaseStatsRequested = true;

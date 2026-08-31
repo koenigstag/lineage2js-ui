@@ -83,7 +83,7 @@ function AnimatedCreature({ creature, selected }: AnimatedCreatureProps) {
  * Working heuristic for an npc/mob the real client doesn't render either
  * (e.g. npc id 32529, reported invisible in-client) -- every nameless
  * NpcInfo entry seen so far has turned out to be one of these invisible
- * trigger/marker NPCs (no entry in public/npc-names, and its own wire Name
+ * trigger/marker NPCs (no entry in datapack/npc-names, and its own wire Name
  * came back blank too, see worldCreatureSnapshotFromCreature's `name`
  * field). Not confirmed against a real server-sent "visible" flag yet (see
  * this function's own TODO) -- until one turns up, treat "no name at all"
