@@ -6,6 +6,45 @@ the converters are wired; this file is the **format reference** for the client
 side of the game -- the Unreal Engine 2 packages the retail client renders the
 world from.
 
+## convert:maps
+
+```bash
+pnpm --filter @lineage2js/assets-server convert:maps --client="D:\Games\Lineage2\L2_HighFive_Client" --umodel="C:\ue_viewer\umodel_64.exe" --meshes
+```
+
+Writes, per map:
+
+```
+assets/highfive/maps/<x>_<y>/scene.json     terrain metadata + actor placement
+assets/highfive/maps/<x>_<y>/heightmap.bin  256x256 16-bit heights, raw
+```
+
+and, with `--meshes`, the geometry those actors point at, into
+`assets/highfive/static-meshes/<Package>/` via umodel. `--only=20_18,22_22`
+restricts to named maps; without `--meshes` it needs no umodel at all.
+
+Over the whole client that is **203 maps, 196791 actor placements, 15780 mesh
+references resolving to 216 packages**, 14 MB of scene files and 25 MB of
+heightmaps. The geometry is much larger -- one map's ten packages come out at
+256 MB, since umodel exports every mesh in a package plus its textures, and
+packages are shared between maps.
+
+Positions stay in **L2 world units, exactly as the client stores them**, and
+rotations in Unreal rotator units (65536 to the turn). The UI converts to
+three.js space itself, the same way it does for creature positions off the
+wire; converting here would bake one axis convention into the asset.
+
+Two things about running it, both learned the hard way:
+
+- **It runs in batches of child processes.** The loader keeps every package it
+  opens, and one process dies about two thirds of the way through the client.
+  Freeing decoded buffers between maps makes it *worse* -- packages simply
+  decode again, and 85 maps get through instead of 145. A new process per
+  batch is the only thing that gives the memory back.
+- **`SysTextures/` must be in the asset list.** Leaving it out costs ~500
+  static meshes, and not loudly: they resolve a texture package to nothing and
+  throw well after their geometry is read, which reads like a mesh format bug.
+
 ## Tooling: what reads what
 
 Measured against `D:\Games\Lineage2\L2_HighFive_Client`, not taken from docs.
@@ -174,17 +213,15 @@ themselves, which is the same path `convert-client-rigs.ts` already uses.
 
 Deltas found so far against Lineage2JS's readers, which were written for C4:
 
-- **`UTexture` carries an extra block on High Five.** After the tagged
-  properties there is a `uint32` flag (archive >= 123 && licensee >= 16, which
-  Lineage2JS also reads) whose value is `0x100` here -- a case its reader
-  explicitly traps on as unseen. The block is fixed-shape: 32 zeroed bytes,
-  the texture's own qualified name as an `FString`, an **HLSL fragment**
-  (`float4 texcolor0=tex2D(s[0], ...)`) -- each string preceded by a one-byte
-  tag -- and a four-byte trailer reading `08 00 26 03`. High Five ships a
-  per-texture shader snippet C4 does not have. Patched in
-  `unreal-l2js-objects`'s `un-texture.ts` and verified against upstream's own
-  "consumed exactly" assertion over 109 textures in 6 packages, in all three
-  formats present (`G16`, `DXT1`, `P8`).
+- **`UTexture` carries an extra block on High Five.** Between the properties
+  and the mipmaps sit zero padding, the texture's name, more padding, an
+  **HLSL fragment** (`float4 texcolor0=tex2D(s[0], ...)`) the client ships per
+  texture, and a trailer. Neither its size nor its presence can be read off a
+  flag: padding runs from 32 bytes to over a thousand across this client's
+  packages, and `T_15_23`'s heightmap has the block without the `0x100` bit
+  Lineage2JS keys on. The reader therefore skips it by locating the mipmap
+  array through its own invariant instead. Verified across **45301 of 45301
+  textures in 548 packages**, licensee 33 through 39.
 - **Two structs C4 does not declare**: `INT64` and `ParamMap`, which
   `loadNativeClasses()` walks over in `Core.u`. Nothing reads them; they only
   have to be constructible. That is the complete set for this client.

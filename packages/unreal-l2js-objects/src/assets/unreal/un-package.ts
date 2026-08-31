@@ -344,7 +344,12 @@ class UNativePackage extends ANativePackage {
             case "PlayerStart": Constructor = UPlayerStart; break;
             case "Camera": Constructor = UCamera; break;
 
-            case "PhysicsVolume": Constructor = UPhysicsVolume; break;
+            case "PhysicsVolume":
+            // Patched for High Five (see README): DefaultPhysicsVolume is
+            // PhysicsVolume's own subclass in Unreal and carries nothing extra
+            // this reader looks at. Maps here reference one where C4 maps did
+            // not, and an unconstructible class loses the whole map.
+            case "DefaultPhysicsVolume": Constructor = UPhysicsVolume; break;
             case "BlockingVolume": Constructor = UBlockingVolume; break;
             case "MusicVolume": Constructor = UMusicVolume; break;
             case "ConvexVolume": Constructor = UConvexVolume; break;

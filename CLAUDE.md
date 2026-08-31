@@ -51,6 +51,10 @@ pitch; this file is for working in the code.
   invalidate clients' caches (no URL versioning needed). `scripts/` holds
   the offline converters that produce those files from sources the user
   supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles),
+  `convert:maps` (the client's `.unr` maps, read with the vendored UE2
+  readers -> per-map terrain metadata, a raw G16 heightmap and every
+  static mesh placement, plus umodel-exported geometry with `--meshes`;
+  see `packages/assets-server/README.md`),
   `convert:client-rigs` (an installed game client, read with umodel -> one
   `.glb` per race/sex plus its textures under
   `assets/highfive/textures/<rig>/`) and `convert:armorgrp` / `convert:chargrp` /

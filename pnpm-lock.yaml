@@ -17,6 +17,9 @@ importers:
 
   packages/assets-server:
     dependencies:
+      '@lineage2js/unreal-l2js-objects':
+        specifier: workspace:^
+        version: link:../unreal-l2js-objects
       express:
         specifier: ^4.21.0
         version: 4.22.2

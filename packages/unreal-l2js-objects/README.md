@@ -63,23 +63,40 @@ Last run: 4902 exports, terrain scale `(128, 128, 76)`, a 256x256 `TEXF_G16`
 heightmap decoding to world Z `-8870.9 .. 2482.8`, all 8 terrain layers, 109
 textures across 6 packages with 0 failures, and 490 of 491 static meshes
 spanning all 18 licensee versions consumed exactly. Over the whole client that
-is 11566 of 11596.
+is 11566 of 11596 static meshes and 45301 of 45301 textures.
 
 ## High Five patches
 
 Upstream targets **Chronicle 4**. Each patch is commented in place and marked
 `Patched for High Five`, so `git log -S "Patched for High Five"` finds them.
 
-- **`src/assets/unreal/un-texture.ts`** -- the real one. High Five textures
-  carry a block C4 does not, between the format flag and the mipmaps: 32
-  zeroed bytes, the texture's own qualified name, an **HLSL fragment**
-  (`float4 texcolor0=tex2D(s[0], ...)`), and a 4-byte trailer that reads
-  `08 00 26 03` on every texture checked. Upstream sets `someFlag` and then
-  hits a bare `debugger` when bit `0x100` is set, because it never saw it.
-  Without this the mip parse starts in the wrong place and every texture in
-  the client fails. Verified by upstream's own invariant -- `un-texture.ts`
-  asserts the object was consumed exactly -- across 109 textures in 6
-  packages, in all three formats present (`G16`, `DXT1`, `P8`).
+- **`src/assets/unreal/un-texture.ts`** -- the biggest one. High Five puts a
+  block between the format flag and the mipmaps that C4 does not have: zero
+  padding, the texture's name, more padding, an **HLSL fragment**
+  (`float4 texcolor0=tex2D(s[0], ...)`) the client ships per texture, and a
+  trailer. Upstream reads a `uint32` there and treats bit `0x100` as "a block
+  follows", then hits a bare `debugger` because C4 never sets it.
+
+  Both halves of that are wrong here, and each cost a round of debugging:
+
+  - The block's shape is not constant. A licensee 37 package pads with 32
+    bytes, a licensee 35 package with 1076, and the trailers differ
+    (`08 00 26 03` against `03 00 19 03`). Modelling it by size gets one
+    package right and the next one wrong.
+  - The bit is not a reliable sign of the block. `T_15_23`'s heightmap has the
+    block and does *not* have the bit -- which is how a map ends up with no
+    terrain at all while every other map is fine.
+
+  So nothing in the block is interpreted. Nothing in it is used either, so it
+  is skipped by looking for what follows: the mipmap array is self-describing
+  and tightly checkable -- a count, then per mip the absolute position its data
+  ends at, then that data's length -- and the array is accepted only if walking
+  the whole thing lands exactly on the object's last byte. Checking one mip is
+  not enough; the HLSL text produces plausible-looking counts on its own.
+
+  Verified across the whole client: **45301 of 45301 textures in 548 packages,
+  spanning licensee versions 33 to 39**, every one consuming its export
+  exactly.
 - **`src/assets/unreal/un-package.ts`** -- `INT64` and `ParamMap` added to the
   struct constructor table. High Five's script packages declare them and C4's
   do not, so `loadNativeClasses()` threw before it finished walking `Core.u`.

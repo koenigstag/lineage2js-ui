@@ -183,7 +183,13 @@ function addImpExtension(ext: C.SupportedExtensions_T, ...classList: string[]) {
 }
 
 addImpExtension("UNR", "Level");
-addImpExtension("UTX", "Texture", "TexOscillator", "Shader", "ColorModifier", "FinalBlend", "TexEnvMap", "Combiner", "TexCoordSource", "TexPanner", "WetTexture", "TexRotator", "FadeColor", "ConstantColor", "VertexColor", "Cubemap");
+// Patched for High Five (see README): the last four are classes this
+// client imports out of .utx files and C4 did not. Without them the
+// package cannot be routed to a file at all and the load throws
+// "Package 'T_21_24[Palette]' not found!", losing a whole map. Found by
+// diffing every import table in the client (1013 packages) against this
+// list; these are all of them, 8 references in total.
+addImpExtension("UTX", "Texture", "TexOscillator", "Shader", "ColorModifier", "FinalBlend", "TexEnvMap", "Combiner", "TexCoordSource", "TexPanner", "WetTexture", "TexRotator", "FadeColor", "ConstantColor", "VertexColor", "Cubemap", "Palette", "TexScaler", "TexOscillatorTriggered", "GlowModifier");
 addImpExtension("UAX", "Sound");
 addImpExtension("USX", "StaticMesh");
 addImpExtension("UKX", "Animation", "SkeletalMesh", "VertMesh");

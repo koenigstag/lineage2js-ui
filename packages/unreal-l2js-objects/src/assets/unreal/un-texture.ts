@@ -21,6 +21,68 @@ enum ETexClampMode {
     TC_Clamp = 0x01,
 }
 
+/**
+ * Patched for High Five (see README): finds where a texture's mipmaps begin.
+ *
+ * High Five puts a block between the format flag and the mipmaps that C4 does
+ * not have -- zero padding, the texture's name, more padding, an HLSL fragment
+ * the client ships per texture, and a trailer. Its shape is not constant:
+ * across this client's packages the padding runs from 32 bytes to over a
+ * thousand and the trailer's bytes differ, so modelling it by size gets one
+ * package right and the next one wrong.
+ *
+ * Nothing in the block is used, so it is skipped rather than parsed, by
+ * looking for the thing that follows it. The mipmap array is
+ * self-describing and tightly checkable: a count, then per mip an int32
+ * holding the absolute position the mip's data ends at, then the data's own
+ * length. Requiring those to agree -- `here + length === end` -- is a
+ * four-billion-to-one coincidence to hit by accident, and the caller's
+ * `readTail === readHead` assertion still has the last word.
+ */
+function findMipmaps(pkg: C.APackage, from: number, readTail: number): number | null {
+    const resume = pkg.tell();
+
+    try {
+        for (let at = from; at < readTail - 8; at++) {
+            if (mipmapsEndExactly(pkg, at, readTail)) return at;
+        }
+        return null;
+    } finally {
+        pkg.seek(resume, "set");
+    }
+}
+
+/**
+ * Walks the mipmap array as if it started at `at` and reports whether it ends
+ * exactly on the object's last byte.
+ *
+ * Checking only the first mip is not enough -- the block being skipped
+ * contains an HLSL fragment, and ASCII happily produces a count and an offset
+ * that look plausible on their own. Requiring the whole array to land on the
+ * export's end is the same invariant the reader asserts afterwards, so a
+ * position that passes here cannot fail there.
+ */
+function mipmapsEndExactly(pkg: C.APackage, at: number, readTail: number): boolean {
+    pkg.seek(at, "set");
+
+    const count = pkg.read("compat32") as number;
+    if (count < 1 || count > 16) return false;
+
+    for (let i = 0; i < count; i++) {
+        const end = pkg.read("int32") as number;          // absolute position the data ends at
+        if (end <= pkg.tell() || end > readTail) return false;
+
+        const length = pkg.read("compat32") as number;
+        if (length < 0 || pkg.tell() + length !== end) return false;
+
+        pkg.seek(length);
+        pkg.seek(10);                                     // USize, VSize (int32) + UBits, VBits (uint8)
+        if (pkg.tell() > readTail) return false;
+    }
+
+    return pkg.tell() === readTail;
+}
+
 abstract class UTexture extends UMaterial {
     declare public readonly palette: GA.UPlatte;
     declare public readonly internalTime: number[];
@@ -51,11 +113,6 @@ abstract class UTexture extends UMaterial {
     declare protected lodSet: number;
 
     public readonly mipmaps = new FArray(FMipmap);
-
-    /** High Five only -- see doLoad. The texture's own qualified name, as the shader block spells it. */
-    declare public shaderTextureName: string;
-    /** High Five only -- see doLoad. The HLSL fragment the client ships alongside this texture. */
-    declare public shaderSource: string;
 
     protected getPropertyMap() {
         return Object.assign({}, super.getPropertyMap(), {
@@ -106,36 +163,29 @@ abstract class UTexture extends UMaterial {
         const verArchive = pkg.header.getArchiveFileVersion();
         const verLicense = pkg.header.getLicenseeVersion();
 
-        let someFlag = 0;
-
-        if (verArchive >= 123 && verLicense >= 16) {
-            someFlag = pkg.read("uint32");
-        }
+        // Where the object's native data begins, before anything is assumed
+        // about it. Everything between here and the mipmaps is skipped -- see
+        // findMipmaps.
+        const nativeStart = pkg.tell();
 
         if (verArchive < 84) {
             debugger;
             throw new Error("Don't know what to do");
         }
 
-        if ((someFlag & 0x100) !== 0) {
-            // High Five ships a per-texture shader that C4 does not, which is
-            // why upstream only had a `debugger` here -- it never saw the bit
-            // set. The block is fixed-shape and sits between the flag and the
-            // mipmaps: 32 zeroed bytes, the texture's own qualified name, an
-            // HLSL fragment (`float4 texcolor0=tex2D(s[0], ...)`) -- each
-            // string preceded by a one-byte tag -- and a four-byte trailer
-            // that reads `08 00 26 03` on every texture checked, across
-            // formats, sizes and packages. Nothing here is used yet; it only
-            // has to be consumed so the mipmaps start in the right place.
-            // The `readTail === readHead` assertion below is what proves it:
-            // a wrong size lands the mip parse somewhere else and trips it.
-            pkg.seek(32);
-            pkg.read("uint8");
-            this.shaderTextureName = pkg.read("char");
-            pkg.read("uint8");
-            this.shaderSource = pkg.read("char");
-            pkg.seek(4);
+        // Patched for High Five (see README). Upstream reads a uint32 here and
+        // treats bit 0x100 as "a shader block follows", then hits a bare
+        // `debugger` because C4 never sets it. Both halves of that are wrong
+        // for this client: the block is there on essentially every texture,
+        // and the bit is not a reliable sign of it -- T_15_23's heightmap has
+        // the block and does *not* have the bit, which is how one map ends up
+        // with no terrain at all. So nothing here is interpreted; the mipmaps
+        // are located by their own invariant instead.
+        const mipmapsAt = findMipmaps(pkg, nativeStart, this.readTail);
+        if (mipmapsAt === null) {
+            throw new Error(`Could not find the mipmaps of '${exp.objectName}'`);
         }
+        pkg.seek(mipmapsAt, "set");
 
         this.mipmaps.load(pkg);
         this.readHead = pkg.tell();
