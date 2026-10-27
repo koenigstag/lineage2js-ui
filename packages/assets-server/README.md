@@ -222,9 +222,13 @@ than inside any of them. Decoding is the same `Lineage2Ver111` wrapper as the
 ```
 [EnvSetup]           StartTime=22  TimeRatio=6  StaticLightingAdjust=4
 [TerrainShadowMap]   Num=8  AutoTimeGeneration=true
-[FOG]                StartRange1..5 / EndRange1..5   (units of 2000)
+[FOG]                StartRange1..5 / EndRange1..5   (x2048 -- see Sky and fog)
 TimeEnvFileName0..3  TimeEnv0.INT .. TimeEnv3.INT    (normal/dusk/dawn/cursed)
 ```
+
+`--env` rewrites `env.json` alone, without touching a map: these are two files
+in the client's `system/`, so adding a field to them should not cost a re-bake
+of all 203.
 
 Each `TimeEnv` file holds 25 points per curve, one an hour with both ends of
 the day present, for `TerrainAmbient`, `StaticMeshAmbient`, `ActorAmbient`,
@@ -399,10 +403,46 @@ in are stated by the map, not a matter of taste. A map has one `L2FogInfo` per
 zone and the converter takes the first: choosing by the zone the camera stands
 in needs the BSP the zones are defined by, which nothing here reads yet.
 
+#### The map's fog ranges are a local override, not the map's fog
+
+Every near in `fogRanges` is 0, on every map in the client. That is not a
+reading error -- `AffectRange` on the same actor reads `(3000..4000)` through
+the same `FRange` struct -- and it is not the fog the world is drawn with
+either. An `L2FogInfo` is a *zone* effect, in force only while the camera
+stands inside that affect range, and there it replaces the global fog
+outright:
+
+```js
+// rendering/render-manager.ts, the vendored renderer
+if (this.activeFogId) {
+    targetFogStart = accStart / totalFogWeight;   // the zone's own range, near = 0
+    ...
+} else {
+    // No active zone fog - already has default values from Env.int
+}
+```
+
+So a swamp's fog really does begin at your feet, and everywhere else the fog
+comes from `env.int`'s `[FOG]`:
+
+```
+StartRange1..5   1.0  1.5  2.0  2.5   4.0      x2048 ->  2048  3072  4096  5120   8192
+EndRange1..5     4.0  5.0  6.0  7.0  10.0      x2048 ->  8192 10240 12288 14336  20480
+```
+
+The factor is **2048**, not the 2000 the file's own comment claims; it comes
+from a trace of the real client (`2.5 * 2048 = 5120`), recorded in the
+vendored renderer beside the code above. Reading the map's bands as the world
+fog is what made the fog start at the camera everywhere, which washed out
+every near surface -- a slope 56 units away measured `(102,84,64)` against its
+own `(89,69,40)`.
+
 The five bands exist because the client picks one by the player's view-distance
 setting. A renderer with a fixed draw distance wants the widest band that still
 closes before its ground runs out; anything wider leaves the terrain's edge
-visible, which is the thing fog is there to prevent.
+visible, which is the thing fog is there to prevent. At this project's 260
+units that is band 3, 4096..12288, which closes at 234 with the ground ending
+at 260.
 
 ## Static meshes
 

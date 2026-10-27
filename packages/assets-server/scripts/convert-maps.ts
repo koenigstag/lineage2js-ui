@@ -1074,8 +1074,13 @@ async function main(): Promise<void> {
     await fs.writeFile(path.join(MAPS_OUT, "env.json"), JSON.stringify(env));
     console.log(
       `env.json: ${env.cycles.length} cycles, ${env.cycles[0].ambient.terrain.length} curve points, ` +
-        `${env.shadowMapCount} shadow planes per sector at ${env.shadowMapTimes.join("/")}h`
+        `${env.shadowMapCount} shadow planes per sector at ${env.shadowMapTimes.join("/")}h, ` +
+        `${env.fog.ranges.length} fog bands ${env.fog.ranges[0]?.join("..")} .. ${env.fog.ranges.at(-1)?.join("..")}`
     );
+    // `--env` stops here. The curves are two files in the client's `system/`
+    // and have nothing to do with any map, so adding a field to them should
+    // not cost a re-bake of all 203 -- same reasoning as `--mesh-table`.
+    if (process.argv.includes("--env")) return;
   }
 
   // `--mesh-table` refreshes meshes.json alone, from the scene files already

@@ -78,7 +78,16 @@ export interface MapEnvironmentTime {
  * yet.
  */
 export interface MapEnvironment {
-  /** Five distance bands, near to far, in L2 world units. */
+  /**
+   * The `L2FogInfo`'s own five bands, near to far, in L2 world units.
+   *
+   * **A local override, not the map's fog.** It applies only while the camera
+   * stands inside the actor's `AffectRange` -- 3000 to 4000 units, a swamp or
+   * a cave mouth -- and there it replaces the world's fog outright, which is
+   * why every near here is 0: a zone fog does start at the camera. Placing it
+   * needs the BSP the zones are cut from, so nothing reads it yet and the fog
+   * comes from WorldEnvFog. Kept for when that lands.
+   */
   fogRanges: Array<[number, number]>;
   times: MapEnvironmentTime[];
   /** Unreal rotator (pitch, yaw, roll) and the billboard's own radius. */
@@ -154,9 +163,22 @@ export interface WorldEnvCycle {
  * packages/assets-server/scripts/client-data/env-config.ts, which also
  * explains why this and not the level's own `LevelInfo` ambient.
  */
+/**
+ * The five fog bands, in L2 world units, one per view-distance setting.
+ *
+ * This is the fog, everywhere except inside an `L2FogInfo`'s affect range --
+ * see MapEnvironment.fogRanges, which is the local override and the reason
+ * those start at 0.
+ */
+export interface WorldEnvFog {
+  ranges: Array<[number, number]>;
+  speed: number;
+}
+
 export interface WorldEnv {
   startTime: number;
   timeRatio: number;
+  fog: WorldEnvFog;
   shadowMapCount: number;
   shadowMapTimes: number[];
   staticLightingAdjust: number;

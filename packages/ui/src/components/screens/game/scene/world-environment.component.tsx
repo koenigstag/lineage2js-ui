@@ -4,7 +4,7 @@ import { Color, Fog, SRGBColorSpace, Vector3 } from "three";
 import { TERRAIN_DRAW_DISTANCE, mapKey, worldToMapCoords } from "../../../../config/world-assets";
 import { L2_TO_THREE_SCALE, l2ToThree } from "../../../../utils/coords";
 import { DEFAULT_HOUR, resolveLighting } from "../../../../utils/world/map-lighting";
-import type { MapEnvironment, MapEnvironmentTime } from "../../../../utils/world/map-scene.types";
+import type { MapEnvironmentTime, WorldEnv } from "../../../../utils/world/map-scene.types";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
 import { useWorldEnv } from "../../../../utils/world/use-world-env";
 
@@ -67,7 +67,7 @@ export function WorldEnvironment({ scenes, worldX, worldY, hour = DEFAULT_HOUR }
     const previousBackground = scene.background;
     const previousFog = scene.fog;
 
-    const [near, far] = fogBand(environment);
+    const [near, far] = fogBand(env);
     scene.background = colors.sky;
     scene.fog = new Fog(colors.fog, near * L2_TO_THREE_SCALE, far * L2_TO_THREE_SCALE);
 
@@ -75,7 +75,7 @@ export function WorldEnvironment({ scenes, worldX, worldY, hour = DEFAULT_HOUR }
       scene.background = previousBackground;
       scene.fog = previousFog;
     };
-  }, [scene, colors, environment]);
+  }, [scene, colors, environment, env]);
 
   // The lights are drawn whether or not the map has a sky: the two come from
   // different places and a map may carry only one.
@@ -137,16 +137,26 @@ function toColor(rgb: [number, number, number]): Color {
 }
 
 /**
- * The band of fog to use, of the five the map carries.
+ * The band of fog to use, of the five the client ships.
  *
- * The client picks by the player's view-distance setting; ours is fixed by
- * TERRAIN_DRAW_DISTANCE, so the useful band is the widest one that still
- * closes before the ground runs out. Anything wider would leave the terrain's
- * edge visible, which is the one thing fog is here to prevent.
+ * These come from `env.int`'s `[FOG]`, not from the map. The map's own
+ * `L2FogInfo` carries five bands too and it is tempting to read them here --
+ * this did, and that is why the fog started at the camera. Those are the
+ * *zone* override, in force only inside the actor's 3000-4000 unit affect
+ * range, and their near is 0 on every map in the client because a swamp's fog
+ * really does begin at your feet. Outside such a zone the client uses these.
+ * See WorldEnvFog and MapEnvironment.fogRanges.
+ *
+ * The client picks the band by the player's view-distance setting; ours is
+ * fixed by TERRAIN_DRAW_DISTANCE, so the useful band is the widest one that
+ * still closes before the ground runs out. Anything wider would leave the
+ * terrain's edge visible, which is the one thing fog is here to prevent.
  */
-function fogBand(environment: MapEnvironment): [number, number] {
-  const bands = environment.fogRanges.filter((range) => range[1] > 0);
-  if (!bands.length) return [0, TERRAIN_DRAW_DISTANCE / L2_TO_THREE_SCALE];
+function fogBand(env: WorldEnv | null): [number, number] {
+  const bands = (env?.fog?.ranges ?? []).filter((range) => range[1] > 0);
+  // The renderer's own fallback when the config names no range, in its own
+  // units -- not a number invented here.
+  if (!bands.length) return [2000, 8000];
 
   const fitting = bands.filter(([, far]) => far * L2_TO_THREE_SCALE <= TERRAIN_DRAW_DISTANCE);
   return fitting.length ? fitting[fitting.length - 1] : bands[0];

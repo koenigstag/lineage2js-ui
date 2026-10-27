@@ -63,10 +63,29 @@ export interface EnvCycle {
   light: EnvSurfaces<EnvTimeLight[]>;
 }
 
+/**
+ * The five fog bands, in world units, one per view-distance setting.
+ *
+ * `[FOG]` states them as `StartRange1=1.0`, and the client multiplies by
+ * **2048** -- not the 2000 the file's own comment claims. The factor is the
+ * vendored renderer's, taken from a trace of the real client (`2.5 * 2048 =
+ * 5120`, rendering/render-manager.ts), so it is the one that matches what the
+ * game draws. Converted here so that nothing downstream has to carry it.
+ *
+ * These are the fog, except where the camera stands inside an `L2FogInfo`'s
+ * affect range -- a swamp, a cave mouth -- which replaces them outright. That
+ * override is what `MapEnvironment.fogRanges` holds, and why those start at 0.
+ */
+export interface EnvFog {
+  ranges: Array<[number, number]>;
+  speed: number;
+}
+
 export interface ClientEnv {
   /** Hour the client starts the day at, and how many times real time it runs. */
   startTime: number;
   timeRatio: number;
+  fog: EnvFog;
   /** Shadow maps baked per terrain sector, and the hours they stand for. */
   shadowMapCount: number;
   shadowMapTimes: number[];
@@ -161,6 +180,21 @@ function lightCurve(rows: Array<[string, string]> | undefined, hsvToRgb: HsvToRg
   });
 }
 
+/** `[FOG]`: StartRangeN/EndRangeN as a pair each, in world units. See EnvFog. */
+function readFog(rows: Array<[string, string]> | undefined): EnvFog {
+  const RANGE_UNITS = 2048;
+  const ranges: Array<[number, number]> = [];
+
+  for (let index = 1; ; index++) {
+    const start = scalar(rows, `startrange${index}`, NaN);
+    const end = scalar(rows, `endrange${index}`, NaN);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) break;
+    ranges.push([start * RANGE_UNITS, end * RANGE_UNITS]);
+  }
+
+  return { ranges, speed: scalar(rows, "fogspeed", 1) };
+}
+
 /**
  * Reads the whole lighting configuration out of an installed client.
  *
@@ -205,6 +239,7 @@ export function readClientEnv(clientDir: string, hsvToRgb: HsvToRgb): ClientEnv 
   return {
     startTime: scalar(setup, "starttime", 0),
     timeRatio: scalar(setup, "timeratio", 6),
+    fog: readFog(env.get("fog")),
     shadowMapCount,
     // `AutoTimeGeneration=true`, and this is the generated series: the midpoint
     // of each equal slice of the day. Same arithmetic as the sector reader's,
