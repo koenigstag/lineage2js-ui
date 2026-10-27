@@ -7,7 +7,11 @@ import { REFERENCE_HUMAN_HEIGHT_M } from "../../../../utils/models/character-mod
 import { IS_DEMO_MODE } from "../../../../config/env";
 import { L2_TO_THREE_SCALE, l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
 import { TERRAIN_BELOW_GEODATA } from "../../../../config/world-assets";
-import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
+import {
+  heightAtWorld,
+  loadedHeightAtWorld,
+  loadedSteppedHeightAtWorld,
+} from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
 import { useMapScenes } from "../../../../utils/world/use-map-scenes";
 import { ARRIVE_EPSILON, interpolatedCreaturePosition } from "../../../../utils/creature-movement";
@@ -48,6 +52,15 @@ interface TestCharacterState {
   x: number;
   y: number;
   yaw: number;
+  /**
+   * The geodata layer it is standing on, carried from step to step.
+   *
+   * Null until it has moved once, because a layer can only be picked relative
+   * to one you are already on -- see steppedHeightAtWorld. While null the
+   * render falls back to the cell's top layer, which is the right answer for
+   * something that has not been anywhere yet.
+   */
+  z: number | null;
 }
 
 interface MoveTarget {
@@ -133,7 +146,7 @@ function clamp(value: number, min: number, max: number): number {
  */
 export const GameScene = observer(function GameScene() {
   const gameStore = useGameStore();
-  const [character, setCharacter] = useState<TestCharacterState>({ x: 0, y: 0, yaw: 0 });
+  const [character, setCharacter] = useState<TestCharacterState>({ x: 0, y: 0, z: null, yaw: 0 });
   // Refs, not state: only read inside the rAF/useFrame loops below, so
   // updating them shouldn't itself trigger a render.
   const moveTargetRef = useRef<MoveTarget | null>(null);
@@ -221,10 +234,25 @@ export const GameScene = observer(function GameScene() {
         // Angle doesn't depend on L2_TO_THREE_SCALE (cancels out in atan2),
         // so the raw (dx, dy) direction can go straight through l2ToThree.
         const facing = l2ToThree(dx, dy, 0);
+        const x = prev.x + (dx / length) * maxStep;
+        const y = prev.y + (dy / length) * maxStep;
+
+        // Which layer we end up on, from the one we are on. Without this the
+        // top layer wins every time, and walking into a cave mouth lifts you
+        // onto the mountain over it. The geodata is read app-wide rather than
+        // from this effect's closure, which was opened once with no deps and
+        // so never sees a tile that streamed in later.
+        const from = prev.z ?? loadedHeightAtWorld(x, y);
+        const z = from === null ? null : loadedSteppedHeightAtWorld(x, y, from);
 
         return {
-          x: prev.x + (dx / length) * maxStep,
-          y: prev.y + (dy / length) * maxStep,
+          x,
+          y,
+          // Keep the last good layer where there is nothing to step onto --
+          // a hole, or a wall rising more than the step-up allowance. This
+          // rig has no collision, so it walks on through at its own height
+          // rather than being teleported somewhere it could not have walked.
+          z: z ?? prev.z,
           yaw: Math.atan2(facing.x, facing.z),
         };
       });
@@ -319,7 +347,9 @@ export const GameScene = observer(function GameScene() {
     window.addEventListener("pointerup", onUp);
   }
 
-  const groundHeight = heightAtWorld(tiles, worldX, worldY) ?? 0;
+  // The test character stands on the layer it walked onto; the top layer is
+  // only the seed, for before it has walked anywhere (see TestCharacterState).
+  const groundHeight = character.z ?? heightAtWorld(tiles, worldX, worldY) ?? 0;
   const characterPos = l2ToThree(worldX, worldY, realPlayer ? realPlayer.z : groundHeight);
 
   // Every body on screen is placed at a geodata Z, and the ground now drawn
