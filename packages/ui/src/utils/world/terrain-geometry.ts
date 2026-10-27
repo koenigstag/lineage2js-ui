@@ -24,9 +24,28 @@ export interface TerrainChunk {
   radius: number;
 }
 
-/** A heightmap sample. TEXF_G16: unsigned 16-bit, little-endian, row-major. */
-function heightAt(heights: Uint16Array, width: number, height: number, x: number, y: number): number {
-  return heights[Math.min(height - 1, y) * width + Math.min(width - 1, x)];
+/**
+ * The heightmaps of the maps one step along +x and +y, and of the one
+ * diagonally between them.
+ *
+ * A map's samples tile the world without overlapping: 20_18's last sample sits
+ * at world 32640 and 21_18's first at 32768, exactly one quad apart. That quad
+ * belongs to neither map's own grid, so a map drawn from its own 256 samples
+ * stops 128 units short of its neighbour and leaves a strip of nothing along
+ * every border -- 2.4 three-units, taller than the character standing beside
+ * it, and crossing right under the camera at a map corner.
+ *
+ * The client draws that row from the neighbour's edge, and its own data says
+ * so: the per-quad bitmaps are 256x256 against the 255x255 quads one map's
+ * samples can span, and every bit of that extra row and column is set.
+ */
+export interface TerrainNeighbours {
+  /** The map at +x; its column 0 is this map's column `width`. */
+  nextX: Uint16Array | null;
+  /** The map at +y; its row 0 is this map's row `height`. */
+  nextY: Uint16Array | null;
+  /** The map diagonally at +x +y, for the single corner sample. */
+  nextXY: Uint16Array | null;
 }
 
 /**
@@ -79,15 +98,38 @@ export function buildTerrainChunk(
   heights: Uint16Array,
   chunkX: number,
   chunkY: number,
-  quads?: TerrainQuads | null
+  quads?: TerrainQuads | null,
+  neighbours?: TerrainNeighbours | null
 ): TerrainChunk {
   const { width, height } = terrain.heightmap;
   const { origin, xAxis, yAxis, zAxis } = terrain.toWorld;
 
+  // One sample past this map's own last is the next map's first -- the same
+  // world position, since the two grids are exactly `width` samples apart. With
+  // that map loaded this one reaches it; without, it stops where it always did
+  // and the strip stays open until it arrives. See TerrainNeighbours.
+  const maxX = neighbours?.nextX ? width : width - 1;
+  const maxY = neighbours?.nextY ? height : height - 1;
+
+  /** A heightmap sample. TEXF_G16: unsigned 16-bit, little-endian, row-major. */
+  const sample = (x: number, y: number): number => {
+    const sx = x < 0 ? 0 : x > maxX ? maxX : x;
+    const sy = y < 0 ? 0 : y > maxY ? maxY : y;
+    if (sx < width) {
+      if (sy < height) return heights[sy * width + sx];
+      return neighbours!.nextY![sx];
+    }
+    if (sy < height) return neighbours!.nextX![sy * width];
+    // The far corner is the one sample that needs the diagonal map. Until it
+    // loads, the nearest edge sample keeps that vertex in the right
+    // neighbourhood; the chunk is rebuilt when the map arrives.
+    return neighbours?.nextXY?.[0] ?? neighbours!.nextX![(height - 1) * width];
+  };
+
   const startX = chunkX * TERRAIN_CHUNK_QUADS;
   const startY = chunkY * TERRAIN_CHUNK_QUADS;
-  const quadsX = Math.min(TERRAIN_CHUNK_QUADS, width - 1 - startX);
-  const quadsY = Math.min(TERRAIN_CHUNK_QUADS, height - 1 - startY);
+  const quadsX = Math.min(TERRAIN_CHUNK_QUADS, maxX - startX);
+  const quadsY = Math.min(TERRAIN_CHUNK_QUADS, maxY - startY);
   const cols = quadsX + 1;
   const rows = quadsY + 1;
 
@@ -106,7 +148,7 @@ export function buildTerrainChunk(
     for (let col = 0; col < cols; col++) {
       const hx = startX + col;
       const hy = startY + row;
-      const h = heightAt(heights, width, height, hx, hy);
+      const h = sample(hx, hy);
 
       const worldX = (hx - origin[0]) * xAxis[0];
       const worldY = (hy - origin[1]) * yAxis[1];
@@ -125,8 +167,8 @@ export function buildTerrainChunk(
       // Central differences over the heightmap, not over the triangles: a
       // neighbouring chunk computes the same value on the shared edge, so the
       // lighting has no seam even though the vertices are duplicated.
-      const dzdx = (heightAt(heights, width, height, hx + 1, hy) - heightAt(heights, width, height, Math.max(0, hx - 1), hy)) * zAxis[2];
-      const dzdy = (heightAt(heights, width, height, hx, hy + 1) - heightAt(heights, width, height, hx, Math.max(0, hy - 1))) * zAxis[2];
+      const dzdx = (sample(hx + 1, hy) - sample(hx - 1, hy)) * zAxis[2];
+      const dzdy = (sample(hx, hy + 1) - sample(hx, hy - 1)) * zAxis[2];
       const spanX = 2 * xAxis[0];
       const spanY = 2 * yAxis[1];
 

@@ -3,7 +3,12 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Vector3, type ShaderMaterial } from "three";
 import { TERRAIN_DRAW_DISTANCE, mapKey } from "../../../../config/world-assets";
 import { ktx2Loader } from "../../../../utils/world/static-mesh-cache";
-import { buildTerrainChunk, terrainChunkCount, type TerrainChunk } from "../../../../utils/world/terrain-geometry";
+import {
+  buildTerrainChunk,
+  terrainChunkCount,
+  type TerrainChunk,
+  type TerrainNeighbours,
+} from "../../../../utils/world/terrain-geometry";
 import { createTerrainMaterial } from "../../../../utils/world/terrain-material";
 import { useHeightmaps, type MapHeightfield } from "../../../../utils/world/use-heightmaps";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
@@ -49,8 +54,23 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
         const key = mapKey(mapX, mapY);
         const heightfield = heightmaps.get(key);
         if (!scene.terrain || !heightfield) return null;
+        // The row of quads along this map's far edge is built from the next
+        // map's first row -- the only way the two ever meet, since neither
+        // map's samples cover the gap. See TerrainNeighbours.
+        const neighbours = {
+          nextX: heightmaps.get(mapKey(mapX + 1, mapY))?.heights ?? null,
+          nextY: heightmaps.get(mapKey(mapX, mapY + 1))?.heights ?? null,
+          nextXY: heightmaps.get(mapKey(mapX + 1, mapY + 1))?.heights ?? null,
+        };
         return (
-          <MapTerrain key={key} scene={scene} heightfield={heightfield} cameraAt={cameraAt} onGroundClick={onGroundClick} />
+          <MapTerrain
+            key={key}
+            scene={scene}
+            heightfield={heightfield}
+            neighbours={neighbours}
+            cameraAt={cameraAt}
+            onGroundClick={onGroundClick}
+          />
         );
       })}
     </>
@@ -60,11 +80,12 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
 interface MapTerrainProps {
   scene: LoadedMapScene["scene"];
   heightfield: MapHeightfield;
+  neighbours: TerrainNeighbours;
   cameraAt: Vector3;
   onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
 }
 
-function MapTerrain({ scene, heightfield, cameraAt, onGroundClick }: MapTerrainProps) {
+function MapTerrain({ scene, heightfield, neighbours, cameraAt, onGroundClick }: MapTerrainProps) {
   const terrain = scene.terrain!;
   const { heights, quads } = heightfield;
 
@@ -96,13 +117,22 @@ function MapTerrain({ scene, heightfield, cameraAt, onGroundClick }: MapTerrainP
 
     for (let chunkY = 0; chunkY < perSide; chunkY++) {
       for (let chunkX = 0; chunkX < perSide; chunkX++) {
-        const key = `${chunkX}_${chunkY}`;
+        // Only the last row and column reach into a neighbour, and only those
+        // have to be rebuilt when one arrives -- so the key says which
+        // neighbours were there, and every interior chunk keeps a stable one.
+        const lastX = chunkX === perSide - 1;
+        const lastY = chunkY === perSide - 1;
+        const edge =
+          (lastX && neighbours.nextX ? "x" : "") +
+          (lastY && neighbours.nextY ? "y" : "") +
+          (lastX && lastY && neighbours.nextXY ? "d" : "");
+        const key = `${chunkX}_${chunkY}_${edge}`;
         let chunk = cache.get(key);
         if (!chunk) {
           // Built to be measured, then kept -- a chunk's own extent is only
           // known once its vertices are, and building is cheap next to the
           // fetch that produced the heightmap.
-          chunk = buildTerrainChunk(terrain, heights, chunkX, chunkY, quads);
+          chunk = buildTerrainChunk(terrain, heights, chunkX, chunkY, quads, neighbours);
           cache.set(key, chunk);
         }
         if (chunk.center.distanceTo(cameraAt) <= TERRAIN_DRAW_DISTANCE + chunk.radius) chunks.push(chunk);
@@ -110,7 +140,9 @@ function MapTerrain({ scene, heightfield, cameraAt, onGroundClick }: MapTerrainP
     }
 
     return chunks;
-  }, [terrain, heights, quads, cameraAt]);
+    // The neighbour arrays, not the object around them: that is rebuilt every
+    // render, while the heightmaps behind it are cached.
+  }, [terrain, heights, quads, neighbours.nextX, neighbours.nextY, neighbours.nextXY, cameraAt]);
 
   return (
     <>
