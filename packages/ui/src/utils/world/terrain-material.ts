@@ -13,7 +13,7 @@ import {
   Vector4,
 } from "three";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
-import { getMapShadowUrl, getStaticMeshTextureUrl } from "../../config/world-assets";
+import { getMapAssetUrl, getStaticMeshTextureUrl } from "../../config/world-assets";
 import { shadowPlaneAt, type ResolvedLighting } from "./map-lighting";
 import type { MapTerrain, MapTerrainLayer } from "./map-scene.types";
 
@@ -298,7 +298,7 @@ function loadShadow(
   if (!shadow?.files.length) return;
 
   const file = shadow.files[shadowPlaneAt(shadow.times, hour)] ?? shadow.files[0];
-  const url = getMapShadowUrl(mapX, mapY, file);
+  const url = getMapAssetUrl(mapX, mapY, file);
   if (!url) return;
 
   new TextureLoader().load(

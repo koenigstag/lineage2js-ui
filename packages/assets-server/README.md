@@ -19,6 +19,7 @@ assets/highfive/maps/<x>_<y>/scene.json       terrain metadata + actor placement
 assets/highfive/maps/<x>_<y>/heightmap.bin    256x256 16-bit heights, raw
 assets/highfive/maps/<x>_<y>/quads.bin        per-quad visibility + edge turn
 assets/highfive/maps/<x>_<y>/shadow-<i>.png   baked sun intensity, one per time slot
+assets/highfive/maps/<x>_<y>/deco-<i>.png     grass density, one per decoration layer
 assets/highfive/maps/env.json                 the world's lighting curves, once
 assets/highfive/static-meshes/meshes.json     per mesh: textures, LOD chain, size
 assets/highfive/static-mesh-textures/...      KTX2, one per texture
@@ -385,6 +386,55 @@ bytes each for a 256x256 map. The `...Orig` (seamless) variants are the ones
 taken, matching what the client's own sector builder reads. A separate file
 rather than a field in the JSON: 16 kB of bits would be 22 kB of base64 in a
 file that is otherwise 63 kB.
+
+### The grass is a recipe, not a placement
+
+Nothing in a map places grass. `TerrainInfo` carries **three decoration
+layers** -- four on some maps -- and each is a mesh, a density image and a
+seeded random walk that the client runs itself, per terrain sector, every time
+it loads the map. Reproducing the walk is the only way to get the same blades
+in the same places, and it is cheaper than shipping them: a map grows 30 to 45
+thousand of them.
+
+```
+                  mesh                                   maxPerQuad  fade (L2)
+20_18 layer 1  field_deco_S.grass_oren_S.Darkelf_grass002     20      300..1500
+      layer 2  field_deco_S.grass_oren_S.grass_darkelf006      8     1400..2400
+      layer 3  field_deco_S.grass_oren_S.grass_darkelf001      4     1500..2400
+```
+
+That `fade` is the point of the whole arrangement: grass is drawn within 1500
+units where the ground is drawn to 13000, so a view holds a few hundred blades
+out of the map's forty thousand.
+
+Across four maps' 13 layers, every one of them has **no scale map, no colour
+map, `AlignToTerrain` false, `ShowOnInvisibleTerrain` false,
+`DisregardTerrainLighting` false and `Seed` 0** -- so the scatter is seeded
+purely by the sector index, and the blade always stands upright rather than
+leaning with the slope.
+
+#### The walk has to be reproduced call for call
+
+Every draw advances one shared 32-bit stream, so a call skipped or added
+anywhere shifts every blade after it. Two draws happen per attempt whether or
+not a blade is placed (the density test uses one, and the multiplier's own
+range uses another), then two for the position, three for the scale and one
+for the yaw. `Math.imul` matters as well: the client's multiply wraps at 32
+bits and JavaScript's does not.
+
+The `DensityMap` is a 512x512 DXT1 texture the client samples **once per
+quad**, scaled from heightmap coordinates, so the rest of it is never read.
+What goes out is one byte per quad as a greyscale PNG, read exactly where the
+client reads it. The map is nearly binary -- on 20_18, 256791 texels at 0 and
+5353 at 224 or above, nothing in between -- and the fraction that is set
+matches what the per-quad sampling sees, 2.0% against 2.1%, so the
+downsampling loses nothing. With `DensityMultiplier` at 10..50, any quad with
+density above about 0.04 places every one of its attempts, which is why the
+result is clumps of dense grass rather than a thin lawn.
+
+A decoration mesh is referenced by no actor at all, so it reaches `meshes.json`
+only because the converter puts the layers' meshes into the same list the
+actors build. Without that the grass draws untextured.
 
 ### Sky and fog
 

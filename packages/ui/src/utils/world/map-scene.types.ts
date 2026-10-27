@@ -55,8 +55,42 @@ export interface MapTerrain {
    * extracted.
    */
   shadow?: { width: number; height: number; times: number[]; files: string[] };
+  /**
+   * The grass and flowers the terrain grows on itself. See MapTerrainDeco and
+   * scatterDecoSector. Absent on a map baked before they were read.
+   */
+  deco?: MapTerrainDeco[];
   sectors: number;
   layers: MapTerrainLayer[];
+}
+
+/**
+ * One decoration layer: a recipe for grass, not a list of it.
+ *
+ * The client scatters these at load from a density image and a seeded random
+ * walk, so this carries the inputs and the renderer runs the same walk -- see
+ * scatterDecoSector, which has to match the client's draw order exactly.
+ */
+export interface MapTerrainDeco {
+  /** Index into MapScene.meshes, same as an actor's. */
+  mesh: number;
+  /** The per-quad density image, one texel per quad, greyscale. */
+  file: string;
+  /** Attempts per quad, each passing or failing the density test. */
+  maxPerQuad: number;
+  /** Seeds the per-sector stream as `seed + sectorIndex`; zero on every layer so far. */
+  seed: number;
+  /** What the density image's 0..1 is multiplied by before the test. */
+  density: [number, number];
+  /** Scale range per axis, in the client's own x/y/z order. */
+  scale: [[number, number], [number, number], [number, number]];
+  /** Where it starts and finishes fading out, L2 units: 300..1500 for a dense layer. */
+  fade: [number, number];
+  randomYaw: boolean;
+  /** False on every layer in the client: the blade stands up, not along the slope. */
+  alignToTerrain: boolean;
+  showOnInvisible: boolean;
+  drawOrder: number;
 }
 
 /** One entry of the map's day: the time it applies at, and the colours then. */

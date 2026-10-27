@@ -75,13 +75,15 @@ export function getMapQuadsUrl(mapX: number, mapY: number): string | undefined {
 }
 
 /**
- * One of the map's baked sun-intensity planes, named by its scene file.
+ * A file the map's own scene names, beside its scene.json -- a baked
+ * sun-intensity plane, a decoration layer's density image.
  *
- * Greyscale PNG rather than a raw buffer: the browser decodes it into a
- * texture without a width and height having to travel beside it, and deflate
- * takes 64kB of smooth intensity down to about 40kB. See MapTerrain.shadow.
+ * Both travel as greyscale PNGs rather than raw buffers: the width and height
+ * come with the file instead of having to be agreed separately, and deflate
+ * takes 64kB down to ten or forty depending on how smooth the map is. See
+ * MapTerrain.shadow and MapTerrainDeco.
  */
-export function getMapShadowUrl(mapX: number, mapY: number, file: string): string | undefined {
+export function getMapAssetUrl(mapX: number, mapY: number, file: string): string | undefined {
   if (!WORLD_MAP_BASE_URL) return undefined;
   return `${withSlash(WORLD_MAP_BASE_URL)}${mapKey(mapX, mapY)}/${file}`;
 }

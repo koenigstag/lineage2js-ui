@@ -80,6 +80,40 @@ const MAP_ZERO_Y = 18;
 
 const MAP_FILE_PATTERN = /^(\d+)_(\d+)$/;
 
+/**
+ * One of a terrain's decoration layers: the grass and flowers it scatters
+ * over itself.
+ *
+ * Not placed actors -- there are none of these in the actor list. The client
+ * grows them on the fly from a density map and a seeded random walk, so what
+ * travels is the recipe, not the result: the mesh, the parameters, and the
+ * per-quad density as an image. Growing 30-45k blades per map into the scene
+ * file would be a megabyte each and would still have to be thinned by
+ * distance at the far end.
+ */
+interface DecoLayerInfo {
+  /** Index into the map's `meshes`, same as an actor's. */
+  mesh: number;
+  /** The per-quad density, greyscale, one texel per quad. See readDecoLayers. */
+  file: string;
+  /** Attempts per quad; each one passes or fails the density test. */
+  maxPerQuad: number;
+  /** Seeds the per-sector random stream, as `seed + sectorIndex`. */
+  seed: number;
+  /** `DensityMultiplier`, min..max -- what the map's 0..1 is scaled by. */
+  density: [number, number];
+  /** `ScaleMultiplier`, min..max per axis. */
+  scale: [[number, number], [number, number], [number, number]];
+  /** `FadeoutRadius`, min..max in L2 units: 300..1500 for a dense layer. */
+  fade: [number, number];
+  randomYaw: boolean;
+  /** False on every layer in the client: the blade stands up, not along the slope. */
+  alignToTerrain: boolean;
+  /** False on every layer: a quad the terrain does not draw grows nothing. */
+  showOnInvisible: boolean;
+  drawOrder: number;
+}
+
 interface TerrainLayerInfo {
   texture: string | null;
   /** Its mask over the map; layer 0 is the unmasked base. */
@@ -438,6 +472,66 @@ function readQuadBitmaps(terrain: any): Uint8Array | null {
 }
 
 /**
+ * The terrain's decoration layers, and the density map each one grows from.
+ *
+ * `DensityMap` is a 512x512 DXT1 texture the client samples once per quad,
+ * scaled from heightmap coordinates -- so what matters is one byte per quad
+ * and the rest of the texture is never read. That is what goes out: a
+ * greyscale image at heightmap resolution, read exactly where the client
+ * reads it, so nothing downstream has to know the texture's size or format.
+ *
+ * Layers the client itself would skip are skipped here, by its own guard:
+ * `showOnTerrain`, a mesh, a density map, and `maxPerQuad > 0`.
+ */
+function readDecoLayers(
+  terrain: any,
+  meshName: (mesh: any) => number | null
+): { layers: DecoLayerInfo[]; density: Uint8Array[] } | null {
+  const raw: any[] = terrain?.decoLayers ?? [];
+  if (!raw.length) return null;
+
+  const width = terrain.heightmapX;
+  const height = terrain.heightmapY;
+  const layers: DecoLayerInfo[] = [];
+  const density: Uint8Array[] = [];
+
+  for (const entry of raw) {
+    const layer = entry?.loadSelf?.() ?? entry;
+    if (!layer?.showOnTerrain || !layer.staticMesh || !layer.densityMap || !(layer.maxPerQuad > 0)) continue;
+
+    const mesh = meshName(layer.staticMesh);
+    if (mesh === null) continue;
+
+    const map = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        map[y * width + x] = terrain.getLayerAlpha(x, y, 0, layer.densityMap) & 0xff;
+      }
+    }
+
+    const range = (r: any): [number, number] => [round(r?.min ?? 0, 4), round(r?.max ?? 0, 4)];
+    const scale = layer.scaleMultiplier;
+
+    layers.push({
+      mesh,
+      file: `deco-${layers.length}.png`,
+      maxPerQuad: layer.maxPerQuad,
+      seed: layer.seed | 0,
+      density: range(layer.densityMultiplier),
+      scale: [range(scale?.x), range(scale?.y), range(scale?.z)],
+      fade: range(layer.fadeoutRadius),
+      randomYaw: !!layer.randomYaw,
+      alignToTerrain: !!layer.alignToTerrain,
+      showOnInvisible: !!layer.isShowOnInvisibleTerrain,
+      drawOrder: layer.drawOrder ?? 0,
+    });
+    density.push(map);
+  }
+
+  return layers.length ? { layers, density } : null;
+}
+
+/**
  * The baked sun intensity, one plane per hour of the day the client bakes for.
  *
  * This is the term that makes the world look lit. The client's terrain has no
@@ -576,8 +670,7 @@ function readLights(pkg: any): LightInfo[] {
   return lights;
 }
 
-function readActors(pkg: any): { meshes: string[]; actors: ActorInfo[]; skipped: number } {
-  const meshIds = new Map<string, number>();
+function readActors(pkg: any, meshIds: Map<string, number>): { actors: ActorInfo[]; skipped: number } {
   const actors: ActorInfo[] = [];
   let skipped = 0;
 
@@ -647,7 +740,17 @@ function readActors(pkg: any): { meshes: string[]; actors: ActorInfo[]; skipped:
     actors.push(record);
   }
 
-  return { meshes: [...meshIds.keys()], actors, skipped };
+  return { actors, skipped };
+}
+
+/** A qualified mesh name's index in the map's shared mesh list, adding it if new. */
+function meshIndex(meshIds: Map<string, number>, name: string | null): number | null {
+  if (!name) return null;
+  const existing = meshIds.get(name);
+  if (existing !== undefined) return existing;
+  const index = meshIds.size;
+  meshIds.set(name, index);
+  return index;
 }
 
 async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<string>> {
@@ -663,7 +766,12 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
   // and what tells pickTerrain which TerrainInfo is this map's own ground.
   const worldOrigin: [number, number] = [(mapX - MAP_ZERO_X) * MAP_SIZE, (mapY - MAP_ZERO_Y) * MAP_SIZE];
 
-  const { terrain, heightmap, quads, shadow, environment, lighting, lights, meshes, actors, skipped, pick } = quietly(() => {
+  // One list of meshes per map, shared by the actors and the decoration
+  // layers -- a grass mesh is referenced by no actor at all, so without this
+  // it would never reach meshes.json and would draw untextured.
+  const meshIds = new Map<string, number>();
+
+  const { terrain, heightmap, quads, shadow, environment, lighting, lights, deco, actors, skipped, pick } = quietly(() => {
     // One pick, shared: the transform, the heightmap and the bitmaps have to
     // come from the same terrain or they describe different ground.
     const pick = pickTerrain(pkg, worldOrigin);
@@ -676,12 +784,20 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
       environment: tolerateInexactReads(() => readEnvironment(pkg)).value,
       lighting: readLighting(pkg),
       lights: readLights(pkg),
-      ...readActors(pkg),
+      ...readActors(pkg, meshIds),
+      deco: readDecoLayers(pick.terrain, (mesh) => meshIndex(meshIds, qualifiedName(mesh))),
     };
   });
+  const meshes = [...meshIds.keys()];
 
   const outDir = path.join(MAPS_OUT, mapName);
   await fs.mkdir(outDir, { recursive: true });
+
+  if (terrain && deco) {
+    // The recipe travels with the terrain it grows on; the density images sit
+    // beside the map like the shadow planes do.
+    terrain.deco = deco.layers;
+  }
 
   if (terrain && shadow) {
     // One file per hour the client bakes for, so a viewer fetches the two that
@@ -716,6 +832,12 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
       )
     );
   }
+  if (deco && terrain) {
+    const { width, height } = terrain.heightmap as { width: number; height: number };
+    await Promise.all(
+      deco.density.map((map, index) => fs.writeFile(path.join(outDir, `deco-${index}.png`), grayPng(width, height, map)))
+    );
+  }
 
   const packages = new Set(meshes.map((name) => name.split(".")[0].toLowerCase()));
 
@@ -724,6 +846,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
       `${terrain ? `, terrain ${(terrain.heightmap as any).width}x${(terrain.heightmap as any).height}` : ", no terrain"}` +
       `${shadow ? `, ${shadow.planes.length} shadow planes` : ", no shadow maps"}` +
       `, ${lights.length} lights, ${actors.filter((a) => a.lit).length} lit placements` +
+      `${deco ? `, ${deco.layers.length} deco layers` : ""}` +
       `${skipped ? `, ${skipped} skipped` : ""}` +
       `${
         pick.exports > 1

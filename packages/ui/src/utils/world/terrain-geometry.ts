@@ -89,7 +89,8 @@ export function parseTerrainQuads(buffer: ArrayBuffer, width: number, height: nu
   };
 }
 
-function bitAt(bits: Uint8Array, width: number, x: number, y: number): boolean {
+/** One bit of a per-quad bitmap, least significant bit first. Shared with the deco scatter. */
+export function bitAt(bits: Uint8Array, width: number, x: number, y: number): boolean {
   const index = x + y * width;
   return (bits[index >> 3] & (1 << (index & 7))) !== 0;
 }

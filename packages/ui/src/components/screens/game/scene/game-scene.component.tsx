@@ -19,6 +19,7 @@ import { useGameStore } from "../../../../stores/StoreContext";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 import { StaticMeshField } from "./static-mesh-field.component";
+import { TerrainDecoField } from "./terrain-deco-field.component";
 import { TerrainField } from "./terrain-field.component";
 import { WorldEnvironment } from "./world-environment.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
@@ -413,6 +414,8 @@ export const GameScene = observer(function GameScene() {
 
         {/* Trees, rocks and buildings out of the retail client -- see StaticMeshField. */}
         <StaticMeshField scenes={mapScenes} />
+        {/* The grass the terrain grows on itself -- see TerrainDecoField. */}
+        <TerrainDecoField scenes={mapScenes} />
 
         {/* Everything that stands on the ground, dropped onto the ground that
             is actually drawn -- see groundOffsetM. Nothing inside carries the
