@@ -18,6 +18,8 @@ Writes, per map:
 assets/highfive/maps/<x>_<y>/scene.json       terrain metadata + actor placement
 assets/highfive/maps/<x>_<y>/heightmap.bin    256x256 16-bit heights, raw
 assets/highfive/maps/<x>_<y>/quads.bin        per-quad visibility + edge turn
+assets/highfive/maps/<x>_<y>/shadow-<i>.png   baked sun intensity, one per time slot
+assets/highfive/maps/env.json                 the world's lighting curves, once
 assets/highfive/static-meshes/meshes.json     per mesh: textures, LOD chain, size
 assets/highfive/static-mesh-textures/...      KTX2, one per texture
 ```
@@ -28,7 +30,8 @@ restricts to named maps; without `--meshes` it needs no umodel at all.
 
 Over the whole client that is **203 maps, 196791 actor placements, 15780 mesh
 references resolving to 216 packages**, 14 MB of scene files, 25 MB of
-heightmaps and 3.2 MB of quad bitmaps.
+heightmaps, 3.2 MB of quad bitmaps and ~64 MB of baked shadow planes (eight
+per map, of which a viewer fetches one).
 
 What a client fetches for one map, measured on 20_18:
 
@@ -185,44 +188,120 @@ meeting filler.
 
 ### Lighting
 
-`scene.json` carries a `lighting` block, read off the level's own actors:
+**The light is not in the level.** A map carries a `LevelInfo` ambient and an
+`NMovableSunLight`, which look like the obvious source and are not: the
+runtime never reads either for colour. It reads `system/env.int` and the four
+`system/timeenv<n>.int` files that env.int names -- one set for the whole
+client, a curve over the day, and a **separate curve per surface class**.
 
-```
-sun          NMovableSunLight: getColor() and its rotator
-ambient      LevelInfo's AmbientBrightness/Hue/Saturation
-zoneAmbient  the same off every ZoneInfo, unresolved
-```
-
-Colours are 0..255 with brightness already folded in, because that is what the
-engine's `getColor()` returns: `hsvToRgb(hue, saturation, 255)` scaled by
-`brightness / 255`. An ambient has no `getColor()` of its own -- it sits on
-different fields -- so the converter runs the same two functions, exported
-from the objects package for the purpose rather than re-derived here.
-
-Measured across three maps, the sun is **the same light everywhere** --
-`brightness 70, hue 0, saturation 255`, giving `(59.29, 59.29, 59.29)` -- and
-only its rotator differs per map. What varies is the ambient, and it varies in
-a way worth knowing:
+Finding that out corrected a wrong answer, and the measurement that should
+have given it away earlier is this one:
 
 ```
           LevelInfo ambient   ZoneInfo ambients
 20_18           25.41         9 zones,  0 .. 50.82
 20_19            0.85         1 zone,   0
 22_22            0.00        17 zones, 16.94 .. 67.76
+
+across all 203 maps: 192 have a LevelInfo ambient below 1
 ```
 
-**The level's ambient is usually not where the light is.** 22_22 says 0 at the
-level and carries the whole figure on its zones. Choosing between them needs
-the BSP the zones are cut from, which nothing here reads yet, so the zones go
-out as a plain list and the renderer takes their median when the level's own
-is dark -- a stand-in for standing in one, and a visible one, rather than a
-constant.
+A world whose ambient is zero on 95% of its maps is not a world with a
+daylight model in its levels. (These values are still baked, as `lighting` in
+`scene.json`, together with `NMovableSunLight`'s colour and rotator. Only the
+rotator is used -- for the direction the meshes are lit from -- and the rest
+is kept because the zone ambients are real level data that the BSP work will
+want.)
 
-What is still missing is the term that makes this bright enough to look like
-the game: the per-sector **shadow maps**, which the client adds as
-`sunColor * shadow/255`. Ambient near zero plus one sun is as dark as it
-sounds, and no amount of adjusting these two numbers substitutes for the baked
-light they modulate.
+#### The curves
+
+`convert:maps` writes `maps/env.json` once per run, beside the maps rather
+than inside any of them. Decoding is the same `Lineage2Ver111` wrapper as the
+`.unr` files -- 28-byte header, XOR `0xAC` -- with EUC-KR text inside.
+
+```
+[EnvSetup]           StartTime=22  TimeRatio=6  StaticLightingAdjust=4
+[TerrainShadowMap]   Num=8  AutoTimeGeneration=true
+[FOG]                StartRange1..5 / EndRange1..5   (units of 2000)
+TimeEnvFileName0..3  TimeEnv0.INT .. TimeEnv3.INT    (normal/dusk/dawn/cursed)
+```
+
+Each `TimeEnv` file holds 25 points per curve, one an hour with both ends of
+the day present, for `TerrainAmbient`, `StaticMeshAmbient`, `ActorAmbient`,
+`BSPAmbient` and the four matching `HSV*Light` curves. At noon, cycle 0:
+
+```
+TerrainAmbient      (120, 120, 120)
+HSVTerrainLight     Hue=1 Sat=255 Bri=200   ->  (216, 216, 216) x 200/255
+StaticMeshAmbient   (120, 120, 120)
+HSVStaticMeshLight  Hue=1 Sat=255 Bri=190   ->  (216, 216, 216) x 190/255
+```
+
+The HSB conversion is the client's own and is not a standard one: saturation
+lerps the hue *towards white*, so `Sat=255` is grey, and brightness is over
+255 and exceeds it (450 at dawn). The converter runs the vendored package's
+`hsvToRgb` at full value and emits the colour and the brightness separately,
+because the client interpolates them apart and multiplies last.
+
+The files are hand-maintained and show it: `COLOR1=(T=0,R=110,G=84,B=77`
+without its closing paren, `Light11=( T=10  Hue=1,` without its comma. The
+parser pulls `NAME=number` pairs out of a value rather than matching a shape,
+which is why those rows load.
+
+#### The formula
+
+```
+terrain = ambient.terrain/2 + light.terrain * intensity/255 * 0.5
+mesh    = ambient.staticMesh/2 + light.staticMesh * 32/255
+```
+
+and both are doubled where they meet the texture (`D3DTOP_MODULATE2X`). The
+halving is a byte shift in the client, and the `0.5` and the `32` are
+constants read out of its code -- see the vendored package's
+`rendering/l2-env.ts` and `objects/terrain.ts`, which carry the addresses.
+
+At noon that puts open ground at `(60 + 169*213/255*0.5)/255 * 2 = 1.03` --
+the texture at its own brightness, which is a good sign that the chain is
+right -- shadowed ground at `0.47`, and a static mesh at `0.63`.
+
+**The terrain has no diffuse term.** No dot product against a sun direction
+anywhere in the client's ground path. Putting one there counts the geometry
+twice, because the `intensity` above already holds it; that is what made a
+tree trunk measure `(1,1,1)` while the grass beside it was fine.
+
+#### Per-sector shadow maps
+
+That `intensity` is baked per terrain vertex and stored on the sector:
+
+```
+hasShadows   int32
+shadowCount  int32          8, from [TerrainShadowMap] Num
+shadowMaps   count x 289 bytes     17x17, one per vertex of the 16x16 quads
+times        i*24/count + 12/count  ->  1.5, 4.5, 7.5 ... 22.5
+```
+
+Every one of the 256 sectors on every map checked carries all eight. The
+values are a smooth field over the whole byte range, not a mask: 213 is
+typical open ground and 0 is full occlusion, with everything between.
+
+`convert:maps` assembles them into one 256x256 greyscale PNG per plane,
+`shadow-<i>.png`, indexed exactly like the heightmap -- sample
+`(x + offsetX, y + offsetY)`, clamped to the last row and column, which is how
+the sector reader places its vertices. The clamp makes adjacent sectors write
+their shared edge twice; they agree on all but 116 of 8448 shared samples on
+20_19, so the last writer wins rather than duplicating vertices over a
+difference nobody can see.
+
+Two oddities in the client's own data, left as they are:
+
+- **Planes repeat.** Plane 0 (1.5h) is byte-identical to plane 3 (10.5h), and
+  plane 1 (4.5h) to plane 6 (19.5h), on every map checked. Six distinct bakes
+  wearing eight labels -- the editor evidently reused the morning occlusion
+  for the small hours, where the "sun" is a blue moonlight term anyway.
+- **PNG, not raw.** 64kB of smooth intensity deflates to about 40kB, the
+  browser decodes it into a texture without a width and height travelling
+  beside it, and -- the practical reason -- a PNG can be opened and looked at,
+  which is how you tell a shadow map from a mistake.
 
 ### A map can carry more than one TerrainInfo
 
@@ -288,18 +367,20 @@ sector samples only the layers it needs rather than all eight.
 - `quadVisibilityBitmap` -- per-quad hole mask (cave mouths, etc.).
 - `edgeTurnBitmap` -- which diagonal a quad is split along (`123/134` vs
   `124/423`); getting it wrong shows up as wrong shading on slopes.
-- `shadowMaps[]` -- **N baked shadow maps per sector, one per time of day**,
-  with `shadowMapTimes[i] = i * 24/N + 12/N`. Terrain lighting in the retail
-  client is
-  `color = ambient + sunColor * shadow/255 + sum(lightColor * intensity)`,
-  with the ambient added unconditionally rather than modulated by the shadow.
+- `shadowMaps[]` -- the baked sun intensity, eight per sector. See
+  [Per-sector shadow maps](#per-sector-shadow-maps) under Lighting, which is
+  where the whole chain they belong to is written down.
+- `lightInfos[]` -- which of the map's 135 `Light` actors reach this sector,
+  each with its own per-vertex visibility bitmap. Not extracted: a point light
+  is the `sum(lightColor * intensity)` term of the client's formula, and
+  nothing here draws one yet.
 
 The two bitmaps go out as `quads.bin`: visibility first, then edge turn, one
 bit per quad at `x + y * heightmapWidth`, least significant bit first -- 8192
 bytes each for a 256x256 map. The `...Orig` (seamless) variants are the ones
 taken, matching what the client's own sector builder reads. A separate file
 rather than a field in the JSON: 16 kB of bits would be 22 kB of base64 in a
-file that is otherwise 63 kB. The shadow maps are not extracted yet.
+file that is otherwise 63 kB.
 
 ### Sky and fog
 

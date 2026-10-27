@@ -51,6 +51,8 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readClientEnv } from "./client-data/env-config";
+import { grayPng } from "./gray-png";
 import {
   hsvToRgb,
   openClient,
@@ -235,25 +237,26 @@ interface TerrainPick {
 }
 
 /**
- * The map's own lighting: the sun actor, and the ambient the level and its
+ * The lighting actors in the level: the sun, and the ambient the level and its
  * zones carry.
  *
- * Both renderers were lighting the world with numbers nobody read out of the
- * client -- the terrain shader with three constants written by hand, the
- * static meshes with a three.js ambient plus directional derived from the sky
- * colour. They disagreed by a factor of four or five, which is why a tree
- * trunk measured (19,17,10) against grass at (90,99,37) standing beside it.
+ * **Not the world's light**, which was the mistake this block was first
+ * written to make. These are the obvious source and the runtime reads none of
+ * them for colour: it reads the global curves in `system/env.int` and
+ * `timeenv<n>.int` instead (see readClientEnv). The tell is in the data --
+ * 192 of the 203 maps leave this LevelInfo ambient below 1 -- and 22_22's
+ * zones ranging 17 to 68 against a level ambient of 0 is the same story, not
+ * a better source.
  *
- * The client keeps a `NMovableSunLight` -- an actual light, not just the
- * `NSun` billboard -- whose `getColor()` already folds brightness into the
- * colour. Ambient is held on `LevelInfo` and again per `ZoneInfo`, on
- * `AmbientBrightness`/`Hue`/`Saturation`, which have no method of their own,
- * so they go through the engine's `hsvToRgb` directly.
+ * What the UI takes from here is `sun.rotation`, the direction static meshes
+ * are lit from. The rest stays because the zone ambients are real level data
+ * the BSP work will want, and because leaving them out would make the
+ * measurement above impossible to repeat.
  *
- * The zones are written out but not resolved: picking the one the camera
- * stands in needs the BSP they are defined by, which nothing here reads yet.
- * They are here so the spread is visible rather than silently flattened --
- * 22_22 ranges from 20 to 50 against a level ambient of 0.
+ * `NMovableSunLight` is an actual light rather than the `NSun` billboard, and
+ * its `getColor()` folds brightness into the colour. The ambients sit on
+ * `AmbientBrightness`/`Hue`/`Saturation` with no method of their own, so they
+ * go through the engine's `hsvToRgb` directly.
  */
 function readLighting(pkg: any): Record<string, unknown> | null {
   const colorOf = (brightness: number, hue: number, saturation: number): [number, number, number] => {
@@ -385,6 +388,62 @@ function readQuadBitmaps(terrain: any): Uint8Array | null {
   return out;
 }
 
+/**
+ * The baked sun intensity, one plane per hour of the day the client bakes for.
+ *
+ * This is the term that makes the world look lit. The client's terrain has no
+ * diffuse lighting at all -- no dot product against a sun direction -- because
+ * the editor already did that work per vertex and stored the answer here,
+ * occlusion included. `UTerrainSector::SetIntensityMap` adds it as
+ * `sunColor * intensity / 255 * 0.5`, and the values are a smooth field over
+ * the whole range: 213 is typical open ground, and a sixth of a map reads 0
+ * where a hill or a building takes the sun away.
+ *
+ * Each sector stores its own 17x17 bytes, one per vertex of its 16x16 quads,
+ * so the planes are assembled the way the sector reader assembles vertices:
+ * sample `(x + offsetX, y + offsetY)`, clamped to the heightmap's last row and
+ * column. That clamp means adjacent sectors write the same global sample
+ * twice, from their own shared edge. They agree almost always -- 116 of 8448
+ * shared samples differ on 20_19 -- and where they do not, one of them is the
+ * sector a shadow edge happens to end on. Last writer wins; the alternative is
+ * duplicating vertices to keep a difference the player cannot see.
+ */
+function readShadowMaps(terrain: any): { width: number; height: number; times: number[]; planes: Uint8Array[] } | null {
+  const sectors: any[] = terrain?.sectors ?? [];
+  if (!sectors.length) return null;
+
+  const width = terrain.heightmapX;
+  const height = terrain.heightmapY;
+  let planes: Uint8Array[] | null = null;
+  let times: number[] = [];
+
+  for (const entry of sectors) {
+    const sector = entry?.loadSelf?.() ?? entry;
+    const maps = sector?.shadowMaps;
+    if (!maps?.length) continue;
+
+    if (!planes) {
+      times = (sector.shadowMapTimes ?? []).map((time: number) => round(time, 3));
+      // Unlit until a sector says otherwise: a map whose sectors do not all
+      // carry shadows should show the gap, not a plausible fill.
+      planes = Array.from({ length: maps.length }, () => new Uint8Array(width * height));
+    }
+
+    for (let plane = 0; plane < planes.length; plane++) {
+      const source = maps[plane]?.getTypedArray?.() as Uint8Array | undefined;
+      if (!source) continue;
+      for (let y = 0; y < 17; y++) {
+        const row = Math.min(y + sector.offsetY, height - 1) * width;
+        for (let x = 0; x < 17; x++) {
+          planes[plane][row + Math.min(x + sector.offsetX, width - 1)] = source[y * 17 + x];
+        }
+      }
+    }
+  }
+
+  return planes ? { width, height, times, planes } : null;
+}
+
 /** The heightmap is an ordinary texture object -- in the one format umodel will not export. */
 function readHeightmap(terrain: any): Uint8Array | null {
   if (!terrain) return null;
@@ -470,7 +529,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
   // and what tells pickTerrain which TerrainInfo is this map's own ground.
   const worldOrigin: [number, number] = [(mapX - MAP_ZERO_X) * MAP_SIZE, (mapY - MAP_ZERO_Y) * MAP_SIZE];
 
-  const { terrain, heightmap, quads, environment, lighting, meshes, actors, skipped, pick } = quietly(() => {
+  const { terrain, heightmap, quads, shadow, environment, lighting, meshes, actors, skipped, pick } = quietly(() => {
     // One pick, shared: the transform, the heightmap and the bitmaps have to
     // come from the same terrain or they describe different ground.
     const pick = pickTerrain(pkg, worldOrigin);
@@ -479,6 +538,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
       terrain: readTerrain(pick.terrain),
       heightmap: readHeightmap(pick.terrain),
       quads: readQuadBitmaps(pick.terrain),
+      shadow: readShadowMaps(pick.terrain),
       environment: tolerateInexactReads(() => readEnvironment(pkg)).value,
       lighting: readLighting(pkg),
       ...readActors(pkg),
@@ -487,6 +547,17 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
 
   const outDir = path.join(MAPS_OUT, mapName);
   await fs.mkdir(outDir, { recursive: true });
+
+  if (terrain && shadow) {
+    // One file per hour the client bakes for, so a viewer fetches the two that
+    // bracket the time of day rather than all eight.
+    terrain.shadow = {
+      width: shadow.width,
+      height: shadow.height,
+      times: shadow.times,
+      files: shadow.planes.map((_, index) => `shadow-${index}.png`),
+    };
+  }
 
   const scene = {
     map: [mapX, mapY],
@@ -502,12 +573,20 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
   await fs.writeFile(path.join(outDir, "scene.json"), JSON.stringify(scene));
   if (heightmap) await fs.writeFile(path.join(outDir, "heightmap.bin"), heightmap);
   if (quads) await fs.writeFile(path.join(outDir, "quads.bin"), quads);
+  if (shadow) {
+    await Promise.all(
+      shadow.planes.map((plane, index) =>
+        fs.writeFile(path.join(outDir, `shadow-${index}.png`), grayPng(shadow.width, shadow.height, plane))
+      )
+    );
+  }
 
   const packages = new Set(meshes.map((name) => name.split(".")[0].toLowerCase()));
 
   console.log(
     `${mapName}: ${actors.length} actors, ${meshes.length} meshes from ${packages.size} packages` +
       `${terrain ? `, terrain ${(terrain.heightmap as any).width}x${(terrain.heightmap as any).height}` : ", no terrain"}` +
+      `${shadow ? `, ${shadow.planes.length} shadow planes` : ", no shadow maps"}` +
       `${skipped ? `, ${skipped} skipped` : ""}` +
       `${
         pick.exports > 1
@@ -985,6 +1064,19 @@ async function main(): Promise<void> {
   }
 
   await fs.mkdir(MAPS_OUT, { recursive: true });
+
+  // The world's lighting curves, written once beside the maps rather than into
+  // each of them: there is one set for the whole client. A batch child must
+  // not write it -- sixteen processes racing on one file is how you get half a
+  // JSON -- and the parent writes it before the children start.
+  if (!process.argv.includes("--child")) {
+    const env = readClientEnv(client, hsvToRgb);
+    await fs.writeFile(path.join(MAPS_OUT, "env.json"), JSON.stringify(env));
+    console.log(
+      `env.json: ${env.cycles.length} cycles, ${env.cycles[0].ambient.terrain.length} curve points, ` +
+        `${env.shadowMapCount} shadow planes per sector at ${env.shadowMapTimes.join("/")}h`
+    );
+  }
 
   // `--mesh-table` refreshes meshes.json alone, from the scene files already
   // on disk. That table is metadata read straight out of the client's

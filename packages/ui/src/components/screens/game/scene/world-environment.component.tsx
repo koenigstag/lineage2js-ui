@@ -3,9 +3,10 @@ import { useThree } from "@react-three/fiber";
 import { Color, Fog, SRGBColorSpace, Vector3 } from "three";
 import { TERRAIN_DRAW_DISTANCE, mapKey, worldToMapCoords } from "../../../../config/world-assets";
 import { L2_TO_THREE_SCALE, l2ToThree } from "../../../../utils/coords";
-import { resolveLighting } from "../../../../utils/world/map-lighting";
+import { DEFAULT_HOUR, resolveLighting } from "../../../../utils/world/map-lighting";
 import type { MapEnvironment, MapEnvironmentTime } from "../../../../utils/world/map-scene.types";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
+import { useWorldEnv } from "../../../../utils/world/use-world-env";
 
 interface WorldEnvironmentProps {
   scenes: LoadedMapScene[];
@@ -18,13 +19,6 @@ interface WorldEnvironmentProps {
    */
   hour?: number;
 }
-
-/**
- * Midday. The client's own day runs six times real time, and the server states
- * it -- until that arrives, standing the world at noon shows the map's colours
- * as the map was lit to be seen.
- */
-const DEFAULT_HOUR = 12;
 
 /**
  * Sky and fog out of the map itself.
@@ -49,14 +43,22 @@ export function WorldEnvironment({ scenes, worldX, worldY, hour = DEFAULT_HOUR }
 
   const colors = useMemo(() => environment && sampleTimeOfDay(environment.times, hour), [environment, hour]);
 
-  // Lighting is picked per map like the environment, but separately: a map can
-  // carry one and not the other. 20_19 has no L2FogInfo at all and borrows its
-  // sky from a neighbour, while its own sun and ambient are perfectly present.
-  const lighting = useMemo(() => {
+  // The light itself is not per map: it comes from the client's own curves,
+  // one set for the whole world, sampled at the hour. See resolveLighting.
+  const env = useWorldEnv();
+  const lighting = useMemo(() => resolveLighting(env, hour), [env, hour]);
+
+  // The sun's *direction* is per map, and is the one thing still taken off the
+  // level: its `NMovableSunLight` rotator. Picked like the environment, and
+  // separately, because a map can carry one and not the other -- 20_19 has no
+  // L2FogInfo at all and borrows its sky from a neighbour, while its own sun
+  // actor is perfectly present.
+  const sunDirection = useMemo(() => {
     const [mapX, mapY] = worldToMapCoords(worldX, worldY);
     const here = mapKey(mapX, mapY);
-    const under = scenes.find((entry) => mapKey(entry.mapX, entry.mapY) === here && entry.scene.lighting);
-    return resolveLighting((under ?? scenes.find((entry) => entry.scene.lighting))?.scene.lighting);
+    const under = scenes.find((entry) => mapKey(entry.mapX, entry.mapY) === here && entry.scene.lighting?.sun);
+    const sun = (under ?? scenes.find((entry) => entry.scene.lighting?.sun))?.scene.lighting?.sun;
+    return sun ? sunDirectionFrom(sun.rotation) : new Vector3(0, 1, 0);
   }, [scenes, worldX, worldY]);
 
   useEffect(() => {
@@ -76,32 +78,55 @@ export function WorldEnvironment({ scenes, worldX, worldY, hour = DEFAULT_HOUR }
   }, [scene, colors, environment]);
 
   // The lights are drawn whether or not the map has a sky: the two come from
-  // different actors and a map may carry only one.
-  const { ambient, sunColor, sunDirection } = lighting;
+  // different places and a map may carry only one.
+  const { meshAmbient, meshSun } = lighting;
 
   return (
     <>
-      {/* The map's own ambient and sun, the same pair the terrain shader is
-          given -- see resolveLighting. The brightness is already inside the
-          colour, as the client's getColor() returns it, so the intensity
-          carries one thing only: the pi that makes the two paths agree.
+      {/* The static-mesh half of the client's lighting, the same pair the
+          terrain shader is given for the ground -- see resolveLighting.
 
-          The terrain shader multiplies directly, `color * (ambient + sun *
-          lambert)`. three's materials run the same quantities through
-          BRDF_Lambert, which is `diffuse / PI`. Left at 1 the meshes come out
-          pi times darker than the ground they stand on -- which is the whole
-          complaint this work started from, just inverted. */}
-      <ambientLight color={ambient} intensity={Math.PI} />
-      {/* A directional light takes only its direction from the position, so
+          The intensity carries two factors and no taste. `2` is
+          D3DTOP_MODULATE2X, which the client applies to a mesh's lighting
+          exactly as it does to the terrain's. `PI` reconciles the two paths:
+          the terrain shader multiplies its colour in directly, while three's
+          materials run the same quantity through BRDF_Lambert, which is
+          `diffuse / PI`. Left at 1 the meshes come out pi times darker than
+          the ground they stand on -- which is the complaint this work started
+          from, just inverted. */}
+      <ambientLight color={meshAmbient} intensity={2 * Math.PI} />
+      {/* The client gives a static mesh no directional term at all: its sun is
+          a flat addition, because the editor baked the shape of the light into
+          the mesh's own vertex colours. Nothing extracts those yet, so the
+          sun's share of that flat total is spent here as a directional light
+          instead -- a stand-in for the bake, which keeps a trunk from reading
+          as a cardboard cut-out. It is a quarter of a mesh's light at noon,
+          so the difference between this and the client's flat version is
+          small, and it goes away the day the vertex colours are read.
+
+          A directional light takes only its direction from the position, so
           this can sit at the origin's own scale and still light a character
           standing 60000 units away. */}
       <directionalLight
-        color={sunColor}
-        intensity={Math.PI}
+        color={meshSun}
+        intensity={2 * Math.PI}
         position={[sunDirection.x * 100, sunDirection.y * 100, sunDirection.z * 100]}
       />
     </>
   );
+}
+
+/**
+ * An Unreal rotator to the direction light arrives *from*.
+ *
+ * The sun actor's rotator points the way its light travels, so the vector a
+ * lambert term wants is the negation of it.
+ */
+function sunDirectionFrom([pitch, yaw]: [number, number, number]): Vector3 {
+  const p = (pitch / 65536) * Math.PI * 2;
+  const y = (yaw / 65536) * Math.PI * 2;
+  const travel = l2ToThree(Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), Math.sin(p));
+  return travel.normalize().negate();
 }
 
 function toColor(rgb: [number, number, number]): Color {

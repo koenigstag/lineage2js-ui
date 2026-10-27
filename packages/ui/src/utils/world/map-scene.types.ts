@@ -44,6 +44,17 @@ export interface MapTerrain {
     yAxis: [number, number, number];
     zAxis: [number, number, number];
   };
+  /**
+   * The sun intensity the editor baked per terrain vertex, as one greyscale
+   * image per hour of the day the client bakes for.
+   *
+   * This is what the client's terrain uses in place of a diffuse term: it has
+   * no dot product against a sun direction at all, because the bake already
+   * accounts for the slope and for everything standing on it. See
+   * resolveLighting and readShadowMaps. Absent on a map baked before they were
+   * extracted.
+   */
+  shadow?: { width: number; height: number; times: number[]; files: string[] };
   sectors: number;
   layers: MapTerrainLayer[];
 }
@@ -76,23 +87,80 @@ export interface MapEnvironment {
 }
 
 /**
- * The map's own lighting, as `convert:maps` reads it off the level.
+ * The lighting actors in the level itself.
  *
- * Colours are 0..255 with the light's brightness already folded in, the way
- * the engine's own `getColor()` returns them.
+ * **Not where the world's light comes from**, which is the useful thing to
+ * know about this block. The runtime reads `env.json`'s curves for colour (see
+ * WorldEnv and resolveLighting); on 192 of the client's 203 maps the
+ * `LevelInfo` ambient here is below 1, because nothing ever asks it.
+ *
+ * What is used is `sun.rotation` -- the direction the static meshes are lit
+ * from. The rest is recorded because it is real level data the BSP work will
+ * want. Colours are 0..255 with brightness already folded in, the way the
+ * engine's own `getColor()` returns them.
  */
 export interface MapLighting {
   /** `NMovableSunLight`: the colour it casts, and the Unreal rotator it casts along. */
   sun: { color: [number, number, number]; rotation: [number, number, number] } | null;
-  /** `LevelInfo`'s ambient. Often near zero -- see zoneAmbient. */
+  /** `LevelInfo`'s ambient. Near zero on nearly every map -- see above. */
   ambient: [number, number, number];
   /**
-   * Every `ZoneInfo`'s ambient, unresolved. The level's own is frequently 0
-   * while its zones carry the actual light -- 22_22 runs 17 to 68 against a
-   * level ambient of 0 -- and choosing between them needs the BSP the zones
-   * are defined by, which nothing reads yet.
+   * Every `ZoneInfo`'s ambient, unresolved. 22_22 runs 17 to 68 against a
+   * level ambient of 0. Which one applies needs the BSP the zones are defined
+   * by, which nothing reads yet.
    */
   zoneAmbient: Array<[number, number, number]>;
+}
+
+/** One point of a colour curve over the day. Hours 0..24, channels 0..255. */
+export interface WorldEnvColor {
+  time: number;
+  color: [number, number, number];
+}
+
+/**
+ * One point of a light curve: the colour at full value, and the brightness it
+ * is scaled by.
+ *
+ * The two are interpolated apart and multiplied last, which is the client's
+ * own order -- `UL2NTimeLight::GetColorPlane` converts both ends of the span
+ * from HSB at value 255, lerps the colours, then lerps the brightnesses and
+ * multiplies. Brightness is over 255 and goes past it: 450 at dawn.
+ */
+export interface WorldEnvLight extends WorldEnvColor {
+  brightness: number;
+}
+
+/** The four surface classes the client lights from separate curves. */
+export interface WorldEnvSurfaces<T> {
+  terrain: T;
+  staticMesh: T;
+  actor: T;
+  bsp: T;
+}
+
+export interface WorldEnvCycle {
+  /** 0 normal, 1 dusk, 2 dawn, 3 cursed sword. Only 0 is reachable so far. */
+  type: number;
+  ambient: WorldEnvSurfaces<WorldEnvColor[]>;
+  light: WorldEnvSurfaces<WorldEnvLight[]>;
+}
+
+/**
+ * The world's lighting, one set for the whole client
+ * (`assets/highfive/maps/env.json`).
+ *
+ * Read from `system/env.int` and the `timeenv<n>.int` curves it names -- see
+ * packages/assets-server/scripts/client-data/env-config.ts, which also
+ * explains why this and not the level's own `LevelInfo` ambient.
+ */
+export interface WorldEnv {
+  startTime: number;
+  timeRatio: number;
+  shadowMapCount: number;
+  shadowMapTimes: number[];
+  staticLightingAdjust: number;
+  cycles: WorldEnvCycle[];
 }
 
 export interface MapActor {

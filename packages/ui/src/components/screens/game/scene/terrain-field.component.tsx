@@ -10,13 +10,16 @@ import {
   type TerrainNeighbourField,
   type TerrainNeighbours,
 } from "../../../../utils/world/terrain-geometry";
-import { resolveLighting } from "../../../../utils/world/map-lighting";
+import { DEFAULT_HOUR, resolveLighting, type ResolvedLighting } from "../../../../utils/world/map-lighting";
 import { createTerrainMaterial } from "../../../../utils/world/terrain-material";
 import { useHeightmaps, type MapHeightfield } from "../../../../utils/world/use-heightmaps";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
+import { useWorldEnv } from "../../../../utils/world/use-world-env";
 
 interface TerrainFieldProps {
   scenes: LoadedMapScene[];
+  /** Game hour, 0..24. Picks the curve point and the baked shadow plane. */
+  hour?: number;
   /** Left-click on the ground -- fired with the raycast hit point, three.js space. */
   onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
 }
@@ -39,8 +42,12 @@ const RECOMPUTE_AFTER = 30;
  * triangles, so a 3x3 window built eagerly would be over a million before
  * anything else is drawn.
  */
-export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
+export function TerrainField({ scenes, hour = DEFAULT_HOUR, onGroundClick }: TerrainFieldProps) {
   const heightmaps = useHeightmaps(scenes);
+  // One set of curves for the whole world, sampled once at the hour: every map
+  // is lit by the same numbers, and only the baked intensity is per map.
+  const env = useWorldEnv();
+  const lighting = useMemo(() => resolveLighting(env, hour), [env, hour]);
 
   const [cameraAt, setCameraAt] = useState(() => new Vector3());
   const lastPublished = useRef(new Vector3(Infinity, Infinity, Infinity));
@@ -83,6 +90,8 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
             key={key}
             scene={scene}
             heightfield={heightfield}
+            lighting={lighting}
+            hour={hour}
             neighbours={neighbours}
             cameraAt={cameraAt}
             onGroundClick={onGroundClick}
@@ -96,23 +105,34 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
 interface MapTerrainProps {
   scene: LoadedMapScene["scene"];
   heightfield: MapHeightfield;
+  lighting: ResolvedLighting;
+  hour: number;
   neighbours: TerrainNeighbours;
   cameraAt: Vector3;
   onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
 }
 
-function MapTerrain({ scene, heightfield, neighbours, cameraAt, onGroundClick }: MapTerrainProps) {
+function MapTerrain({ scene, heightfield, lighting, hour, neighbours, cameraAt, onGroundClick }: MapTerrainProps) {
   const terrain = scene.terrain!;
-  // Each map lights its own ground, from its own level -- see resolveLighting.
-  const lighting = useMemo(() => resolveLighting(scene.lighting), [scene.lighting]);
   const { heights, quads } = heightfield;
+  const [mapX, mapY] = scene.map;
 
   // One material per map: every chunk of it paints the same eight layers, and
-  // the textures are the expensive part.
+  // the textures are the expensive part. The baked sun intensity is per map
+  // too, and hangs off the same material.
   const [, redraw] = useState(0);
   const material = useMemo<ShaderMaterial>(
-    () => createTerrainMaterial(terrain, lighting, ktx2Loader(), () => redraw((n) => n + 1)),
-    [terrain, lighting]
+    () =>
+      createTerrainMaterial({
+        terrain,
+        mapX,
+        mapY,
+        lighting,
+        hour,
+        loader: ktx2Loader(),
+        onTexture: () => redraw((n) => n + 1),
+      }),
+    [terrain, mapX, mapY, lighting, hour]
   );
   useEffect(() => () => material.dispose(), [material]);
 

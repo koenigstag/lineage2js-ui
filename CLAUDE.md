@@ -52,9 +52,14 @@ pitch; this file is for working in the code.
   the offline converters that produce those files from sources the user
   supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles),
   `convert:maps` (the client's `.unr` maps, read with the vendored UE2
-  readers -> per-map terrain metadata, a raw G16 heightmap and every
-  static mesh placement, plus umodel-exported geometry with `--meshes`;
-  see `packages/assets-server/README.md`),
+  readers -> per-map terrain metadata, a raw G16 heightmap, the editor's
+  baked sun intensity as one PNG per time of day, and every
+  static mesh placement, plus umodel-exported geometry with `--meshes`.
+  It also writes `maps/env.json` from the client's `system/env.int` +
+  `timeenv*.int`: the world's lighting curves, which is where terrain
+  and mesh brightness actually come from -- *not* the level's own
+  `LevelInfo`/`NMovableSunLight`, which 192 of 203 maps leave at zero.
+  See `packages/assets-server/README.md`),
   `convert:client-rigs` (an installed game client, read with umodel -> one
   `.glb` per race/sex plus its textures under
   `assets/highfive/textures/<rig>/`) and `convert:armorgrp` / `convert:chargrp` /

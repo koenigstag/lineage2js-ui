@@ -75,6 +75,27 @@ export function getMapQuadsUrl(mapX: number, mapY: number): string | undefined {
 }
 
 /**
+ * One of the map's baked sun-intensity planes, named by its scene file.
+ *
+ * Greyscale PNG rather than a raw buffer: the browser decodes it into a
+ * texture without a width and height having to travel beside it, and deflate
+ * takes 64kB of smooth intensity down to about 40kB. See MapTerrain.shadow.
+ */
+export function getMapShadowUrl(mapX: number, mapY: number, file: string): string | undefined {
+  if (!WORLD_MAP_BASE_URL) return undefined;
+  return `${withSlash(WORLD_MAP_BASE_URL)}${mapKey(mapX, mapY)}/${file}`;
+}
+
+/**
+ * The world's lighting curves -- one file for the whole client, beside the
+ * maps rather than inside any of them. See WorldEnv.
+ */
+export function getWorldEnvUrl(): string | undefined {
+  if (!WORLD_MAP_BASE_URL) return undefined;
+  return `${withSlash(WORLD_MAP_BASE_URL)}env.json`;
+}
+
+/**
  * A scene file names a mesh the way its package does -- `Package.Group.Name`,
  * e.g. `Oren_tree_S.DarkElf.Oren_Darkelf_tree09`. umodel lays its exports out
  * by *class* rather than group, so the group is dropped and the file is

@@ -183,7 +183,7 @@ app.use(
       // covered drew untextured. The bodies these tables point at are
       // content-addressed enough to keep the hour; the tables are not, and a
       // revalidation of one is a 304 and a few bytes.
-      const isManifest = /[\\/](?:meshes\.json|scene\.json)$/i.test(filePath);
+      const isManifest = /[\\/](?:meshes\.json|scene\.json|env\.json)$/i.test(filePath);
       res.setHeader(
         "Cache-Control",
         isManifest ? "public, max-age=0, must-revalidate" : `public, max-age=${MAX_AGE_SECONDS}, must-revalidate`
