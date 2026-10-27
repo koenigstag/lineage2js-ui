@@ -1,4 +1,5 @@
 import { Matrix4, Quaternion, Vector3 } from "three";
+import { STATIC_MESH_SCALE } from "../../config/world-assets";
 import { l2ToThree } from "../coords";
 import type { MapTerrain, MapTerrainDeco } from "./map-scene.types";
 import { bitAt, type TerrainQuads } from "./terrain-geometry";
@@ -165,9 +166,18 @@ export function scatterDecoSector(
         // stands up rather than leaning with the slope, and the only rotation
         // left is the yaw -- see the pitch term in setDecorationMatrix, which
         // is zero for a normal of (0, 0, 1).
+        // The layer's own scale is a multiplier on the mesh, and the mesh
+        // arrives from umodel at a hundredth of client units -- so this needs
+        // the same STATIC_MESH_SCALE every placed actor gets (see
+        // actorMatrix). Without it a blade is drawn at 52.5% of its size,
+        // which on the dense layer is a speck in the ground rather than grass.
         l2ToThree(at.x, at.y, at.z, position);
         quaternion.setFromAxisAngle(up, -(yaw / 65536) * Math.PI * 2);
-        scale.set(scaleX, scaleZ, scaleY);
+        scale.set(
+          scaleX * STATIC_MESH_SCALE,
+          scaleZ * STATIC_MESH_SCALE,
+          scaleY * STATIC_MESH_SCALE
+        );
         out.push(new Matrix4().compose(position, quaternion, scale));
       }
     }

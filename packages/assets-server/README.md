@@ -436,6 +436,30 @@ A decoration mesh is referenced by no actor at all, so it reaches `meshes.json`
 only because the converter puts the layers' meshes into the same list the
 actors build. Without that the grass draws untextured.
 
+#### Two things the first pass got wrong, both visible as "that is not grass"
+
+The layer's `DrawScale3D` is a multiplier **on the mesh**, and the mesh comes
+out of umodel at a hundredth of client units -- so a blade needs the same
+`STATIC_MESH_SCALE` every placed actor gets. Without it a blade is drawn at
+52.5% of its height, which on the dense layer is a speck lost in the ground
+texture instead of a tuft.
+
+Worse, the slot is **two-sided and nothing was reading that**. A blade is one
+quad with a random yaw, so drawing it front-facing only deletes about half of
+every patch, and what is left reads as scattered dead twigs. `Shader.TwoSided`
+(and the texture's own `bTwoSided`) now goes into `meshes.json` as
+`blends[].twoSided`. It is not a grass problem: **2387 of the client's 8946
+meshes have a two-sided slot**, 4263 slots in all, which is every leaf card,
+banner and fence in the world.
+
+That flag rides on `blends[]` but is read before the blending test, because a
+slot can be two-sided and perfectly opaque -- the Shader is not always there.
+
+The art itself is dark and that is correct, not a lighting bug: measured on
+`dakelf_grass002`, the opaque texels average RGB `42,45,27`. The grass is lit
+slightly *brighter* than the ground it stands on (0.63 against the terrain's
+0.57 at noon), so there is nothing left to raise.
+
 ### Sky and fog
 
 `scene.json` carries an `environment` block, from the map's own `L2FogInfo`

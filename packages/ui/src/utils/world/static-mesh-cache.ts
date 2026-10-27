@@ -2,6 +2,7 @@ import {
   AdditiveBlending,
   BufferGeometry,
   ClampToEdgeWrapping,
+  DoubleSide,
   Material,
   Mesh,
   MeshBasicMaterial,
@@ -77,6 +78,8 @@ export interface SlotBlend {
   alphaRef: number;
   /** Whether the Shader carries an Opacity -- see applyBlend, it decides as much as the mode. */
   opacity: boolean;
+  /** `Shader.TwoSided` or the texture's `bTwoSided` -- see applyBlend. */
+  twoSided?: boolean;
 }
 
 /** What the converter knows about a mesh that its glTF does not carry. */
@@ -173,9 +176,19 @@ const textures = new Map<string, Promise<unknown>>();
  * (`glAlphaFunc(GL_GREATER, 0)`).
  */
 function applyBlend(material: MeshBasicMaterial, blend: SlotBlend | null | undefined): void {
+  if (!blend) return;
+
+  // Before the blending test, not after: a slot can be two-sided and opaque.
+  // Grass is the case that makes this visible -- a blade is one quad with a
+  // random yaw, so front-facing only throws away about half of every patch.
+  if (blend.twoSided && material.side !== DoubleSide) {
+    material.side = DoubleSide;
+    material.needsUpdate = true;
+  }
+
   // No Shader at all, or OB_Normal without an Opacity: the engine turns
   // blending off, so leave the material exactly as the glTF built it.
-  if (!blend || (blend.mode === "normal" && !blend.opacity)) return;
+  if (blend.mode === "normal" && !blend.opacity) return;
 
   if (blend.mode === "invisible") {
     material.visible = false;

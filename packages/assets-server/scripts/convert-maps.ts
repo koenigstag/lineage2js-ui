@@ -997,6 +997,15 @@ interface SlotBlend {
   alphaRef: number;
   /** Whether the Shader carries an Opacity at all -- the engine's own test for enabling blending. */
   opacity: boolean;
+  /**
+   * `Shader.TwoSided`, or the texture's own `bTwoSided`.
+   *
+   * A blade of grass and a leaf card are single quads: drawn front-facing
+   * only, every one whose random yaw turned it away from the camera simply
+   * is not there. The client draws them from both sides, and written out
+   * only when true -- it is the exception, not the rule.
+   */
+  twoSided?: boolean;
 }
 
 /** What the UI needs about a mesh beyond its geometry. */
@@ -1044,6 +1053,8 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
     let texture: string | null = null;
     let blend: SlotBlend | null = null;
     let clamp: [boolean, boolean] | null = null;
+    // Either link of the chain can carry it, and either one is enough.
+    let twoSided = false;
 
     for (let depth = 0; node && depth < 6; depth++) {
       node = node.loadSelf?.() ?? node;
@@ -1062,11 +1073,13 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
         const ref = typeof node.alphaTest === "number" ? node.alphaTest : 0;
         blend = { mode, alphaRef: round(ref / 255, 4), opacity: Boolean(node.opacity) };
       }
+      if (node.doubleSide) twoSided = true;
 
       // A texture is where the walk stops; anything else is a wrapper whose
       // own `material` is the next link.
       if (node.mipmaps) {
         texture = name;
+        if (node.isTwoSided) twoSided = true;
         // UClampMode/VClampMode, TC_Wrap = 0 and TC_Clamp = 1. Bark, walls and
         // floors tile; three defaults a texture to clamped, which smears the
         // last column of a trunk down its whole length instead of repeating
@@ -1078,6 +1091,10 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
       }
       node = node.material ?? node.diffuse;
     }
+
+    // A slot can be two-sided without blending at all, so this gets a row of
+    // its own rather than riding on a Shader that may not be there.
+    if (twoSided) blend = { ...(blend ?? { mode: "normal", alphaRef: 0, opacity: false }), twoSided };
 
     textures.push(texture);
     blends.push(blend);
