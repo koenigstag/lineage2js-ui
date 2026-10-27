@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { getMapHeightmapUrl, mapKey } from "../../config/world-assets";
+import { getMapHeightmapUrl, getMapQuadsUrl, mapKey } from "../../config/world-assets";
+import { parseTerrainQuads, type TerrainQuads } from "./terrain-geometry";
 import type { LoadedMapScene } from "./use-map-scenes";
 
 /**
@@ -9,8 +10,14 @@ import type { LoadedMapScene } from "./use-map-scenes";
  * and an order of magnitude larger: 128kB of 16-bit samples against 63kB of
  * JSON. A map's terrain simply does not draw until its heightmap lands.
  */
-export function useHeightmaps(scenes: LoadedMapScene[]): Map<string, Uint16Array> {
-  const cacheRef = useRef(new Map<string, Uint16Array>());
+export interface MapHeightfield {
+  heights: Uint16Array;
+  /** The per-quad bitmaps, when the map has them. */
+  quads: TerrainQuads | null;
+}
+
+export function useHeightmaps(scenes: LoadedMapScene[]): Map<string, MapHeightfield> {
+  const cacheRef = useRef(new Map<string, MapHeightfield>());
   const inFlightRef = useRef(new Set<string>());
   const [, forceRender] = useState(0);
 
@@ -33,11 +40,25 @@ export function useHeightmaps(scenes: LoadedMapScene[]): Map<string, Uint16Array
 
       inFlight.add(key);
       startedThisRun.add(key);
-      fetch(url)
-        .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(`${res.status} ${url}`))))
-        .then((buffer) => {
+      const quadsUrl = getMapQuadsUrl(mapX, mapY);
+      Promise.all([
+        fetch(url).then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(`${res.status} ${url}`)))),
+        // The bitmaps are optional: a map baked before they existed simply
+        // draws every quad, which is what it did anyway.
+        quadsUrl
+          ? fetch(quadsUrl)
+              .then((res) => (res.ok ? res.arrayBuffer() : null))
+              .catch(() => null)
+          : Promise.resolve(null),
+      ])
+        .then(([heightBuffer, quadBuffer]) => {
           if (cancelled) return;
-          cache.set(key, new Uint16Array(buffer));
+          const heights = new Uint16Array(heightBuffer);
+          const { width, height } = scene.terrain!.heightmap;
+          cache.set(key, {
+            heights,
+            quads: quadBuffer ? parseTerrainQuads(quadBuffer, width, height) : null,
+          });
           forceRender((n) => n + 1);
         })
         .catch(() => {

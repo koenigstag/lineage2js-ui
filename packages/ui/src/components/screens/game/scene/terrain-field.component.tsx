@@ -5,7 +5,7 @@ import { mapKey } from "../../../../config/world-assets";
 import { ktx2Loader } from "../../../../utils/world/static-mesh-cache";
 import { buildTerrainChunk, terrainChunkCount, type TerrainChunk } from "../../../../utils/world/terrain-geometry";
 import { createTerrainMaterial } from "../../../../utils/world/terrain-material";
-import { useHeightmaps } from "../../../../utils/world/use-heightmaps";
+import { useHeightmaps, type MapHeightfield } from "../../../../utils/world/use-heightmaps";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
 
 interface TerrainFieldProps {
@@ -50,9 +50,11 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
     <>
       {scenes.map(({ mapX, mapY, scene }) => {
         const key = mapKey(mapX, mapY);
-        const heights = heightmaps.get(key);
-        if (!scene.terrain || !heights) return null;
-        return <MapTerrain key={key} scene={scene} heights={heights} cameraAt={cameraAt} onGroundClick={onGroundClick} />;
+        const heightfield = heightmaps.get(key);
+        if (!scene.terrain || !heightfield) return null;
+        return (
+          <MapTerrain key={key} scene={scene} heightfield={heightfield} cameraAt={cameraAt} onGroundClick={onGroundClick} />
+        );
       })}
     </>
   );
@@ -60,13 +62,14 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
 
 interface MapTerrainProps {
   scene: LoadedMapScene["scene"];
-  heights: Uint16Array;
+  heightfield: MapHeightfield;
   cameraAt: Vector3;
   onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
 }
 
-function MapTerrain({ scene, heights, cameraAt, onGroundClick }: MapTerrainProps) {
+function MapTerrain({ scene, heightfield, cameraAt, onGroundClick }: MapTerrainProps) {
   const terrain = scene.terrain!;
+  const { heights, quads } = heightfield;
 
   // One material per map: every chunk of it paints the same eight layers, and
   // the textures are the expensive part.
@@ -102,7 +105,7 @@ function MapTerrain({ scene, heights, cameraAt, onGroundClick }: MapTerrainProps
           // Built to be measured, then kept -- a chunk's own extent is only
           // known once its vertices are, and building is cheap next to the
           // fetch that produced the heightmap.
-          chunk = buildTerrainChunk(terrain, heights, chunkX, chunkY);
+          chunk = buildTerrainChunk(terrain, heights, chunkX, chunkY, quads);
           cache.set(key, chunk);
         }
         if (chunk.center.distanceTo(cameraAt) <= DRAW_DISTANCE + chunk.radius) chunks.push(chunk);
@@ -110,7 +113,7 @@ function MapTerrain({ scene, heights, cameraAt, onGroundClick }: MapTerrainProps
     }
 
     return chunks;
-  }, [terrain, heights, cameraAt]);
+  }, [terrain, heights, quads, cameraAt]);
 
   return (
     <>

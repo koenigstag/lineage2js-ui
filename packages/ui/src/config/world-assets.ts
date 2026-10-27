@@ -25,6 +25,21 @@ export const MAP_SIZE = GEO_REGION_SIZE;
  */
 export const STATIC_MESH_SCALE = 100 * L2_TO_THREE_SCALE;
 
+/**
+ * How far the drawn ground sits below the geodata's walkable plane, in L2
+ * units.
+ *
+ * Measured rather than assumed: sampling 20_18's heightmap against this
+ * project's own baked geodata puts the terrain 31-33 units under it, tightly
+ * (p10 -37.6, p90 -26.4) -- see packages/assets-server/README.md. The two
+ * describe different surfaces and both are right; they simply do not coincide.
+ *
+ * Everything the server places -- players, mobs, dropped items -- stands on
+ * the walkable plane, so drawing it at the Z the server gave leaves it
+ * hovering once real terrain is underneath.
+ */
+export const TERRAIN_BELOW_GEODATA = 32;
+
 /** Which map a world position falls in. Same arithmetic as worldToRegionCoords. */
 export function worldToMapCoords(worldX: number, worldY: number): [number, number] {
   return [Math.floor(worldX / MAP_SIZE) + GEO_REGION_ZERO_X, Math.floor(worldY / MAP_SIZE) + GEO_REGION_ZERO_Y];
@@ -42,6 +57,12 @@ export function getMapSceneUrl(mapX: number, mapY: number): string | undefined {
 export function getMapHeightmapUrl(mapX: number, mapY: number): string | undefined {
   if (!WORLD_MAP_BASE_URL) return undefined;
   return `${withSlash(WORLD_MAP_BASE_URL)}${mapKey(mapX, mapY)}/heightmap.bin`;
+}
+
+/** Per-quad visibility and edge-turn bits, concatenated. See parseTerrainQuads. */
+export function getMapQuadsUrl(mapX: number, mapY: number): string | undefined {
+  if (!WORLD_MAP_BASE_URL) return undefined;
+  return `${withSlash(WORLD_MAP_BASE_URL)}${mapKey(mapX, mapY)}/quads.bin`;
 }
 
 /**

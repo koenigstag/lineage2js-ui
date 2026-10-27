@@ -4,6 +4,7 @@
  *
  *   assets/highfive/maps/<x>_<y>/scene.json     terrain metadata + actor placement
  *   assets/highfive/maps/<x>_<y>/heightmap.bin  256x256 16-bit heights, raw
+ *   assets/highfive/maps/<x>_<y>/quads.bin      per-quad visibility + edge turn bits
  *
  * and, with `--meshes`, the geometry those actors point at, plus the textures
  * that geometry wears:
@@ -173,6 +174,9 @@ function readTerrain(pkg: any): Record<string, unknown> | null {
       format: "g16",
       file: "heightmap.bin",
     },
+    // Two bit-per-quad maps, concatenated: visibility then edge turn. See
+    // readQuadBitmaps.
+    quads: { file: "quads.bin" },
     // Unreal's TransformPointBy subtracts the origin before projecting onto
     // the axes, so a sample becomes:
     //   world = ((hx, hy, height) - origin) . (xAxis, yAxis, zAxis)
@@ -185,6 +189,40 @@ function readTerrain(pkg: any): Record<string, unknown> | null {
     sectors: terrain.sectors?.length ?? 0,
     layers,
   };
+}
+
+/**
+ * The two per-quad bitmaps, packed as the client packs them: one bit per quad
+ * at `x + y * heightmapWidth`, least significant bit first.
+ *
+ * `quadVisibility` is what makes a hole a hole -- a cave mouth is a quad the
+ * terrain does not draw, and without it the world is sealed. `edgeTurn` says
+ * which diagonal a quad is split along, which decides the silhouette of every
+ * ridge and hollow.
+ *
+ * Written as one file rather than into the scene JSON: 16kB of bits would be
+ * 22kB of base64 in a file that is otherwise 63kB.
+ */
+function readQuadBitmaps(pkg: any): Uint8Array | null {
+  const [entry] = pkg.exportGroups["TerrainInfo"] ?? [];
+  if (!entry) return null;
+
+  const terrain = pkg.fetchObject(entry.index + 1).loadSelf();
+  const visibility = terrain.quadVisibilityBitmapOrig ?? terrain.quadVisibilityBitmap;
+  const edgeTurn = terrain.edgeTurnBitmapOrig ?? terrain.edgeTurnBitmap;
+  if (!visibility || !edgeTurn) return null;
+
+  const bytes = (array: any): Uint8Array => {
+    const typed = array.getTypedArray?.();
+    return typed ? new Uint8Array(typed.buffer, typed.byteOffset, typed.byteLength) : new Uint8Array(0);
+  };
+
+  const a = bytes(visibility);
+  const b = bytes(edgeTurn);
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
 }
 
 /** The heightmap is an ordinary texture object -- in the one format umodel will not export. */
@@ -269,9 +307,10 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
 
   const pkg = await loader.load(loader.getPackage(mapName, "Level"));
 
-  const { terrain, heightmap, meshes, actors, skipped } = quietly(() => ({
+  const { terrain, heightmap, quads, meshes, actors, skipped } = quietly(() => ({
     terrain: readTerrain(pkg),
     heightmap: readHeightmap(pkg),
+    quads: readQuadBitmaps(pkg),
     ...readActors(pkg),
   }));
 
@@ -291,6 +330,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
 
   await fs.writeFile(path.join(outDir, "scene.json"), JSON.stringify(scene));
   if (heightmap) await fs.writeFile(path.join(outDir, "heightmap.bin"), heightmap);
+  if (quads) await fs.writeFile(path.join(outDir, "quads.bin"), quads);
 
   const packages = new Set(meshes.map((name) => name.split(".")[0].toLowerCase()));
 
@@ -361,14 +401,16 @@ async function collectMeshInfo(loader: ClientLoader, meshes: Set<string>): Promi
   }
 
   const info: Record<string, MeshInfo> = {};
-  let failed = 0;
+  // Named, not counted: "4 could not be read" out of 8273 is easy to wave off,
+  // and which four it is decides whether that matters.
+  const failed: string[] = [];
 
   for (const [pkgName, names] of byPackage) {
     let pkg: any;
     try {
       pkg = await loader.load(loader.getPackage(pkgName, "StaticMesh"));
     } catch {
-      failed += names.length;
+      failed.push(...names);
       continue;
     }
 
@@ -381,20 +423,21 @@ async function collectMeshInfo(loader: ClientLoader, meshes: Set<string>): Promi
       for (const name of names) {
         const entry = exports.get(name.split(".").pop()!.toLowerCase());
         if (!entry) {
-          failed++;
+          failed.push(name);
           continue;
         }
         try {
           info[name] = meshInfo(pkg.fetchObject(entry.index + 1).loadSelf(), qualifiedName);
         } catch {
-          failed++;
+          failed.push(name);
         }
       }
     });
   }
 
   const withLod = Object.values(info).filter((entry) => entry.lods).length;
-  console.log(`meshes: ${Object.keys(info).length} resolved (${withLod} with LOD), ${failed} could not be read`);
+  console.log(`meshes: ${Object.keys(info).length} resolved (${withLod} with LOD), ${failed.length} could not be read`);
+  if (failed.length) console.log(`  unread: ${failed.slice(0, 20).join(", ")}${failed.length > 20 ? ", ..." : ""}`);
   return info;
 }
 
@@ -500,13 +543,23 @@ function exportTextures(
   console.log(`textures: ${wanted.size} referenced from ${packages.size} packages`);
 
   for (const name of [...packages].sort()) {
-    const result = spawnSync(
-      umodel,
-      [`-path=${client}`, "-game=l2", "-export", "-png", `-out=${staging}`, "-nooverwrite", `${name}.utx`],
-      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }
-    );
-    if (result.status !== 0) {
-      console.warn(`  umodel failed on ${name}.utx: ${lastLines(result.stderr || result.stdout, 2)}`);
+    // Most textures live in a `.utx`, but not all: a few packages keep their
+    // textures inside the static-mesh package that uses them, and asking for
+    // the wrong extension is a hard "failed to load provided packages" rather
+    // than an empty export. Three of the client's 373 packages are like this
+    // (Field_Deco_Artifact_S, gludio_dungeon_enterance_s, innadecobuild), and
+    // between them they carry 17 textures.
+    let result;
+    for (const extension of ["utx", "usx"]) {
+      result = spawnSync(
+        umodel,
+        [`-path=${client}`, "-game=l2", "-export", "-png", `-out=${staging}`, "-nooverwrite", `${name}.${extension}`],
+        { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }
+      );
+      if (result.status === 0) break;
+    }
+    if (result!.status !== 0) {
+      console.warn(`  umodel failed on ${name} (.utx and .usx): ${lastLines(result!.stderr || result!.stdout, 2)}`);
     }
   }
 
@@ -609,9 +662,11 @@ async function runInBatches(maps: string[], size: number, client: string): Promi
 }
 
 /** Every mesh package referenced by the scene files written so far. */
-async function referencedPackages(): Promise<Set<string>> {
+async function referencedPackages(mapNames?: string[]): Promise<Set<string>> {
+  const wanted = mapNames ? new Set(mapNames) : null;
   const packages = new Set<string>();
   for (const entry of await fs.readdir(MAPS_OUT)) {
+    if (wanted && !wanted.has(entry)) continue;
     let scene: { meshes?: string[] };
     try {
       scene = JSON.parse(await fs.readFile(path.join(MAPS_OUT, entry, "scene.json"), "utf8"));
@@ -670,8 +725,11 @@ async function main(): Promise<void> {
 
   if (!isChild && maps.length > batchSize) {
     await runInBatches(maps, batchSize, client);
-    const referenced = await referencedPackages();
-    const written = (await fs.readdir(MAPS_OUT)).length;
+    const referenced = await referencedPackages(maps);
+    // What this run produced, not what is on disk: with --only the two differ,
+    // and reporting the directory count once read as "203/18 maps".
+    const onDisk = new Set(await fs.readdir(MAPS_OUT));
+    const written = maps.filter((name) => onDisk.has(name)).length;
     console.log(`
 ${written}/${maps.length} maps, ${referenced.size} mesh packages referenced`);
     if (wantMeshes) {

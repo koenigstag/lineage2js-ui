@@ -29,6 +29,11 @@ export interface MapTerrain {
   scale: [number, number, number];
   heightmap: { width: number; height: number; format: "g16"; file: string };
   /**
+   * Two bit-per-quad maps in one file, visibility then edge turn. Absent on a
+   * map baked before they were extracted -- see parseTerrainQuads.
+   */
+  quads?: { file: string };
+  /**
    * Heightmap sample -> world, as the client stores it. Unreal's
    * TransformPointBy subtracts the origin first:
    *   world = ((hx, hy, height) - origin) . (xAxis, yAxis, zAxis)

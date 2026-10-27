@@ -5,7 +5,8 @@ import { observer } from "mobx-react-lite";
 import { CharacterModel } from "../../../core/scene/character-model.component";
 import { REFERENCE_HUMAN_HEIGHT_M } from "../../../../utils/models/character-model";
 import { IS_DEMO_MODE } from "../../../../config/env";
-import { l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
+import { L2_TO_THREE_SCALE, l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
+import { TERRAIN_BELOW_GEODATA } from "../../../../config/world-assets";
 import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
 import { useMapScenes } from "../../../../utils/world/use-map-scenes";
@@ -65,6 +66,8 @@ interface CameraFollowProps {
   fallbackWorldX: number;
   fallbackWorldY: number;
   fallbackGroundHeightM: number;
+  /** Applied to whatever the camera is following -- see GameScene's groundOffsetM. */
+  groundOffsetM: number;
   orbitRef: MutableRefObject<OrbitState>;
 }
 
@@ -76,7 +79,7 @@ interface CameraFollowProps {
  * gameStore.creatures' own ~150ms poll cadence while the same interpolation
  * already makes the rendered body (GameCreaturesField) move smoothly.
  */
-function CameraFollow({ realPlayer, fallbackWorldX, fallbackWorldY, fallbackGroundHeightM, orbitRef }: CameraFollowProps) {
+function CameraFollow({ realPlayer, fallbackWorldX, fallbackWorldY, fallbackGroundHeightM, groundOffsetM, orbitRef }: CameraFollowProps) {
   useFrame(({ camera }: { camera: Camera }) => {
     let target;
     let groundHeightM;
@@ -88,6 +91,7 @@ function CameraFollow({ realPlayer, fallbackWorldX, fallbackWorldY, fallbackGrou
       target = l2ToThree(fallbackWorldX, fallbackWorldY, 0);
       groundHeightM = fallbackGroundHeightM;
     }
+    groundHeightM += groundOffsetM;
 
     const { azimuth, pitch } = orbitRef.current;
     const horizontalDistance = CAMERA_DISTANCE_M * Math.cos(pitch);
@@ -235,6 +239,9 @@ export const GameScene = observer(function GameScene() {
 
   function handleGroundClick(event: ThreeEvent<MouseEvent>) {
     const target = threeToL2(event.point);
+    // The click landed on the drawn ground, which sits below the plane the
+    // server walks on -- put the destination back on that plane.
+    if (hasTerrain) target.z += TERRAIN_BELOW_GEODATA;
     console.log("[click-debug] three point", event.point.toArray(), "-> L2 target", target, "player L2 now", realPlayer && { x: realPlayer.x, y: realPlayer.y, z: realPlayer.z });
     if (realPlayer) {
       gameStore.moveTo(target.x, target.y, target.z);
@@ -313,6 +320,13 @@ export const GameScene = observer(function GameScene() {
   const groundHeight = heightAtWorld(tiles, worldX, worldY) ?? 0;
   const characterPos = l2ToThree(worldX, worldY, realPlayer ? realPlayer.z : groundHeight);
 
+  // Every body on screen is placed at a geodata Z, and the ground now drawn
+  // under it is TERRAIN_BELOW_GEODATA lower -- so without this they all float.
+  // One shift on the group rather than a correction inside each field: they
+  // all share the same cause, and the terrain and the meshes it belongs to
+  // must not move with them.
+  const groundOffsetM = hasTerrain ? -TERRAIN_BELOW_GEODATA * L2_TO_THREE_SCALE : 0;
+
   return (
     <div
       // Disables native scroll/pan/pinch-zoom for touch gestures on this
@@ -333,6 +347,7 @@ export const GameScene = observer(function GameScene() {
           fallbackWorldX={worldX}
           fallbackWorldY={worldY}
           fallbackGroundHeightM={characterPos.y}
+          groundOffsetM={groundOffsetM}
           orbitRef={orbitRef}
         />
 
@@ -359,25 +374,30 @@ export const GameScene = observer(function GameScene() {
         {/* Trees, rocks and buildings out of the retail client -- see StaticMeshField. */}
         <StaticMeshField scenes={mapScenes} />
 
-        {/* Local placeholder avatar -- only shown before a real player entry
-            exists (no live session yet). Once gameStore.creatures has us,
-            GameCreaturesField already renders this exact objectId via
-            PlayerModel with our real race/class colors -- rendering both
-            would double up. Also gated on IS_DEMO_MODE: without it, a real
-            deployment with no session yet should show an empty world, not a
-            WASD-controllable test capsule wandering around for anyone to see. */}
-        {!realPlayer && IS_DEMO_MODE && (
-          <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={yaw} color="#5b8fd6" />
-        )}
+        {/* Everything that stands on the ground, dropped onto the ground that
+            is actually drawn -- see groundOffsetM. Nothing inside carries the
+            correction itself; they only ever knew a geodata Z. */}
+        <group position={[0, groundOffsetM, 0]}>
+          {/* Local placeholder avatar -- only shown before a real player entry
+              exists (no live session yet). Once gameStore.creatures has us,
+              GameCreaturesField already renders this exact objectId via
+              PlayerModel with our real race/class colors -- rendering both
+              would double up. Also gated on IS_DEMO_MODE: without it, a real
+              deployment with no session yet should show an empty world, not a
+              WASD-controllable test capsule wandering around for anyone to see. */}
+          {!realPlayer && IS_DEMO_MODE && (
+            <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={yaw} color="#5b8fd6" />
+          )}
 
-        {/* Real NPCs/mobs/other players from the live session, if connected -- see GameCreaturesField. */}
-        <GameCreaturesField />
+          {/* Real NPCs/mobs/other players from the live session, if connected -- see GameCreaturesField. */}
+          <GameCreaturesField />
 
-        {/* Ground items (SpawnItem/DropItem), if connected -- see DroppedItemsField. */}
-        <DroppedItemsField />
+          {/* Ground items (SpawnItem/DropItem), if connected -- see DroppedItemsField. */}
+          <DroppedItemsField />
 
-        {/* Where we're currently walking to, if anywhere -- see MoveTargetMarker. */}
-        <MoveTargetMarker realPlayer={realPlayer} />
+          {/* Where we're currently walking to, if anywhere -- see MoveTargetMarker. */}
+          <MoveTargetMarker realPlayer={realPlayer} />
+        </group>
       </Canvas>
     </div>
   );

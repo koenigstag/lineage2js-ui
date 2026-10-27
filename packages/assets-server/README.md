@@ -17,6 +17,7 @@ Writes, per map:
 ```
 assets/highfive/maps/<x>_<y>/scene.json       terrain metadata + actor placement
 assets/highfive/maps/<x>_<y>/heightmap.bin    256x256 16-bit heights, raw
+assets/highfive/maps/<x>_<y>/quads.bin        per-quad visibility + edge turn
 assets/highfive/static-meshes/meshes.json     per mesh: textures, LOD chain, size
 assets/highfive/static-mesh-textures/...      KTX2, one per texture
 ```
@@ -26,8 +27,8 @@ and, with `--meshes`, the geometry those actors point at, into
 restricts to named maps; without `--meshes` it needs no umodel at all.
 
 Over the whole client that is **203 maps, 196791 actor placements, 15780 mesh
-references resolving to 216 packages**, 14 MB of scene files and 25 MB of
-heightmaps.
+references resolving to 216 packages**, 14 MB of scene files, 25 MB of
+heightmaps and 3.2 MB of quad bitmaps.
 
 What a client fetches for one map, measured on 20_18:
 
@@ -215,6 +216,12 @@ sector samples only the layers it needs rather than all eight.
   `color = ambient + sunColor * shadow/255 + sum(lightColor * intensity)`,
   with the ambient added unconditionally rather than modulated by the shadow.
 
+The two bitmaps go out as `quads.bin`: visibility first, then edge turn, one
+bit per quad at `x + y * heightmapWidth`, least significant bit first -- 8192
+bytes each for a 256x256 map. The `...Orig` (seamless) variants are the ones
+taken, matching what the client's own sector builder reads. A separate file
+rather than a field in the JSON: 16 kB of bits would be 22 kB of base64 in a
+file that is otherwise 63 kB. The shadow maps are not extracted yet.
 ## Static meshes
 
 `20_18.unr` has 797 `StaticMeshActor`s carrying a mesh -- but only **131

@@ -30,6 +30,35 @@ function heightAt(heights: Uint16Array, width: number, height: number, x: number
 }
 
 /**
+ * The client's two per-quad bitmaps, as `convert:maps` writes them: visibility
+ * first, then edge turn, one bit per quad at `x + y * width`, least significant
+ * bit first.
+ *
+ * Visibility is what makes a hole a hole -- a cave mouth is a quad the terrain
+ * does not draw, and without it the world is sealed shut. Edge turn says which
+ * diagonal a quad splits along, which is the difference between a ridge and a
+ * hollow on the same four corners.
+ */
+export interface TerrainQuads {
+  visibility: Uint8Array;
+  edgeTurn: Uint8Array;
+}
+
+export function parseTerrainQuads(buffer: ArrayBuffer, width: number, height: number): TerrainQuads | null {
+  const half = Math.ceil((width * height) / 8);
+  if (buffer.byteLength < half * 2) return null;
+  return {
+    visibility: new Uint8Array(buffer, 0, half),
+    edgeTurn: new Uint8Array(buffer, half, half),
+  };
+}
+
+function bitAt(bits: Uint8Array, width: number, x: number, y: number): boolean {
+  const index = x + y * width;
+  return (bits[index >> 3] & (1 << (index & 7))) !== 0;
+}
+
+/**
  * Builds one chunk of a map's terrain surface.
  *
  * Heights come straight from the client's G16 heightmap, and the transform
@@ -49,7 +78,8 @@ export function buildTerrainChunk(
   terrain: MapTerrain,
   heights: Uint16Array,
   chunkX: number,
-  chunkY: number
+  chunkY: number,
+  quads?: TerrainQuads | null
 ): TerrainChunk {
   const { width, height } = terrain.heightmap;
   const { origin, xAxis, yAxis, zAxis } = terrain.toWorld;
@@ -114,16 +144,35 @@ export function buildTerrainChunk(
   let at = 0;
   for (let row = 0; row < quadsY; row++) {
     for (let col = 0; col < quadsX; col++) {
+      const hx = startX + col;
+      const hy = startY + row;
+      // A quad the client marks invisible is a hole -- the mouth of a cave,
+      // the shaft under a trapdoor. Drawing it seals the world over.
+      if (quads && !bitAt(quads.visibility, width, hx, hy)) continue;
+
       const a = row * cols + col;
       const b = a + 1;
       const c = a + cols;
       const d = c + 1;
-      indices[at++] = a;
-      indices[at++] = c;
-      indices[at++] = b;
-      indices[at++] = b;
-      indices[at++] = c;
-      indices[at++] = d;
+
+      // Which diagonal the quad splits along. The client stores it per quad
+      // because on the same four corners one choice gives a ridge and the
+      // other a hollow.
+      if (quads && bitAt(quads.edgeTurn, width, hx, hy)) {
+        indices[at++] = a;
+        indices[at++] = c;
+        indices[at++] = b;
+        indices[at++] = c;
+        indices[at++] = d;
+        indices[at++] = b;
+      } else {
+        indices[at++] = a;
+        indices[at++] = c;
+        indices[at++] = d;
+        indices[at++] = a;
+        indices[at++] = d;
+        indices[at++] = b;
+      }
     }
   }
 
@@ -131,7 +180,7 @@ export function buildTerrainChunk(
   geometry.setAttribute("position", new BufferAttribute(positions, 3));
   geometry.setAttribute("normal", new BufferAttribute(normals, 3));
   geometry.setAttribute("worldXY", new BufferAttribute(worldXY, 2));
-  geometry.setIndex(new BufferAttribute(indices, 1));
+  geometry.setIndex(new BufferAttribute(indices.subarray(0, at), 1));
   geometry.computeBoundingSphere();
 
   const center = min.clone().add(max).multiplyScalar(0.5);
