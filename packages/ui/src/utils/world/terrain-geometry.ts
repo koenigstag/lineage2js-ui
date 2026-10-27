@@ -41,11 +41,28 @@ export interface TerrainChunk {
  */
 export interface TerrainNeighbours {
   /** The map at +x; its column 0 is this map's column `width`. */
-  nextX: Uint16Array | null;
+  nextX: TerrainNeighbourField | null;
   /** The map at +y; its row 0 is this map's row `height`. */
-  nextY: Uint16Array | null;
+  nextY: TerrainNeighbourField | null;
   /** The map diagonally at +x +y, for the single corner sample. */
-  nextXY: Uint16Array | null;
+  nextXY: TerrainNeighbourField | null;
+}
+
+/**
+ * A neighbour's heightmap and the Z origin its raw values are measured from.
+ *
+ * The origin is not decoration. Each map's `toWorld` carries its own
+ * `origin.z` -- the terrain actor's height, folded in by Unreal -- and they
+ * differ: 20_18's is 32225.86 against 21_18's 32323.54. Reading a neighbour's
+ * raw sample and subtracting *our* origin puts that vertex 29 units off the
+ * same point as the neighbour draws it, which is a one-quad ledge along the
+ * border -- a smaller, sharper version of the gap this stitch exists to close.
+ * So the sample is carried into this map's frame first.
+ */
+export interface TerrainNeighbourField {
+  heights: Uint16Array;
+  /** That map's own `toWorld.origin.z`. */
+  originZ: number;
 }
 
 /**
@@ -111,19 +128,31 @@ export function buildTerrainChunk(
   const maxX = neighbours?.nextX ? width : width - 1;
   const maxY = neighbours?.nextY ? height : height - 1;
 
+  // A neighbour's raw samples are measured from its own origin, so they are
+  // carried into this map's frame before anything divides or subtracts.
+  // See TerrainNeighbourField.
+  const inOurFrame = (field: TerrainNeighbourField, raw: number): number => raw - field.originZ + origin[2];
+
   /** A heightmap sample. TEXF_G16: unsigned 16-bit, little-endian, row-major. */
   const sample = (x: number, y: number): number => {
     const sx = x < 0 ? 0 : x > maxX ? maxX : x;
     const sy = y < 0 ? 0 : y > maxY ? maxY : y;
     if (sx < width) {
       if (sy < height) return heights[sy * width + sx];
-      return neighbours!.nextY![sx];
+      const next = neighbours!.nextY!;
+      return inOurFrame(next, next.heights[sx]);
     }
-    if (sy < height) return neighbours!.nextX![sy * width];
+    if (sy < height) {
+      const next = neighbours!.nextX!;
+      return inOurFrame(next, next.heights[sy * width]);
+    }
     // The far corner is the one sample that needs the diagonal map. Until it
     // loads, the nearest edge sample keeps that vertex in the right
     // neighbourhood; the chunk is rebuilt when the map arrives.
-    return neighbours?.nextXY?.[0] ?? neighbours!.nextX![(height - 1) * width];
+    const corner = neighbours?.nextXY;
+    if (corner) return inOurFrame(corner, corner.heights[0]);
+    const next = neighbours!.nextX!;
+    return inOurFrame(next, next.heights[(height - 1) * width]);
   };
 
   const startX = chunkX * TERRAIN_CHUNK_QUADS;

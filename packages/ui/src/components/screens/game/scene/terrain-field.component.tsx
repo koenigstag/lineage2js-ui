@@ -7,6 +7,7 @@ import {
   buildTerrainChunk,
   terrainChunkCount,
   type TerrainChunk,
+  type TerrainNeighbourField,
   type TerrainNeighbours,
 } from "../../../../utils/world/terrain-geometry";
 import { createTerrainMaterial } from "../../../../utils/world/terrain-material";
@@ -48,6 +49,20 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
     setCameraAt(camera.position.clone());
   });
 
+  // Keyed once rather than scanned three times per map: a neighbour is needed
+  // by its heightmap *and* by its own Z origin, which only its scene carries.
+  const sceneByKey = useMemo(
+    () => new Map(scenes.map((entry) => [mapKey(entry.mapX, entry.mapY), entry.scene])),
+    [scenes]
+  );
+
+  function neighbourField(x: number, y: number): TerrainNeighbourField | null {
+    const key = mapKey(x, y);
+    const heights = heightmaps.get(key)?.heights;
+    const terrain = sceneByKey.get(key)?.terrain;
+    return heights && terrain ? { heights, originZ: terrain.toWorld.origin[2] } : null;
+  }
+
   return (
     <>
       {scenes.map(({ mapX, mapY, scene }) => {
@@ -58,9 +73,9 @@ export function TerrainField({ scenes, onGroundClick }: TerrainFieldProps) {
         // map's first row -- the only way the two ever meet, since neither
         // map's samples cover the gap. See TerrainNeighbours.
         const neighbours = {
-          nextX: heightmaps.get(mapKey(mapX + 1, mapY))?.heights ?? null,
-          nextY: heightmaps.get(mapKey(mapX, mapY + 1))?.heights ?? null,
-          nextXY: heightmaps.get(mapKey(mapX + 1, mapY + 1))?.heights ?? null,
+          nextX: neighbourField(mapX + 1, mapY),
+          nextY: neighbourField(mapX, mapY + 1),
+          nextXY: neighbourField(mapX + 1, mapY + 1),
         };
         return (
           <MapTerrain
