@@ -12,6 +12,7 @@ import {
 } from "three";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { getStaticMeshTextureUrl } from "../../config/world-assets";
+import type { ResolvedLighting } from "./map-lighting";
 import type { MapTerrain, MapTerrainLayer } from "./map-scene.types";
 
 /**
@@ -79,6 +80,12 @@ const fragmentShader = /* glsl */ `
   uniform vec3 sunColor;
   uniform vec3 sunDirection;
 
+  // No tonemapping_pars_fragment / colorspace_pars_fragment here: the renderer
+  // already puts those functions in the fragment prefix of every program,
+  // ShaderMaterial included, so including them again is a pile of "function
+  // already has a body". Only the two calls at the end are missing.
+  // (And no backticks in this comment -- it lives inside a template literal.)
+
   varying vec2 vWorldXY;
   varying float vWorldZ;
   varying vec3 vNormal;
@@ -109,6 +116,9 @@ ${LAYER_BLOCKS}
     float lambert = max(dot(normalize(vNormal), normalize(sunDirection)), 0.0);
     gl_FragColor = vec4(color * (ambient + sunColor * lambert), 1.0);
 
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+
     // Last, as three's own materials do it: the renderer hands fogColor over in
     // the output colour space, which is the space this shader writes in.
     // Without this the ground is the one surface the map's fog does not reach,
@@ -123,7 +133,12 @@ ${LAYER_BLOCKS}
  * Textures arrive one at a time and the material is usable before any of them
  * do -- a chunk with a white ground is a better first frame than no ground.
  */
-export function createTerrainMaterial(terrain: MapTerrain, loader: KTX2Loader, onTexture: () => void): ShaderMaterial {
+export function createTerrainMaterial(
+  terrain: MapTerrain,
+  lighting: ResolvedLighting,
+  loader: KTX2Loader,
+  onTexture: () => void
+): ShaderMaterial {
   const layers = terrain.layers.slice(0, MAX_LAYERS);
   // A real one-pixel texture, not a bare `new Texture()`: an empty one has no
   // image for three to upload, and every sampler in the shader is read whether
@@ -180,9 +195,13 @@ export function createTerrainMaterial(terrain: MapTerrain, loader: KTX2Loader, o
       alphaOffset: { value: new Vector2(base?.uvOffset[0] ?? 0, base?.uvOffset[1] ?? 0) },
       layerAxis: { value: layerAxis },
       layerCount: { value: layers.length },
-      ambient: { value: [0.55, 0.55, 0.6] },
-      sunColor: { value: [0.45, 0.44, 0.38] },
-      sunDirection: { value: [0.4, 0.85, 0.35] },
+      // The map's own, resolved once for everything that lights anything --
+      // see resolveLighting. These were three constants written by hand, which
+      // is why the ground was four or five times brighter than the meshes
+      // standing on it.
+      ambient: { value: lighting.ambient },
+      sunColor: { value: lighting.sunColor },
+      sunDirection: { value: lighting.sunDirection },
     },
   });
 

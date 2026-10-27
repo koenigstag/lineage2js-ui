@@ -183,6 +183,47 @@ real relief step by 57 and 58 units. 62 of the 203 maps are a single height end
 to end -- open sea and out-of-bounds -- which is why so many borders are filler
 meeting filler.
 
+### Lighting
+
+`scene.json` carries a `lighting` block, read off the level's own actors:
+
+```
+sun          NMovableSunLight: getColor() and its rotator
+ambient      LevelInfo's AmbientBrightness/Hue/Saturation
+zoneAmbient  the same off every ZoneInfo, unresolved
+```
+
+Colours are 0..255 with brightness already folded in, because that is what the
+engine's `getColor()` returns: `hsvToRgb(hue, saturation, 255)` scaled by
+`brightness / 255`. An ambient has no `getColor()` of its own -- it sits on
+different fields -- so the converter runs the same two functions, exported
+from the objects package for the purpose rather than re-derived here.
+
+Measured across three maps, the sun is **the same light everywhere** --
+`brightness 70, hue 0, saturation 255`, giving `(59.29, 59.29, 59.29)` -- and
+only its rotator differs per map. What varies is the ambient, and it varies in
+a way worth knowing:
+
+```
+          LevelInfo ambient   ZoneInfo ambients
+20_18           25.41         9 zones,  0 .. 50.82
+20_19            0.85         1 zone,   0
+22_22            0.00        17 zones, 16.94 .. 67.76
+```
+
+**The level's ambient is usually not where the light is.** 22_22 says 0 at the
+level and carries the whole figure on its zones. Choosing between them needs
+the BSP the zones are cut from, which nothing here reads yet, so the zones go
+out as a plain list and the renderer takes their median when the level's own
+is dark -- a stand-in for standing in one, and a visible one, rather than a
+constant.
+
+What is still missing is the term that makes this bright enough to look like
+the game: the per-sector **shadow maps**, which the client adds as
+`sunColor * shadow/255`. Ambient near zero plus one sun is as dark as it
+sounds, and no amount of adjusting these two numbers substitutes for the baked
+light they modulate.
+
 ### A map can carry more than one TerrainInfo
 
 `12_24` has two: its own ground, and a second at half the quad size whose

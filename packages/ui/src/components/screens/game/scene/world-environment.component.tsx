@@ -3,6 +3,7 @@ import { useThree } from "@react-three/fiber";
 import { Color, Fog, SRGBColorSpace, Vector3 } from "three";
 import { TERRAIN_DRAW_DISTANCE, mapKey, worldToMapCoords } from "../../../../config/world-assets";
 import { L2_TO_THREE_SCALE, l2ToThree } from "../../../../utils/coords";
+import { resolveLighting } from "../../../../utils/world/map-lighting";
 import type { MapEnvironment, MapEnvironmentTime } from "../../../../utils/world/map-scene.types";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
 
@@ -48,6 +49,16 @@ export function WorldEnvironment({ scenes, worldX, worldY, hour = DEFAULT_HOUR }
 
   const colors = useMemo(() => environment && sampleTimeOfDay(environment.times, hour), [environment, hour]);
 
+  // Lighting is picked per map like the environment, but separately: a map can
+  // carry one and not the other. 20_19 has no L2FogInfo at all and borrows its
+  // sky from a neighbour, while its own sun and ambient are perfectly present.
+  const lighting = useMemo(() => {
+    const [mapX, mapY] = worldToMapCoords(worldX, worldY);
+    const here = mapKey(mapX, mapY);
+    const under = scenes.find((entry) => mapKey(entry.mapX, entry.mapY) === here && entry.scene.lighting);
+    return resolveLighting((under ?? scenes.find((entry) => entry.scene.lighting))?.scene.lighting);
+  }, [scenes, worldX, worldY]);
+
   useEffect(() => {
     if (!colors || !environment) return;
 
@@ -64,38 +75,33 @@ export function WorldEnvironment({ scenes, worldX, worldY, hour = DEFAULT_HOUR }
     };
   }, [scene, colors, environment]);
 
-  if (!colors || !environment) return null;
-
-  const sunDirection = environment.sun ? rotatorToDirection(environment.sun.rotation) : null;
-  // How much daylight there is, straight off the sky the map names for this
-  // hour: its own night colours are dark, so nothing else has to know when
-  // night is.
-  const daylight = luminance(colors.sky);
+  // The lights are drawn whether or not the map has a sky: the two come from
+  // different actors and a map may carry only one.
+  const { ambient, sunColor, sunDirection } = lighting;
 
   return (
     <>
-      {/* Sky light, in the sky's own colour -- the reason a night scene reads
-          as blue rather than as an underlit day. */}
-      <ambientLight color={colors.sky} intensity={0.6 + 0.5 * daylight} />
-      {sunDirection ? (
-        // A directional light only takes its direction from the position, so
-        // this one can sit at the origin's own scale and still light a
-        // character standing 60000 units away.
-        <directionalLight
-          position={[-sunDirection.x * 100, -sunDirection.y * 100, -sunDirection.z * 100]}
-          intensity={0.15 + 0.75 * daylight}
-        />
-      ) : (
-        <directionalLight position={[5, 10, 5]} intensity={0.6} />
-      )}
+      {/* The map's own ambient and sun, the same pair the terrain shader is
+          given -- see resolveLighting. The brightness is already inside the
+          colour, as the client's getColor() returns it, so the intensity
+          carries one thing only: the pi that makes the two paths agree.
+
+          The terrain shader multiplies directly, `color * (ambient + sun *
+          lambert)`. three's materials run the same quantities through
+          BRDF_Lambert, which is `diffuse / PI`. Left at 1 the meshes come out
+          pi times darker than the ground they stand on -- which is the whole
+          complaint this work started from, just inverted. */}
+      <ambientLight color={ambient} intensity={Math.PI} />
+      {/* A directional light takes only its direction from the position, so
+          this can sit at the origin's own scale and still light a character
+          standing 60000 units away. */}
+      <directionalLight
+        color={sunColor}
+        intensity={Math.PI}
+        position={[sunDirection.x * 100, sunDirection.y * 100, sunDirection.z * 100]}
+      />
     </>
   );
-}
-
-/** Perceived brightness, 0..1, of a colour -- read back in the space it was given in. */
-function luminance(color: Color): number {
-  const { r, g, b } = color.getRGB({ r: 0, g: 0, b: 0 }, SRGBColorSpace);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 function toColor(rgb: [number, number, number]): Color {
@@ -119,18 +125,6 @@ function fogBand(environment: MapEnvironment): [number, number] {
 
   const fitting = bands.filter(([, far]) => far * L2_TO_THREE_SCALE <= TERRAIN_DRAW_DISTANCE);
   return fitting.length ? fitting[fitting.length - 1] : bands[0];
-}
-
-/**
- * An Unreal rotator to the direction it points, in three.js space.
- *
- * The sun billboard's pitch is negative, so this points down -- the way the
- * light travels, not the way to the sun.
- */
-function rotatorToDirection([pitch, yaw]: [number, number, number]): Vector3 {
-  const p = (pitch / 65536) * Math.PI * 2;
-  const y = (yaw / 65536) * Math.PI * 2;
-  return l2ToThree(Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), Math.sin(p)).normalize();
 }
 
 interface SampledColors {

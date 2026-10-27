@@ -10,6 +10,7 @@ import {
   type TerrainNeighbourField,
   type TerrainNeighbours,
 } from "../../../../utils/world/terrain-geometry";
+import { resolveLighting } from "../../../../utils/world/map-lighting";
 import { createTerrainMaterial } from "../../../../utils/world/terrain-material";
 import { useHeightmaps, type MapHeightfield } from "../../../../utils/world/use-heightmaps";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
@@ -102,14 +103,16 @@ interface MapTerrainProps {
 
 function MapTerrain({ scene, heightfield, neighbours, cameraAt, onGroundClick }: MapTerrainProps) {
   const terrain = scene.terrain!;
+  // Each map lights its own ground, from its own level -- see resolveLighting.
+  const lighting = useMemo(() => resolveLighting(scene.lighting), [scene.lighting]);
   const { heights, quads } = heightfield;
 
   // One material per map: every chunk of it paints the same eight layers, and
   // the textures are the expensive part.
   const [, redraw] = useState(0);
   const material = useMemo<ShaderMaterial>(
-    () => createTerrainMaterial(terrain, ktx2Loader(), () => redraw((n) => n + 1)),
-    [terrain]
+    () => createTerrainMaterial(terrain, lighting, ktx2Loader(), () => redraw((n) => n + 1)),
+    [terrain, lighting]
   );
   useEffect(() => () => material.dispose(), [material]);
 

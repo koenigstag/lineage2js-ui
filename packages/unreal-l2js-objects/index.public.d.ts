@@ -69,6 +69,9 @@ export declare const ULight: any;
 export declare const FZoneInfo: any;
 export declare const USkyZoneInfo: any;
 
+export declare function hsvToRgb(hue: number, saturation: number, value: number): [number, number, number];
+export declare function saturationToBrightness(byte: number): number;
+
 export declare const FVector: any;
 export declare const FRotator: any;
 export declare const FCoords: any;

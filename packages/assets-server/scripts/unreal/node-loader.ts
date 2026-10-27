@@ -16,6 +16,15 @@ import * as Lib from "@lineage2js/unreal-l2js-objects";
 const { AAssetLoader } = Lib as any;
 
 /**
+ * The client's own HSB -> RGB and byte -> fraction, re-exported so the
+ * converter has one import specifier for the readers. A `Light` already
+ * applies both in `getColor()`; an ambient is held on different fields and
+ * has no method, so it needs them directly. See the objects package README.
+ */
+export const hsvToRgb = (Lib as any).hsvToRgb as (h: number, s: number, v: number) => [number, number, number];
+export const saturationToBrightness = (Lib as any).saturationToBrightness as (byte: number) => number;
+
+/**
  * Every directory of the installed client that holds packages.
  *
  * `SysTextures` earns its place: leaving it out costs roughly 500 static

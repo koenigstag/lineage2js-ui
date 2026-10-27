@@ -51,7 +51,14 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { openClient, quietly, tolerateInexactReads, type ClientLoader } from "./unreal/node-loader";
+import {
+  hsvToRgb,
+  openClient,
+  quietly,
+  saturationToBrightness,
+  tolerateInexactReads,
+  type ClientLoader,
+} from "./unreal/node-loader";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -227,6 +234,69 @@ interface TerrainPick {
   onOwnCorner: boolean;
 }
 
+/**
+ * The map's own lighting: the sun actor, and the ambient the level and its
+ * zones carry.
+ *
+ * Both renderers were lighting the world with numbers nobody read out of the
+ * client -- the terrain shader with three constants written by hand, the
+ * static meshes with a three.js ambient plus directional derived from the sky
+ * colour. They disagreed by a factor of four or five, which is why a tree
+ * trunk measured (19,17,10) against grass at (90,99,37) standing beside it.
+ *
+ * The client keeps a `NMovableSunLight` -- an actual light, not just the
+ * `NSun` billboard -- whose `getColor()` already folds brightness into the
+ * colour. Ambient is held on `LevelInfo` and again per `ZoneInfo`, on
+ * `AmbientBrightness`/`Hue`/`Saturation`, which have no method of their own,
+ * so they go through the engine's `hsvToRgb` directly.
+ *
+ * The zones are written out but not resolved: picking the one the camera
+ * stands in needs the BSP they are defined by, which nothing here reads yet.
+ * They are here so the spread is visible rather than silently flattened --
+ * 22_22 ranges from 20 to 50 against a level ambient of 0.
+ */
+function readLighting(pkg: any): Record<string, unknown> | null {
+  const colorOf = (brightness: number, hue: number, saturation: number): [number, number, number] => {
+    const [r, g, b] = hsvToRgb(hue ?? 0, saturation ?? 255, 255);
+    const scale = saturationToBrightness(brightness ?? 0);
+    return [round(r * scale, 2), round(g * scale, 2), round(b * scale, 2)];
+  };
+
+  const first = (cls: string): any => {
+    const [entry] = pkg.exportGroups[cls] ?? [];
+    return entry ? pkg.fetchObject(entry.index + 1).loadSelf() : null;
+  };
+
+  const sunLight = first("NMovableSunLight");
+  // Its own rotator where it has one; the NSun billboard otherwise, which is
+  // the same direction expressed on the thing you can see.
+  const sunRotation = sunLight?.rotation ?? first("NSun")?.rotation;
+  const sun = sunLight
+    ? {
+        color: sunLight.getColor().map((c: number) => round(c, 2)) as [number, number, number],
+        rotation: sunRotation ? [sunRotation.pitch, sunRotation.yaw, sunRotation.roll] : [0, 0, 0],
+      }
+    : null;
+
+  const level = first("LevelInfo");
+  const ambient = level
+    ? colorOf(level.ambientBrightness, level.ambientHue, level.ambientSaturation)
+    : ([0, 0, 0] as [number, number, number]);
+
+  const zones: Array<[number, number, number]> = [];
+  for (const entry of pkg.exportGroups["ZoneInfo"] ?? []) {
+    try {
+      const zone = pkg.fetchObject(entry.index + 1).loadSelf();
+      zones.push(colorOf(zone.ambientBrightness, zone.ambientHue, zone.ambientSaturation));
+    } catch {
+      // a zone that will not read says nothing about the others
+    }
+  }
+
+  if (!sun && !level && !zones.length) return null;
+  return { sun, ambient, zoneAmbient: zones };
+}
+
 function readTerrain(terrain: any): Record<string, unknown> | null {
   if (!terrain) return null;
 
@@ -400,7 +470,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
   // and what tells pickTerrain which TerrainInfo is this map's own ground.
   const worldOrigin: [number, number] = [(mapX - MAP_ZERO_X) * MAP_SIZE, (mapY - MAP_ZERO_Y) * MAP_SIZE];
 
-  const { terrain, heightmap, quads, environment, meshes, actors, skipped, pick } = quietly(() => {
+  const { terrain, heightmap, quads, environment, lighting, meshes, actors, skipped, pick } = quietly(() => {
     // One pick, shared: the transform, the heightmap and the bitmaps have to
     // come from the same terrain or they describe different ground.
     const pick = pickTerrain(pkg, worldOrigin);
@@ -410,6 +480,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
       heightmap: readHeightmap(pick.terrain),
       quads: readQuadBitmaps(pick.terrain),
       environment: tolerateInexactReads(() => readEnvironment(pkg)).value,
+      lighting: readLighting(pkg),
       ...readActors(pkg),
     };
   });
@@ -423,6 +494,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
     worldSize: MAP_SIZE,
     terrain: terrain ?? null,
     environment: environment ?? null,
+    lighting: lighting ?? null,
     meshes,
     actors,
   };

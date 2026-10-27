@@ -133,6 +133,12 @@ Upstream targets **Chronicle 4**. Each patch is commented in place and marked
 - **`@l2js/core` renamed to `@lineage2js/unreal-l2js-core`** throughout, so the
   fork does not squat the upstream package name. A pure scope rename -- 102
   specifiers, mechanical to re-apply after a re-sync.
+- **`src/unreal-index.ts` re-exports `hsvToRgb` / `saturationToBrightness`**
+  (two lines, no behaviour change). A `Light` converts its own colour through
+  `getColor()`, but an ambient lives on `AmbientBrightness`/`Hue`/`Saturation`
+  with no method of its own, so a consumer baking a map's lighting has to run
+  the same arithmetic. Exporting the engine's version keeps that from being
+  re-derived, differently, outside the package.
 
 ## What still fails
 

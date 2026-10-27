@@ -25,6 +25,13 @@ export { default as ULight } from "./assets/unreal/un-light";
 export { default as FZoneInfo } from "./assets/unreal/un-zone-info";
 export { default as USkyZoneInfo } from "./assets/unreal/un-sky-zone-info";
 
+// The client's own HSB -> RGB, and its byte -> fraction. A Light's getColor()
+// already applies both, but an ambient is held on different fields
+// (AmbientBrightness/Hue/Saturation) with no method of its own, so a consumer
+// baking map lighting needs the same arithmetic rather than a second guess at
+// it. See un-light.ts for how the engine pairs them.
+export { hsvToRgb, saturationToBrightness } from "./utils/hsv-to-rgb";
+
 export { default as FVector } from "./assets/unreal/un-vector";
 export { default as FRotator } from "./assets/unreal/un-rotator";
 export { default as FCoords } from "./assets/unreal/un-coords";

@@ -75,6 +75,26 @@ export interface MapEnvironment {
   moon: { radius: number; rotation: [number, number, number] } | null;
 }
 
+/**
+ * The map's own lighting, as `convert:maps` reads it off the level.
+ *
+ * Colours are 0..255 with the light's brightness already folded in, the way
+ * the engine's own `getColor()` returns them.
+ */
+export interface MapLighting {
+  /** `NMovableSunLight`: the colour it casts, and the Unreal rotator it casts along. */
+  sun: { color: [number, number, number]; rotation: [number, number, number] } | null;
+  /** `LevelInfo`'s ambient. Often near zero -- see zoneAmbient. */
+  ambient: [number, number, number];
+  /**
+   * Every `ZoneInfo`'s ambient, unresolved. The level's own is frequently 0
+   * while its zones carry the actual light -- 22_22 runs 17 to 68 against a
+   * level ambient of 0 -- and choosing between them needs the BSP the zones
+   * are defined by, which nothing reads yet.
+   */
+  zoneAmbient: Array<[number, number, number]>;
+}
+
 export interface MapActor {
   /** Index into MapScene.meshes. */
   mesh: number;
@@ -93,6 +113,7 @@ export interface MapScene {
   worldSize: number;
   terrain: MapTerrain | null;
   environment: MapEnvironment | null;
+  lighting: MapLighting | null;
   /** Qualified mesh names, `Package.Group.Name`; actors index into this. */
   meshes: string[];
   actors: MapActor[];
