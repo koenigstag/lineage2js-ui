@@ -1,4 +1,13 @@
-import { BufferGeometry, Material, Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, WebGLRenderer } from "three";
+import {
+  AdditiveBlending,
+  BufferGeometry,
+  Material,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+  SRGBColorSpace,
+  WebGLRenderer,
+} from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { getMeshTableUrl, getStaticMeshTextureUrl, getStaticMeshUrl } from "../../config/world-assets";
@@ -50,10 +59,28 @@ export function ktx2Loader(): KTX2Loader {
 const cache = new Map<string, StaticMeshPart[] | null>();
 const inFlight = new Map<string, Promise<StaticMeshPart[] | null>>();
 
+/**
+ * How the client blends one material slot, as `convert:maps` reads it off the
+ * slot's `Shader`.
+ *
+ * Absent for a slot means the client wrapped it in nothing at all -- a bare
+ * texture, drawn opaque. That is bark, stone and masonry; foliage, glass and
+ * water all arrive with one of these.
+ */
+export interface SlotBlend {
+  mode: "normal" | "masked" | "modulate" | "translucent" | "invisible" | "brighten" | "darken";
+  /** `Shader.AlphaRef`, 0..1. */
+  alphaRef: number;
+  /** Whether the Shader carries an Opacity -- see applyBlend, it decides as much as the mode. */
+  opacity: boolean;
+}
+
 /** What the converter knows about a mesh that its glTF does not carry. */
 export interface MeshInfo {
   /** Per material slot, the qualified texture it wears. */
   textures: (string | null)[];
+  /** Per material slot, how the client blends it. Absent when every slot is opaque. */
+  blends?: (SlotBlend | null)[];
   /** The client's own simplified versions, nearest first. Only trees have them. */
   lods?: string[];
   /** Bounding radius in client units. */
@@ -120,11 +147,64 @@ export function loadStaticMesh(name: string): Promise<StaticMeshPart[] | null> {
 
 const textures = new Map<string, Promise<unknown>>();
 
+/**
+ * Turns the client's own description of a slot into three's material flags.
+ *
+ * The rule is the engine's, quoted in the vendored reader beside its blend
+ * switch:
+ *
+ *   if (OutputBlending == OB_Normal && !Opacity) glDisable(GL_BLEND);
+ *   else                                         glEnable(GL_BLEND);
+ *
+ * which is why a tree's bark stays solid while its leaves do not -- both are
+ * `OB_Normal`, and only the leaves carry an Opacity. Reading the mode alone
+ * would leave 3123 opaque slots blended and every leaf still a card.
+ * `OB_Masked` additionally discards fully transparent texels
+ * (`glAlphaFunc(GL_GREATER, 0)`).
+ */
+function applyBlend(material: MeshStandardMaterial, blend: SlotBlend | null | undefined): void {
+  // No Shader at all, or OB_Normal without an Opacity: the engine turns
+  // blending off, so leave the material exactly as the glTF built it.
+  if (!blend || (blend.mode === "normal" && !blend.opacity)) return;
+
+  if (blend.mode === "invisible") {
+    material.visible = false;
+    return;
+  }
+
+  material.transparent = true;
+
+  if (blend.mode === "brighten") {
+    material.blending = AdditiveBlending;
+    material.depthWrite = false;
+  } else if (blend.mode === "translucent") {
+    material.depthWrite = false;
+  } else {
+    // Foliage keeps writing depth. A forest is tens of thousands of instanced
+    // leaf cards; sorting them per frame costs more than it buys, and gets the
+    // answer wrong whenever two cards interpenetrate -- which, for a tree, is
+    // most of them. Discarding the empty texels is what makes that honest.
+    material.depthWrite = true;
+  }
+
+  // three discards below alphaTest; the engine discards at or below AlphaRef,
+  // and for OB_Masked at zero. One step of an 8-bit channel is the smallest
+  // cut that means anything.
+  const ref = blend.mode === "masked" ? Math.max(blend.alphaRef, 1 / 255) : blend.alphaRef;
+  if (ref > 0) material.alphaTest = ref;
+
+  // transparent and alphaTest both change which shader three compiles, and a
+  // part without a texture never reaches the needsUpdate below.
+  material.needsUpdate = true;
+}
+
 async function applyTextures(meshName: string, parts: StaticMeshPart[]): Promise<void> {
-  const slots = (await meshTable())[meshName]?.textures;
+  const info = (await meshTable())[meshName];
+  const slots = info?.textures;
   if (!slots) return;
 
   for (const part of parts) {
+    applyBlend(part.material as MeshStandardMaterial, info?.blends?.[part.slot]);
     const textureName = slots[part.slot];
     const url = textureName ? getStaticMeshTextureUrl(textureName) : undefined;
     if (!url) continue;

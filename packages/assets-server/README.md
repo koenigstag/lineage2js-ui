@@ -296,6 +296,44 @@ Heavy instancing, so the per-map asset budget is small and the renderer wants
 `InstancedMesh` per distinct mesh. `umodel -export -gltf` handles the meshes
 themselves, which is the same path `convert-client-rigs.ts` already uses.
 
+### What makes a slot transparent is the Opacity, not the mode
+
+A material slot is either a bare `StaticMeshMaterial -> Texture`, or that
+wrapped in a `Shader`. One tree shows both:
+
+```
+Oren_Darkelf_tree02_A
+  slot 0  StaticMeshMaterial -> Texture {format=3}                       bark
+  slot 1  StaticMeshMaterial -> Texture {format=3}                       bark
+  slot 2  StaticMeshMaterial -> Shader {outputBlending=0 AlphaRef=1
+                                        opacity=yes} -> Texture {format=7}   leaves
+```
+
+Format 3 is DXT1, format 7 is DXT3 -- the leaves are the ones carrying a real
+alpha channel. But the mode alone does not say to blend them: `outputBlending`
+is `0`, `OB_Normal`, the same value a solid wall has. The engine's own rule,
+quoted beside the blend switch in `unreal-l2js-objects`:
+
+```
+if (OutputBlending == OB_Normal && !Opacity) glDisable(GL_BLEND);
+else                                         glEnable(GL_BLEND);
+```
+
+so it is the **presence of an Opacity** that decides. Measured over the whole
+client, that distinction is the entire feature: of 6248 slots carrying a
+Shader, 3123 are `OB_Normal` with no Opacity and must stay opaque, while 1415
+are `OB_Normal` *with* one and are the foliage. Treating the mode as the
+answer would blend half the world's masonry and still leave every leaf a card.
+
+`meshes.json` therefore carries a `blends` array beside `textures`, per slot:
+`{ mode, alphaRef, opacity }`, and only for meshes where some slot is not
+plain opaque -- 3033 of 8269. `OB_Masked` (1658 slots) additionally discards
+fully transparent texels, `glAlphaFunc(GL_GREATER, 0)`.
+
+Regenerate that table alone with `--mesh-table`: it is metadata read out of
+the packages, so it needs neither umodel nor an encoder and takes seconds
+rather than the hour a full `--meshes` pass costs.
+
 ## High Five vs C4
 
 Deltas found so far against Lineage2JS's readers, which were written for C4:

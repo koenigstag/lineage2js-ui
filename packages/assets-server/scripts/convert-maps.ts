@@ -30,6 +30,9 @@
  *       --client="D:\Games\Lineage2\L2_HighFive_Client" \
  *       --umodel="C:\ue_viewer\umodel_64.exe" --meshes
  *
+ * `--mesh-table` rewrites `static-meshes/meshes.json` alone, from the scene
+ * files already baked -- no umodel, no encoder, seconds rather than an hour.
+ *
  * `--only=20_18,22_22` restricts to named maps; without `--meshes` it writes
  * the scene files alone, which needs no umodel and takes seconds per map.
  *
@@ -544,10 +547,28 @@ async function collectMeshInfo(loader: ClientLoader, meshes: Set<string>): Promi
   return info;
 }
 
+/**
+ * How a material slot is blended, when the client wraps it in a Shader.
+ *
+ * Absent means the slot was a bare `StaticMeshMaterial -> Texture`: opaque,
+ * which is what bark, stone and walls are. Present means foliage, glass,
+ * water and the like -- drawn opaque, a leaf texture becomes a solid card.
+ */
+interface SlotBlend {
+  /** `Shader.OutputBlending`. Foliage is `normal` *with* an opacity, not `masked`. */
+  mode: (typeof BLEND_MODES)[number];
+  /** `Shader.AlphaRef` as a 0..1 fraction. The client's leaves use 1/255 and 10/255. */
+  alphaRef: number;
+  /** Whether the Shader carries an Opacity at all -- the engine's own test for enabling blending. */
+  opacity: boolean;
+}
+
 /** What the UI needs about a mesh beyond its geometry. */
 interface MeshInfo {
   /** Per material slot, the texture it wears. */
   textures: (string | null)[];
+  /** Per material slot, how it blends -- only when some slot is not plain opaque. */
+  blends?: (SlotBlend | null)[];
   /**
    * The client's own simplified versions, nearest first. Only some meshes have
    * them -- 35 of 603 in one package, and they are the trees, which is also
@@ -569,16 +590,36 @@ interface MeshInfo {
  * which *package* it lives in: umodel names a glTF material after the texture
  * object alone, and the same name occurs in more than one package.
  */
+/** `Shader.OutputBlending`, in the engine's own order. */
+const BLEND_MODES = ["normal", "masked", "modulate", "translucent", "invisible", "brighten", "darken"] as const;
+
 function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
   const textures: (string | null)[] = [];
+  const blends: (SlotBlend | null)[] = [];
 
   for (let i = 0; i < (mesh.materials?.length ?? 0); i++) {
     let node = mesh.materials[i];
     let texture: string | null = null;
+    let blend: SlotBlend | null = null;
 
     for (let depth = 0; node && depth < 6; depth++) {
       node = node.loadSelf?.() ?? node;
       const name = qualify(node);
+
+      // A Shader on the way down is the client saying how this slot is drawn.
+      // Tree bark goes StaticMeshMaterial -> Texture and is simply opaque;
+      // foliage goes through a Shader carrying an Opacity, which is what the
+      // engine tests for before it enables blending at all:
+      //
+      //   if (OutputBlending == OB_Normal && !Opacity) glDisable(GL_BLEND);
+      //
+      // so the Opacity matters as much as the mode does.
+      if (node.outputBlending !== undefined) {
+        const mode = BLEND_MODES[Number(node.outputBlending?.valueOf?.() ?? node.outputBlending)] ?? "normal";
+        const ref = typeof node.alphaTest === "number" ? node.alphaTest : 0;
+        blend = { mode, alphaRef: round(ref / 255, 4), opacity: Boolean(node.opacity) };
+      }
+
       // A texture is where the walk stops; anything else is a wrapper whose
       // own `material` is the next link.
       if (node.mipmaps) {
@@ -589,6 +630,7 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
     }
 
     textures.push(texture);
+    blends.push(blend);
   }
 
   const lods: string[] = [];
@@ -605,7 +647,14 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
     sphere?.w ??
     (box ? Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z) / 2 : 0);
 
-  return { textures, radius: Math.round(radius), ...(lods.length > 0 ? { lods } : {}) };
+  return {
+    textures,
+    radius: Math.round(radius),
+    // Left out entirely when every slot is a plain opaque texture, which is
+    // most of them -- this table is already 2.2MB.
+    ...(blends.some(Boolean) ? { blends } : {}),
+    ...(lods.length > 0 ? { lods } : {}),
+  };
 }
 
 /** Qualified name -> `<Package>/<Name>`, the path this project stores a texture under. */
@@ -822,6 +871,17 @@ async function main(): Promise<void> {
   }
 
   await fs.mkdir(MAPS_OUT, { recursive: true });
+
+  // `--mesh-table` refreshes meshes.json alone, from the scene files already
+  // on disk. That table is metadata read straight out of the client's
+  // packages, so it needs neither umodel nor an encoder -- and when a field is
+  // added to it, re-exporting every mesh and every texture to pick the field
+  // up costs an hour and changes nothing on disk but that one file.
+  if (process.argv.includes("--mesh-table")) {
+    await fs.mkdir(MESHES_OUT, { recursive: true });
+    await bakeTextures(loader, "", "", client, false, only ? maps : undefined);
+    return;
+  }
 
   const batchSize = Number(readArg("--batch") ?? 16);
   const isChild = process.argv.includes("--child");
