@@ -574,47 +574,93 @@ interior is authored slightly brighter than open ground -- it has to be,
 with no sun in it.
 
 An actor whose zone ambient is zero is mostly not left black, though: what
-lights it is the colour stream below, which covers 634 of the world's 1540.
+lights it is the torchlight below. Of the world's 1540 such actors, **1419
+come out lit and 121 stay black** -- those last have no light reaching them
+at all, which is the client's own answer and not a gap here.
 
-#### The torches: the per-instance colour stream
+#### The torches, computed rather than taken
 
-`UStaticMeshInstance.colorStream` holds one colour per mesh vertex, and it is
-the editor's bake of the `Light` actors reaching that placement -- the lights'
-share alone, which the client adds on top of the sun or the zone ambient
-rather than in place of either. Measured over six maps:
+The lights' own contribution to a placement is `lighting` in the client's
+shader, and the editor bakes it into `UStaticMeshInstance.colorStream` -- one
+colour per mesh vertex. That bake is not a reliable source, though, and the
+client's own behaviour says why: **`mesh.useVertexColor` is false on every
+mesh checked** (all 797 of 20_18's, all 2030 of 22_22's), so the runtime never
+reads the stream. It recomputes from `sceneLights` every frame instead. And
+the bake is patchy to match: on 20_21 all 210 actors with no zone ambient
+carry a `sceneLights` list and a stream that is **entirely zero**.
+
+So `convert:maps` does the recompute, once, offline
+(`scripts/unreal/mesh-lighting.ts`). Per vertex, per light the editor found
+reaching it:
 
 ```
-            actors   non-zero stream   uniform
-20_18          800      121 (15.1%)          0
-22_22         2030      144 ( 7.1%)          0
-20_19         1112        0 ( 0.0%)          0
-whole world 196791    24490 (12.4%)          0     67232 Light actors
+intensity = multiplier(1.0) * ScaleGlow * 0.5 * sampleIntensity(light, point, normal)
+colour   += floor(light.getColor() * intensity)        clamped to 255
 ```
 
-This is what lights a torchlit interior, and for the actors whose zone ambient
-is zero it is the only thing that does: of the world's 1540 such actors, 634
-have it. The `Light` actors themselves are baked too -- position, radius and
-`getColor()` -- though nothing draws one yet.
+`sampleIntensity` is a switch on `LightEffect` with twenty-one branches, of
+which the client's own data uses **two**: of 822 lights over three maps, 445
+are `None` (the default cubic attenuation, `(2a³-3a²+1)/a * |dot/r| * 2`) and
+376 are `Spotlight`. One is `QuadraticNonIncidence`, none are dynamic. The
+per-vertex reach is not recomputed -- it comes from each light's own
+`vertexFlags` bitmap, which is the editor's visibility and nothing here could
+reproduce it.
 
-**906 actors are still black**, 0.46% of the world, and the reason is worth
-writing down because it decides what comes next. They are not missing an
-instance and not missing a stream: on 20_21 all 210 of them have `sceneLights`
-listing the lights that reach them, and a colour stream that is **entirely
-zero**. The editor never baked the result. The client does not care, because
-it never reads `colorStream` at all -- `mesh.useVertexColor` is false on all
-797 of 20_18's meshes and all 2030 of 22_22's, so the runtime recomputes from
-`sceneLights` every time. Lighting those last ones means doing the same:
-`sampleIntensity` per `LightEffect` over each vertex, which is the switch in
-the vendored `dynamic-light.ts`. The 24490 placements that do carry a stream
-are then the test for it.
+**Checked against the bake, which is an answer key for exactly this
+calculation.** Over four maps, 559 placements carry both:
 
-**It is averaged per placement, and that is a real loss.** A colour per vertex
-cannot ride on an `InstancedMesh`, and not one instance of the 24490 is
-uniform: over 20_18's lit instances the standard deviation within one of them
-has a median of 0.99 of its own mean. So a wall lit from one end comes out
-evenly lit. What survives is which placements are lit and how much, which is
-the difference between a black interior and a dim one -- the mean luminance a
-lit placement adds runs p10 2, median 14, p90 42, max 178.
+```
+|mine - theirs| on the instance mean, out of 255
+  all 559 placements     median 0.8   p90 7.0   max 59
+  where theirs >= 10     median 1.1   p90 11.3  max 59
+  per-vertex within 8                 91.7% (20_18)  92.8% (22_22)
+  placements the editor lit and this does not            0
+```
+
+Median error by `LightEffect` is 0.03 of the mean for every combination --
+`None`, `Spotlight`, and mixed -- so no branch is systematically wrong; the
+tail is placements whose light is near zero, where a ratio means nothing.
+
+What it buys is coverage. Across the whole client the lit placement count
+goes from the bake's **24490 to 68736**, 12.4% of actors to 34.9%, and the
+actors with no zone ambient -- the ones that rendered black -- go from 634 lit
+to 1419 of 1540. On 20_21 alone, where the editor baked nothing at all, 2307
+placements light up and 200 of the 210 black ones with them:
+
+```
+          lit placements        zero-ambient actors lit
+20_18       121 -> 323                100 of 101
+20_21         0 -> 2307               200 of 210
+22_22       144 -> 364                  1 of 2
+world     24490 -> 68736             1419 of 1540
+```
+
+#### The bake it is checked against
+
+`UStaticMeshInstance.colorStream` holds one colour per mesh vertex, and where
+the editor filled it in it is the answer to the calculation above. Its extent,
+which is also the extent of the check:
+
+```
+            actors   non-zero stream
+20_18          800      121 (15.1%)
+22_22         2030      144 ( 7.1%)
+20_19         1112        0 ( 0.0%)     -- an open field has no torches
+whole world 196791    24490 (12.4%)        against 67232 Light actors
+```
+
+The `Light` actors themselves are baked beside the placements -- position,
+radius and `getColor()` -- so a renderer that wants to light something moving
+past a torch has them without re-reading the client.
+
+#### Averaging is what is given up, not the lights
+
+A colour per vertex cannot ride on an `InstancedMesh`, so what each placement
+carries is the mean over its vertices -- and **not one of the 24490 instances
+with a stream is uniform**. Over 20_18's lit instances the standard deviation
+within one of them has a median of 0.99 of its own mean, so a wall lit from
+one end comes out evenly lit. What survives is which placements are lit and
+how much, which is the difference between a black interior and a dim one.
 
 Keeping the gradient means taking those placements out of their
 `InstancedMesh` and giving each its own colour attribute, and that needs a

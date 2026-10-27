@@ -208,12 +208,14 @@ export interface MapActor {
   amb?: [number, number, number];
   /**
    * What the `Light` actors around this placement add, 0..255, averaged over
-   * the mesh -- the editor's own bake, added on top of the sun or the zone
-   * ambient rather than replacing either.
+   * the mesh -- added on top of the sun or the zone ambient rather than
+   * replacing either.
    *
-   * On 8.7% of placements. Averaged because a colour per vertex cannot ride
-   * on an `InstancedMesh`; the spread given up is about the size of the mean,
-   * so a wall lit from one end comes out evenly lit.
+   * Computed by the converter the way the client computes it, rather than
+   * taken from the editor's bake, which is missing on exactly the placements
+   * that need it most. Averaged because a colour per vertex cannot ride on an
+   * `InstancedMesh`; the spread given up is about the size of the mean, so a
+   * wall lit from one end comes out evenly lit.
    */
   lit?: [number, number, number];
 }

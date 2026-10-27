@@ -53,6 +53,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readClientEnv } from "./client-data/env-config";
 import { grayPng } from "./gray-png";
+import { computeInstanceLight } from "./unreal/mesh-lighting";
 import {
   hsvToRgb,
   openClient,
@@ -509,27 +510,34 @@ function readHeightmap(terrain: any): Uint8Array | null {
 }
 
 /**
- * The light the editor baked into one placement, averaged over its vertices.
+ * What the `Light` actors add to one placement, averaged over its vertices.
  *
- * `colorStream` holds one colour per mesh vertex and is the `Light` actors'
- * contribution only -- it sits on top of the sun or the zone ambient rather
- * than replacing either, which is how the client's own shader adds it
- * (`vLitColor = lighting + staticMeshSunAmbient * sunAffected`). An instance
- * with nothing near it has a stream of zeroes, which is most of the world.
+ * Computed rather than taken from `UStaticMeshInstance.colorStream`, which is
+ * the editor's bake of the same thing. The bake is not always there -- on
+ * 20_21 every one of the 210 actors with no zone ambient has a `sceneLights`
+ * list and an entirely zero stream, and taking it at face value leaves them
+ * black. The client is no help as a precedent either way: it never reads the
+ * stream at all (`mesh.useVertexColor` is false on every mesh checked) and
+ * recomputes from `sceneLights` each frame. So this does the recompute, once,
+ * for everything -- see computeInstanceLight, and the README for how closely
+ * it reproduces the bake where both exist.
+ *
+ * It is the lights' contribution alone, to be added on top of the sun or the
+ * zone ambient rather than replacing either, which is how the client's own
+ * shader adds it: `vLitColor = lighting + staticMeshSunAmbient * sunAffected`.
  */
 function instanceLight(actor: any): [number, number, number] | null {
-  const stream = actor.instance?.loadSelf?.()?.colorStream;
-  const count = stream?.getElemCount?.() ?? 0;
-  if (!count) return null;
+  const colors = computeInstanceLight(actor);
+  if (!colors) return null;
 
+  const count = colors.length / 3;
   let r = 0;
   let g = 0;
   let b = 0;
   for (let index = 0; index < count; index++) {
-    const [cr, cg, cb] = stream.getColor(index);
-    r += cr;
-    g += cg;
-    b += cb;
+    r += colors[index * 3];
+    g += colors[index * 3 + 1];
+    b += colors[index * 3 + 2];
   }
 
   if (!r && !g && !b) return null;

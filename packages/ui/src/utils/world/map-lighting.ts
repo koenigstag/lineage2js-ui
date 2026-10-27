@@ -150,7 +150,7 @@ export function resolveLighting(env: WorldEnv | null | undefined, hour: number =
  *
  *     outdoors  ambient.staticMesh/2 + light.staticMesh * 32/255
  *     indoors   the actor's own zone ambient
- *     either    plus the Light actors around it, from the editor's bake
+ *     either    plus the Light actors around it, summed by the converter
  *
  * The branch is the client's `if (!this.isSunAffected)`, and every term comes
  * off the actor. The last one is what keeps an interior from being black:
