@@ -26,6 +26,15 @@ export const MAP_SIZE = GEO_REGION_SIZE;
 export const STATIC_MESH_SCALE = 100 * L2_TO_THREE_SCALE;
 
 /**
+ * How far a terrain chunk is built and drawn from, on top of its own radius.
+ *
+ * Lives here rather than in TerrainField because the fog has to agree with it:
+ * fog that clears before the ground ends shows the edge of the world, and fog
+ * that closes in sooner than it needs to throws away ground already paid for.
+ */
+export const TERRAIN_DRAW_DISTANCE = 260;
+
+/**
  * How far the drawn ground sits below the geodata's walkable plane, in L2
  * units.
  *

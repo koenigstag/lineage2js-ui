@@ -16,6 +16,7 @@ import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
 import { StaticMeshField } from "./static-mesh-field.component";
 import { TerrainField } from "./terrain-field.component";
+import { WorldEnvironment } from "./world-environment.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
 import { DroppedItemsField } from "./dropped-items-field.component";
 import { MoveTargetMarker } from "./move-target-marker.component";
@@ -154,6 +155,7 @@ export const GameScene = observer(function GameScene() {
   // Once a map with terrain is loaded the wireframe stops being the thing
   // clicked on, and stops being drawn over the ground it stood in for.
   const hasTerrain = mapScenes.some(({ scene }) => scene.terrain);
+  const hasEnvironment = mapScenes.some(({ scene }) => scene.environment);
 
   useEffect(() => {
     const keys = new Set<string>();
@@ -340,8 +342,16 @@ export const GameScene = observer(function GameScene() {
         camera={{ position: [0, CAMERA_DISTANCE_M, CAMERA_DISTANCE_M], fov: 60, near: 0.1, far: 2000 }}
         onPointerMissed={() => console.log("[click-debug] pointer missed everything")}
       >
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[5, 10, 5]} intensity={0.6} />
+        {/* Sky, fog and the sun the map itself names -- see WorldEnvironment.
+            It renders the lights too, so this pair is only the fallback for a
+            map that has no environment baked (or none loaded yet). */}
+        <WorldEnvironment scenes={mapScenes} worldX={worldX} worldY={worldY} />
+        {!hasEnvironment && (
+          <>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 10, 5]} intensity={0.6} />
+          </>
+        )}
         <CameraFollow
           realPlayer={realPlayer}
           fallbackWorldX={worldX}

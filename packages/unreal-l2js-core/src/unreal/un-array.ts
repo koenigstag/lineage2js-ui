@@ -33,7 +33,22 @@ class FArray<T extends C.UObject | FArrayPrimitive<C.NumberTypes_T | C.StringTyp
 
         const headerSize = hasTag ? pkg.tell() - beginIndex : null;
         const dataBytes = hasTag ? tag.dataSize - headerSize : null;
-        const isFixedSize = hasTag ? (dataBytes % this.length) === 0 : false;
+        // Patched for High Five (see README): an element's size used to be
+        // inferred whenever the byte count divided evenly by the count, which
+        // is a coincidence rather than evidence. L2FogInfo's per-time colours
+        // are 8 tagged property lists in 392 bytes -- they divide evenly and
+        // are not the same size, so alternate entries were read from the
+        // middle of their neighbour and came back zeroed, losing the sky and
+        // fog colour of every map.
+        //
+        // Elements that carry their own property tags end themselves on a
+        // `None`, so their size only has to be an upper bound; handing each
+        // one the rest of the array is correct for them and for the evenly
+        // divided case alike. `plainStructFields` marks the elements that are
+        // instead read as raw fields (vectors, colours, planes) and do need a
+        // real size.
+        const fixedByLayout = (this.Constructor as any)?.plainStructFields === true;
+        const isFixedSize = hasTag && fixedByLayout ? (dataBytes % this.length) === 0 : false;
         const elementSize = isFixedSize ? dataBytes / this.length : null;
 
         for (let i = 0, len = this.length; i < len; i++) {

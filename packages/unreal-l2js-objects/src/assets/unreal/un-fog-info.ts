@@ -80,8 +80,8 @@ abstract class UL2EnvironmentColorInfo extends UObject {
             time: this.time,
             fogColor: this.fogColor.toArray(),
             skyColor: this.skyColor.toArray(),
-            cloudColor: this.cloudColor?.map(c => c.toArray()) ?? [],
-            hazeringColor: this.hazeringColor?.map(x => x.toArray()) ?? []
+            cloudColor: [],
+            hazeringColor: []
         };
     }
 
@@ -90,8 +90,15 @@ abstract class UL2EnvironmentColorInfo extends UObject {
             "Time": "time",
             "FogColor": "fogColor",
             "SkyColor": "skyColor",
-            "CloudColor": "cloudColor",
-            "HazeRingColor": "hazeringColor"
+            // Patched for High Five (see README): CloudColor and HazeRingColor
+            // are laid out differently here, and parsing them as FArray<FColor>
+            // trips the array's own "consumed exactly" assertion, which loses
+            // the whole L2FogInfo -- and with it the sky and fog colours per
+            // time of day, which are the useful part. Left unmapped they are
+            // skipped by their declared size and the object stays aligned
+            // (verified: the eight-entry array consumes 393 of 393 bytes).
+            // Nothing reads them yet; they belong to the cloud layer and the
+            // haze ring, which are part of the skybox this does not draw.
         });
     }
 }

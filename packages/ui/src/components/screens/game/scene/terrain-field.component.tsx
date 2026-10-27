@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Vector3, type ShaderMaterial } from "three";
-import { mapKey } from "../../../../config/world-assets";
+import { TERRAIN_DRAW_DISTANCE, mapKey } from "../../../../config/world-assets";
 import { ktx2Loader } from "../../../../utils/world/static-mesh-cache";
 import { buildTerrainChunk, terrainChunkCount, type TerrainChunk } from "../../../../utils/world/terrain-geometry";
 import { createTerrainMaterial } from "../../../../utils/world/terrain-material";
@@ -13,9 +13,6 @@ interface TerrainFieldProps {
   /** Left-click on the ground -- fired with the raycast hit point, three.js space. */
   onGroundClick?: (event: ThreeEvent<MouseEvent>) => void;
 }
-
-/** How far a terrain chunk is built and drawn from, on top of its own radius. */
-const DRAW_DISTANCE = 260;
 
 /** How far the camera moves before the chunk set is reconsidered. */
 const RECOMPUTE_AFTER = 30;
@@ -108,7 +105,7 @@ function MapTerrain({ scene, heightfield, cameraAt, onGroundClick }: MapTerrainP
           chunk = buildTerrainChunk(terrain, heights, chunkX, chunkY, quads);
           cache.set(key, chunk);
         }
-        if (chunk.center.distanceTo(cameraAt) <= DRAW_DISTANCE + chunk.radius) chunks.push(chunk);
+        if (chunk.center.distanceTo(cameraAt) <= TERRAIN_DRAW_DISTANCE + chunk.radius) chunks.push(chunk);
       }
     }
 

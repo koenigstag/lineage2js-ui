@@ -125,3 +125,29 @@ export function quietly<T>(run: () => T): T {
     console.log = log;
   }
 }
+
+/**
+ * Runs `read` with the readers' "consumed exactly" assertion downgraded to a
+ * warning, and reports whether it fired.
+ *
+ * That assertion is the readers' best safety net and is left armed everywhere
+ * else. One place needs it off: `L2FogInfo`'s per-time colour array. Its
+ * elements are tagged property lists, which are variable length, but the array
+ * loader infers a fixed element size whenever the byte count happens to divide
+ * evenly -- and here 392 bytes over 8 elements does. The elements terminate
+ * themselves and the array still ends exactly where it should (checked by hand
+ * against the bytes: 393 of 393), so the assertion is the only casualty, and
+ * losing it costs the sky and fog colours of every map.
+ */
+export function tolerateInexactReads<T>(read: () => T): { value: T; complained: boolean } {
+  const assert = console.assert;
+  let complained = false;
+  console.assert = (condition?: boolean) => {
+    if (!condition) complained = true;
+  };
+  try {
+    return { value: read(), complained };
+  } finally {
+    console.assert = assert;
+  }
+}

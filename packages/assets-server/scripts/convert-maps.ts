@@ -48,7 +48,7 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { openClient, quietly, type ClientLoader } from "./unreal/node-loader";
+import { openClient, quietly, tolerateInexactReads, type ClientLoader } from "./unreal/node-loader";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -130,6 +130,58 @@ function qualifiedName(object: any): string | null {
 function round(value: number, places = 3): number {
   const factor = 10 ** places;
   return Math.round(value * factor) / factor;
+}
+
+/**
+ * Sky and fog, which the map states outright rather than leaving to taste.
+ *
+ * `L2FogInfo` carries five distance bands and, per time of day, the colour of
+ * the fog and of the sky (`L2EnvironmentColorInfo`). A map has several -- one
+ * per zone -- and the first is taken: picking by the zone the camera stands in
+ * needs the BSP the zones are defined by, which nothing here reads yet.
+ *
+ * `NSun` and `NMoon` are billboards far outside the map, in the sky zone;
+ * their rotation is what the light comes from.
+ */
+function readEnvironment(pkg: any): Record<string, unknown> | null {
+  const [fogEntry] = pkg.exportGroups["L2FogInfo"] ?? [];
+  if (!fogEntry) return null;
+
+  const fog = pkg.fetchObject(fogEntry.index + 1).loadSelf();
+  const range = (r: any): [number, number] => [round(r?.min ?? 0), round(r?.max ?? 0)];
+  const color = (c: any): [number, number, number] => [c?.r ?? 255, c?.g ?? 255, c?.b ?? 255];
+
+  const times: Record<string, unknown>[] = [];
+  for (let i = 0; i < (fog.colors?.length ?? 0); i++) {
+    const entry = fog.colors[i]?.loadSelf?.() ?? fog.colors[i];
+    if (!entry) continue;
+    times.push({
+      time: round(entry.time ?? 0, 2),
+      fog: color(entry.fogColor),
+      sky: color(entry.skyColor),
+      haze: entry.hazeringColor?.length ? color(entry.hazeringColor[0]) : null,
+    });
+  }
+
+  const celestial = (cls: string): Record<string, unknown> | null => {
+    const [entry] = pkg.exportGroups[cls] ?? [];
+    if (!entry) return null;
+    const body = pkg.fetchObject(entry.index + 1).loadSelf();
+    return {
+      radius: round(body.radius ?? 0),
+      // Unreal rotator; the direction the light arrives from.
+      rotation: body.rotation ? [body.rotation.pitch, body.rotation.yaw, body.rotation.roll] : [0, 0, 0],
+    };
+  };
+
+  return {
+    // Five bands, near to far, in world units. The client fades between them;
+    // the nearest and the farthest are what a single fog needs.
+    fogRanges: [fog.fogRange1, fog.fogRange2, fog.fogRange3, fog.fogRange4, fog.fogRange5].map(range),
+    times,
+    sun: celestial("NSun"),
+    moon: celestial("NMoon"),
+  };
 }
 
 function readTerrain(pkg: any): Record<string, unknown> | null {
@@ -307,10 +359,11 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
 
   const pkg = await loader.load(loader.getPackage(mapName, "Level"));
 
-  const { terrain, heightmap, quads, meshes, actors, skipped } = quietly(() => ({
+  const { terrain, heightmap, quads, environment, meshes, actors, skipped } = quietly(() => ({
     terrain: readTerrain(pkg),
     heightmap: readHeightmap(pkg),
     quads: readQuadBitmaps(pkg),
+    environment: tolerateInexactReads(() => readEnvironment(pkg)).value,
     ...readActors(pkg),
   }));
 
@@ -324,6 +377,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
     worldOrigin: [(mapX - MAP_ZERO_X) * MAP_SIZE, (mapY - MAP_ZERO_Y) * MAP_SIZE],
     worldSize: MAP_SIZE,
     terrain: terrain ?? null,
+    environment: environment ?? null,
     meshes,
     actors,
   };

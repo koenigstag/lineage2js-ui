@@ -222,6 +222,29 @@ bytes each for a 256x256 map. The `...Orig` (seamless) variants are the ones
 taken, matching what the client's own sector builder reads. A separate file
 rather than a field in the JSON: 16 kB of bits would be 22 kB of base64 in a
 file that is otherwise 63 kB. The shadow maps are not extracted yet.
+
+### Sky and fog
+
+`scene.json` carries an `environment` block, from the map's own `L2FogInfo`
+plus its `NSun`/`NMoon` billboards:
+
+```
+fogRanges  five distance bands, near to far, L2 units    [[0,8000] ... [0,24000]]
+times[]    per time of day: hour, fog RGB, sky RGB, haze RGB
+sun/moon   billboard radius and its Unreal rotator
+```
+
+For 20_18 that is eight time entries -- 0h sky `58,49,70`, 8h `126,158,241`,
+20h `60,111,157`, 23h `82,90,135` -- so the colours a map is meant to be seen
+in are stated by the map, not a matter of taste. A map has one `L2FogInfo` per
+zone and the converter takes the first: choosing by the zone the camera stands
+in needs the BSP the zones are defined by, which nothing here reads yet.
+
+The five bands exist because the client picks one by the player's view-distance
+setting. A renderer with a fixed draw distance wants the widest band that still
+closes before its ground runs out; anything wider leaves the terrain's edge
+visible, which is the thing fog is there to prevent.
+
 ## Static meshes
 
 `20_18.unr` has 797 `StaticMeshActor`s carrying a mesh -- but only **131

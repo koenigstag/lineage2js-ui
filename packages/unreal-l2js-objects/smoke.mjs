@@ -112,7 +112,7 @@ for (let i = 0; i < (terrain.layers?.length ?? 0); i++) {
 console.log("");
 console.log("== texture sweep: every texture in 12 packages ==");
 const texPackages = ["t_20_18", "t_oren", "t_20_19", "t_21_18", "t_22_22", "t_17_25"];
-let ok = 0, failed = 0, shaderBlocks = 0, formats = new Map();
+let ok = 0, failed = 0, formats = new Map();
 for (const name of texPackages) {
   let texPkg;
   try {
@@ -125,7 +125,6 @@ for (const name of texPackages) {
     try {
       const t = texPkg.fetchObject(entry.index + 1).loadSelf();
       ok++;
-      if (t.shaderSource) shaderBlocks++;
       formats.set(t.format, (formats.get(t.format) ?? 0) + 1);
     } catch (e) {
       failed++;
@@ -133,7 +132,7 @@ for (const name of texPackages) {
     }
   }
 }
-console.log(`  ${ok} textures read, ${failed} failed, ${shaderBlocks} carried a High Five shader block`);
+console.log(`  ${ok} textures read, ${failed} failed`);
 console.log("  formats:", [...formats].map(([f, n]) => `${n}x fmt${f}`).join(", "));
 
 // --- static meshes -----------------------------------------------------

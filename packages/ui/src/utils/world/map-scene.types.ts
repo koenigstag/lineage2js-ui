@@ -48,6 +48,33 @@ export interface MapTerrain {
   layers: MapTerrainLayer[];
 }
 
+/** One entry of the map's day: the time it applies at, and the colours then. */
+export interface MapEnvironmentTime {
+  /** Hours, 0..24. */
+  time: number;
+  /** 0..255 sRGB. */
+  fog: [number, number, number];
+  sky: [number, number, number];
+  haze: [number, number, number] | null;
+}
+
+/**
+ * Sky and fog, which the map states outright rather than leaving to taste.
+ *
+ * From the map's `L2FogInfo` plus its `NSun`/`NMoon` billboards. A map has one
+ * fog info per zone and the converter takes the first: picking by the zone the
+ * camera stands in needs the BSP the zones are defined by, which nothing reads
+ * yet.
+ */
+export interface MapEnvironment {
+  /** Five distance bands, near to far, in L2 world units. */
+  fogRanges: Array<[number, number]>;
+  times: MapEnvironmentTime[];
+  /** Unreal rotator (pitch, yaw, roll) and the billboard's own radius. */
+  sun: { radius: number; rotation: [number, number, number] } | null;
+  moon: { radius: number; rotation: [number, number, number] } | null;
+}
+
 export interface MapActor {
   /** Index into MapScene.meshes. */
   mesh: number;
@@ -65,6 +92,7 @@ export interface MapScene {
   worldOrigin: [number, number];
   worldSize: number;
   terrain: MapTerrain | null;
+  environment: MapEnvironment | null;
   /** Qualified mesh names, `Package.Group.Name`; actors index into this. */
   meshes: string[];
   actors: MapActor[];

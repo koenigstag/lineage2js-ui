@@ -1,4 +1,15 @@
-import { DataTexture, DoubleSide, RGBAFormat, ShaderMaterial, SRGBColorSpace, Texture, Vector2, Vector4 } from "three";
+import {
+  DataTexture,
+  DoubleSide,
+  RGBAFormat,
+  ShaderMaterial,
+  SRGBColorSpace,
+  Texture,
+  UniformsLib,
+  UniformsUtils,
+  Vector2,
+  Vector4,
+} from "three";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { getStaticMeshTextureUrl } from "../../config/world-assets";
 import type { MapTerrain, MapTerrainLayer } from "./map-scene.types";
@@ -19,12 +30,16 @@ const vertexShader = /* glsl */ `
   varying float vWorldZ;
   varying vec3 vNormal;
 
+  #include <fog_pars_vertex>
+
   void main() {
     vWorldXY = worldXY;
     // three's Y is L2's Z -- the vertical projections need it.
     vWorldZ = position.y;
     vNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
   }
 `;
 
@@ -68,6 +83,8 @@ const fragmentShader = /* glsl */ `
   varying float vWorldZ;
   varying vec3 vNormal;
 
+  #include <fog_pars_fragment>
+
   vec2 layerUvFor(vec4 t, int axis) {
     // The client projects a layer down one of three world planes: the ground
     // for almost everything, XZ or YZ for the textures painted onto cliffs.
@@ -91,6 +108,12 @@ ${LAYER_BLOCKS}
 
     float lambert = max(dot(normalize(vNormal), normalize(sunDirection)), 0.0);
     gl_FragColor = vec4(color * (ambient + sunColor * lambert), 1.0);
+
+    // Last, as three's own materials do it: the renderer hands fogColor over in
+    // the output colour space, which is the space this shader writes in.
+    // Without this the ground is the one surface the map's fog does not reach,
+    // and the terrain's edge stays visible through it.
+    #include <fog_fragment>
   }
 `;
 
@@ -142,7 +165,14 @@ export function createTerrainMaterial(terrain: MapTerrain, loader: KTX2Loader, o
     // (standing under an overhang, or the camera dipping through a slope) is
     // better as a surface than as a hole.
     side: DoubleSide,
+    // ShaderMaterial opts out of fog by default, and the uniforms have to be
+    // there for the renderer to fill in -- neither happens on its own.
+    fog: true,
     uniforms: {
+      // Cloned, not merged: UniformsUtils.merge copies array values, which
+      // would hand the material its own layerMaps and leave the arrays the
+      // loaders below fill in unread.
+      ...UniformsUtils.clone(UniformsLib.fog),
       layerMaps: { value: layerMaps },
       alphaMaps: { value: alphaMaps },
       layerUv: { value: layerUv },
