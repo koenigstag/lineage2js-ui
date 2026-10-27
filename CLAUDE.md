@@ -13,6 +13,21 @@ pitch; this file is for working in the code.
   extending a packet.
 - `packages/ui` (`@lineage2js/ui`) — the web client. Vite + React + TypeScript
   + MobX (`mobx-react-lite`). This is where almost all UI work happens.
+- `packages/unreal-l2js-core` + `packages/unreal-l2js-objects` — **vendored
+  forks** (ISC, realratchet's l2js-core and Lineage2JS) that read the client's
+  Unreal Engine 2 packages: `.unr` maps, `.utx` textures, `.usx` static
+  meshes. This is the one thing no off-the-shelf tool does — umodel covers the
+  assets but has no classes for `TerrainInfo`, `StaticMeshActor` or `Light`,
+  and refuses `TEXF_G16` heightmaps outright. Upstream targets Chronicle 4;
+  the High Five patches (a per-texture shader block C4 lacks, two extra
+  structs, three's moved exports) are listed in each package's README and
+  marked `Patched for High Five` in the source. **Read those READMEs before
+  editing either package** — the divergence is kept deliberately small so a
+  re-sync stays a copy plus the recorded patches. The core builds with `tsc`
+  and typechecks clean; the objects package builds with esbuild (webpack
+  aliases) and its `typecheck` is advisory with a recorded baseline. Its
+  `smoke.mjs`, pointed at a real client, is the regression test for the
+  patches.
 - `packages/assets-server` (`@lineage2js/assets-server`) — Express static
   server for game icons (skills/items/actions/classes), pre-baked geodata
   tiles, and converted character models. Real files live under
@@ -36,6 +51,15 @@ pitch; this file is for working in the code.
   invalidate clients' caches (no URL versioning needed). `scripts/` holds
   the offline converters that produce those files from sources the user
   supplies locally: `convert:geodata` (L2J `.l2j` regions -> tiles),
+  `convert:maps` (the client's `.unr` maps, read with the vendored UE2
+  readers -> per-map terrain metadata, a raw G16 heightmap, the editor's
+  baked sun intensity as one PNG per time of day, and every
+  static mesh placement, plus umodel-exported geometry with `--meshes`.
+  It also writes `maps/env.json` from the client's `system/env.int` +
+  `timeenv*.int`: the world's lighting curves, which is where terrain
+  and mesh brightness actually come from -- *not* the level's own
+  `LevelInfo`/`NMovableSunLight`, which 192 of 203 maps leave at zero.
+  See `packages/assets-server/README.md`),
   `convert:client-rigs` (an installed game client, read with umodel -> one
   `.glb` per race/sex plus its textures under
   `assets/highfive/textures/<rig>/`) and `convert:armorgrp` / `convert:chargrp` /

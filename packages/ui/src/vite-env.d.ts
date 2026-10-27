@@ -14,6 +14,12 @@ interface ImportMetaEnv {
   readonly VITE_GAME_MENU_ICON_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/geodata-tiles/{tileX}_{tileY}.bin" -- pre-baked geodata tile (see assets-server/scripts/convert-l2j-geodata.ts), "{tileX}"/"{tileY}" get replaced with the tile's coordinates. Deserialized directly, see geo-tile-parser.ts. */
   readonly VITE_GEODATA_TILE_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/maps/" -- folder of baked map scenes (see assets-server/scripts/convert-maps.ts), one `<mapX>_<mapY>/scene.json` + `heightmap.bin` per .unr map. Unset leaves the world as geodata only, see config/world-assets.ts. */
+  readonly VITE_WORLD_MAP_BASE_URL: string;
+  /** e.g. "http://localhost:4000/highfive/static-meshes/" -- folder of mesh geometry exported by umodel, laid out as `<Package>/StaticMesh/<Name>.gltf`. Separate from the map scenes on purpose: the scenes are tens of megabytes, the geometry is gigabytes, and serving the first without the second renders the world empty rather than broken. */
+  readonly VITE_STATIC_MESH_BASE_URL: string;
+  /** e.g. "http://localhost:4001/highfive/static-mesh-textures/" -- KTX2 textures for those meshes (assets-server's convert:maps --meshes, needs Khronos ktx). Unset leaves every mesh on umodel's placeholder colours. */
+  readonly VITE_STATIC_MESH_TEXTURE_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/cursors/" -- folder of real cursor art (.cur files, see assets-server/scripts/extract-cursors.ts and config/cursor-urls.ts's getCursorUrl). Unset/unresolved leaves the browser's native cursor in place. */
   readonly VITE_CURSOR_BASE_URL: string;
   /** e.g. "http://localhost:4000/highfive/models/" -- folder of converted character bodies (see assets-server/scripts/convert-client-rigs.ts), one `<rig>.glb` per race/sex. Unset (or a body that fails to load) leaves that character on the placeholder capsule, see config/character-models.ts. */

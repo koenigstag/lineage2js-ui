@@ -151,3 +151,7 @@ dist/
 
 # Scratch git worktrees Claude Code creates for isolated agent runs
 .claude/worktrees/
+
+# One-off operational scripts -- probes, backfills, verification harnesses.
+# They belong to a task, not to the repository.
+.tmp/

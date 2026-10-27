@@ -5,13 +5,23 @@ import { observer } from "mobx-react-lite";
 import { CharacterModel } from "../../../core/scene/character-model.component";
 import { REFERENCE_HUMAN_HEIGHT_M } from "../../../../utils/models/character-model";
 import { IS_DEMO_MODE } from "../../../../config/env";
-import { l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
-import { heightAtWorld } from "../../../../utils/geodata/geo-tile-height";
+import { L2_TO_THREE_SCALE, l2HeadingToThreeYaw, l2ToThree, threeToL2 } from "../../../../utils/coords";
+import { TERRAIN_BELOW_GEODATA } from "../../../../config/world-assets";
+import {
+  heightAtWorld,
+  loadedHeightAtWorld,
+  loadedSteppedHeightAtWorld,
+} from "../../../../utils/geodata/geo-tile-height";
 import { useGeoTiles } from "../../../../utils/geodata/use-geo-tiles";
+import { useMapScenes } from "../../../../utils/world/use-map-scenes";
 import { ARRIVE_EPSILON, interpolatedCreaturePosition } from "../../../../utils/creature-movement";
 import { useGameStore } from "../../../../stores/StoreContext";
 import type { WorldCreatureSnapshot } from "../../../../stores/GameStore";
 import { GeoTerrainField } from "./geo-terrain-field.component";
+import { StaticMeshField } from "./static-mesh-field.component";
+import { TerrainDecoField } from "./terrain-deco-field.component";
+import { TerrainField } from "./terrain-field.component";
+import { WorldEnvironment } from "./world-environment.component";
 import { GameCreaturesField } from "./game-creatures-field.component";
 import { DroppedItemsField } from "./dropped-items-field.component";
 import { MoveTargetMarker } from "./move-target-marker.component";
@@ -43,6 +53,15 @@ interface TestCharacterState {
   x: number;
   y: number;
   yaw: number;
+  /**
+   * The geodata layer it is standing on, carried from step to step.
+   *
+   * Null until it has moved once, because a layer can only be picked relative
+   * to one you are already on -- see steppedHeightAtWorld. While null the
+   * render falls back to the cell's top layer, which is the right answer for
+   * something that has not been anywhere yet.
+   */
+  z: number | null;
 }
 
 interface MoveTarget {
@@ -62,6 +81,8 @@ interface CameraFollowProps {
   fallbackWorldX: number;
   fallbackWorldY: number;
   fallbackGroundHeightM: number;
+  /** Applied to whatever the camera is following -- see GameScene's groundOffsetM. */
+  groundOffsetM: number;
   orbitRef: MutableRefObject<OrbitState>;
 }
 
@@ -73,7 +94,7 @@ interface CameraFollowProps {
  * gameStore.creatures' own ~150ms poll cadence while the same interpolation
  * already makes the rendered body (GameCreaturesField) move smoothly.
  */
-function CameraFollow({ realPlayer, fallbackWorldX, fallbackWorldY, fallbackGroundHeightM, orbitRef }: CameraFollowProps) {
+function CameraFollow({ realPlayer, fallbackWorldX, fallbackWorldY, fallbackGroundHeightM, groundOffsetM, orbitRef }: CameraFollowProps) {
   useFrame(({ camera }: { camera: Camera }) => {
     let target;
     let groundHeightM;
@@ -85,6 +106,7 @@ function CameraFollow({ realPlayer, fallbackWorldX, fallbackWorldY, fallbackGrou
       target = l2ToThree(fallbackWorldX, fallbackWorldY, 0);
       groundHeightM = fallbackGroundHeightM;
     }
+    groundHeightM += groundOffsetM;
 
     const { azimuth, pitch } = orbitRef.current;
     const horizontalDistance = CAMERA_DISTANCE_M * Math.cos(pitch);
@@ -125,7 +147,7 @@ function clamp(value: number, min: number, max: number): number {
  */
 export const GameScene = observer(function GameScene() {
   const gameStore = useGameStore();
-  const [character, setCharacter] = useState<TestCharacterState>({ x: 0, y: 0, yaw: 0 });
+  const [character, setCharacter] = useState<TestCharacterState>({ x: 0, y: 0, z: null, yaw: 0 });
   // Refs, not state: only read inside the rAF/useFrame loops below, so
   // updating them shouldn't itself trigger a render.
   const moveTargetRef = useRef<MoveTarget | null>(null);
@@ -141,6 +163,13 @@ export const GameScene = observer(function GameScene() {
   const yaw = realPlayer ? l2HeadingToThreeYaw(realPlayer.heading) : character.yaw;
 
   const tiles = useGeoTiles(worldX, worldY);
+  // The client's own scenery, streamed a whole .unr map at a time -- see
+  // useMapScenes for why that grid and not the geodata one.
+  const mapScenes = useMapScenes(worldX, worldY);
+  // Once a map with terrain is loaded the wireframe stops being the thing
+  // clicked on, and stops being drawn over the ground it stood in for.
+  const hasTerrain = mapScenes.some(({ scene }) => scene.terrain);
+  const hasEnvironment = mapScenes.some(({ scene }) => scene.environment);
 
   useEffect(() => {
     const keys = new Set<string>();
@@ -206,10 +235,25 @@ export const GameScene = observer(function GameScene() {
         // Angle doesn't depend on L2_TO_THREE_SCALE (cancels out in atan2),
         // so the raw (dx, dy) direction can go straight through l2ToThree.
         const facing = l2ToThree(dx, dy, 0);
+        const x = prev.x + (dx / length) * maxStep;
+        const y = prev.y + (dy / length) * maxStep;
+
+        // Which layer we end up on, from the one we are on. Without this the
+        // top layer wins every time, and walking into a cave mouth lifts you
+        // onto the mountain over it. The geodata is read app-wide rather than
+        // from this effect's closure, which was opened once with no deps and
+        // so never sees a tile that streamed in later.
+        const from = prev.z ?? loadedHeightAtWorld(x, y);
+        const z = from === null ? null : loadedSteppedHeightAtWorld(x, y, from);
 
         return {
-          x: prev.x + (dx / length) * maxStep,
-          y: prev.y + (dy / length) * maxStep,
+          x,
+          y,
+          // Keep the last good layer where there is nothing to step onto --
+          // a hole, or a wall rising more than the step-up allowance. This
+          // rig has no collision, so it walks on through at its own height
+          // rather than being teleported somewhere it could not have walked.
+          z: z ?? prev.z,
           yaw: Math.atan2(facing.x, facing.z),
         };
       });
@@ -226,6 +270,9 @@ export const GameScene = observer(function GameScene() {
 
   function handleGroundClick(event: ThreeEvent<MouseEvent>) {
     const target = threeToL2(event.point);
+    // The click landed on the drawn ground, which sits below the plane the
+    // server walks on -- put the destination back on that plane.
+    if (hasTerrain) target.z += TERRAIN_BELOW_GEODATA;
     console.log("[click-debug] three point", event.point.toArray(), "-> L2 target", target, "player L2 now", realPlayer && { x: realPlayer.x, y: realPlayer.y, z: realPlayer.z });
     if (realPlayer) {
       gameStore.moveTo(target.x, target.y, target.z);
@@ -301,8 +348,17 @@ export const GameScene = observer(function GameScene() {
     window.addEventListener("pointerup", onUp);
   }
 
-  const groundHeight = heightAtWorld(tiles, worldX, worldY) ?? 0;
+  // The test character stands on the layer it walked onto; the top layer is
+  // only the seed, for before it has walked anywhere (see TestCharacterState).
+  const groundHeight = character.z ?? heightAtWorld(tiles, worldX, worldY) ?? 0;
   const characterPos = l2ToThree(worldX, worldY, realPlayer ? realPlayer.z : groundHeight);
+
+  // Every body on screen is placed at a geodata Z, and the ground now drawn
+  // under it is TERRAIN_BELOW_GEODATA lower -- so without this they all float.
+  // One shift on the group rather than a correction inside each field: they
+  // all share the same cause, and the terrain and the meshes it belongs to
+  // must not move with them.
+  const groundOffsetM = hasTerrain ? -TERRAIN_BELOW_GEODATA * L2_TO_THREE_SCALE : 0;
 
   return (
     <div
@@ -317,13 +373,22 @@ export const GameScene = observer(function GameScene() {
         camera={{ position: [0, CAMERA_DISTANCE_M, CAMERA_DISTANCE_M], fov: 60, near: 0.1, far: 2000 }}
         onPointerMissed={() => console.log("[click-debug] pointer missed everything")}
       >
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[5, 10, 5]} intensity={0.6} />
+        {/* Sky, fog and the sun the map itself names -- see WorldEnvironment.
+            It renders the lights too, so this pair is only the fallback for a
+            map that has no environment baked (or none loaded yet). */}
+        <WorldEnvironment scenes={mapScenes} worldX={worldX} worldY={worldY} />
+        {!hasEnvironment && (
+          <>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 10, 5]} intensity={0.6} />
+          </>
+        )}
         <CameraFollow
           realPlayer={realPlayer}
           fallbackWorldX={worldX}
           fallbackWorldY={worldY}
           fallbackGroundHeightM={characterPos.y}
+          groundOffsetM={groundOffsetM}
           orbitRef={orbitRef}
         />
 
@@ -333,27 +398,49 @@ export const GameScene = observer(function GameScene() {
             steal ground-click hits meant for the terrain mesh underneath it. */}
         <gridHelper args={[GROUND_GRID_SIZE_M, 40, "#3a4a3f", "#25302a"]} raycast={() => null} />
 
-        <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} orbitDragActiveRef={orbitDragActiveRef} />
+        {/* The real ground, where a map has been baked for it. Geodata stays
+            the walkable surface movement is checked against -- it just stops
+            being what the player looks at. */}
+        <TerrainField scenes={mapScenes} onGroundClick={handleGroundClick} />
 
-        {/* Local placeholder avatar -- only shown before a real player entry
-            exists (no live session yet). Once gameStore.creatures has us,
-            GameCreaturesField already renders this exact objectId via
-            PlayerModel with our real race/class colors -- rendering both
-            would double up. Also gated on IS_DEMO_MODE: without it, a real
-            deployment with no session yet should show an empty world, not a
-            WASD-controllable test capsule wandering around for anyone to see. */}
-        {!realPlayer && IS_DEMO_MODE && (
-          <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={yaw} color="#5b8fd6" />
+        {/* Only until the real ground is there. Geodata never stops being the
+            walkable surface -- movement and gravity read it through
+            geo-tile-index, not through this mesh -- but drawn over terrain it
+            is a green net across the picture, and clicks belong to the ground
+            the player can actually see. */}
+        {!hasTerrain && (
+          <GeoTerrainField tiles={tiles} onGroundClick={handleGroundClick} orbitDragActiveRef={orbitDragActiveRef} />
         )}
 
-        {/* Real NPCs/mobs/other players from the live session, if connected -- see GameCreaturesField. */}
-        <GameCreaturesField />
+        {/* Trees, rocks and buildings out of the retail client -- see StaticMeshField. */}
+        <StaticMeshField scenes={mapScenes} />
+        {/* The grass the terrain grows on itself -- see TerrainDecoField. */}
+        <TerrainDecoField scenes={mapScenes} />
 
-        {/* Ground items (SpawnItem/DropItem), if connected -- see DroppedItemsField. */}
-        <DroppedItemsField />
+        {/* Everything that stands on the ground, dropped onto the ground that
+            is actually drawn -- see groundOffsetM. Nothing inside carries the
+            correction itself; they only ever knew a geodata Z. */}
+        <group position={[0, groundOffsetM, 0]}>
+          {/* Local placeholder avatar -- only shown before a real player entry
+              exists (no live session yet). Once gameStore.creatures has us,
+              GameCreaturesField already renders this exact objectId via
+              PlayerModel with our real race/class colors -- rendering both
+              would double up. Also gated on IS_DEMO_MODE: without it, a real
+              deployment with no session yet should show an empty world, not a
+              WASD-controllable test capsule wandering around for anyone to see. */}
+          {!realPlayer && IS_DEMO_MODE && (
+            <CharacterModel x={characterPos.x} y={characterPos.y} z={characterPos.z} angleToCenter={yaw} color="#5b8fd6" />
+          )}
 
-        {/* Where we're currently walking to, if anywhere -- see MoveTargetMarker. */}
-        <MoveTargetMarker realPlayer={realPlayer} />
+          {/* Real NPCs/mobs/other players from the live session, if connected -- see GameCreaturesField. */}
+          <GameCreaturesField />
+
+          {/* Ground items (SpawnItem/DropItem), if connected -- see DroppedItemsField. */}
+          <DroppedItemsField />
+
+          {/* Where we're currently walking to, if anywhere -- see MoveTargetMarker. */}
+          <MoveTargetMarker realPlayer={realPlayer} />
+        </group>
       </Canvas>
     </div>
   );

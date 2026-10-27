@@ -133,6 +133,40 @@ export function readDatFile(file: string): Buffer {
 }
 
 /**
+ * Reads one of the client's `system/*.int` / `*.ini` config files as text.
+ *
+ * Same header as the tables above, a far cheaper scheme behind it: the body is
+ * XORed with one byte. Version 111 uses a fixed 0xAC; the 12x versions store
+ * the key in the first body byte, XORed with 0xC1. Both keys are the vendored
+ * reader's (see un-encoded-file.ts), which takes them from the client.
+ *
+ * The text is EUC-KR, not UTF-8 -- the values are ASCII but the comments
+ * beside them are Korean, and decoding as UTF-8 turns those into replacement
+ * characters that then break a naive line split.
+ */
+export function readConfigFile(file: string): string {
+  const data = fs.readFileSync(file);
+  const header = data.subarray(0, HEADER_BYTES).toString("utf16le");
+  if (!header.startsWith("Lineage2Ver")) {
+    // Not every config is coded -- Option.ini and user.ini are plain text.
+    return data.toString("latin1");
+  }
+
+  const version = header.slice("Lineage2Ver".length).replace(/\0.*$/, "");
+  const body = Buffer.from(data.subarray(HEADER_BYTES));
+  if (!version.startsWith("1")) {
+    throw new Error(
+      `${file}: config version ${version} is not one this reads -- only the single-byte ` +
+        "XOR schemes (1xx) are, and the RSA 4xx ones belong to readDatFile."
+    );
+  }
+
+  const key = version === "111" ? 0xac : body[0] ^ 0xc1;
+  for (let index = 0; index < body.length; index++) body[index] ^= key;
+  return new TextDecoder("euc-kr").decode(body);
+}
+
+/**
  * A cursor over a decrypted table.
  *
  * Everything in these files is packed with no alignment, and strings are a

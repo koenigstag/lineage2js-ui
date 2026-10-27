@@ -1,0 +1,250 @@
+import { UObject } from "@lineage2js/unreal-l2js-core";
+
+abstract class FVector extends UObject implements GD.IDecodableStruct<GD.Vector3Arr> {
+    // declare protected ["constructor"]: { new(): never } & typeof FVector;
+
+    public static readonly plainStructFields = true; // values live in fields, not propertyDict (see UObject.loadNative)
+
+    declare public x: number;
+    declare public y: number;
+    declare public z: number;
+
+    protected getPropertyMap() {
+        return {
+            "X": "x",
+            "Y": "y",
+            "Z": "z"
+        };
+    }
+
+
+    public constructor(x = 0, y = 0, z = 0) {
+        super();
+        this.set(x, y, z);
+    }
+
+    public set(x: number, y: number, z: number) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+
+        return this;
+    }
+
+    public getElements(): GD.Vector3Arr { return [this.x, this.y, this.z]; }
+
+    public getDecodeInfo(_library: GD.DecodeLibrary): GD.Vector3Arr { return this.getElements(); }
+
+    public addScalar(scalar: number) {
+        return FVector.make(
+            this.x + scalar,
+            this.y + scalar,
+            this.z + scalar
+        );
+    }
+
+    public subScalar(scalar: number) {
+        return this.addScalar(-scalar);
+    }
+
+    public divideScalar(scalar: number) { return this.multiplyScalar(1 / scalar); }
+    public multiplyScalar(scalar: number) {
+        return FVector.make(this.x * scalar, this.y * scalar, this.z * scalar);
+    }
+
+    public add(other: FVector) {
+        return FVector.make(
+            this.x + other.x,
+            this.y + other.y,
+            this.z + other.z
+        );
+    }
+
+    public sub(other: FVector) {
+        return FVector.make(
+            this.x - other.x,
+            this.y - other.y,
+            this.z - other.z
+        );
+    }
+
+    public mul(other: FVector) {
+        return FVector.make(
+            this.x * other.x,
+            this.y * other.y,
+            this.z * other.z
+        );
+    }
+
+    public div(other: FVector) {
+        return FVector.make(
+            this.x / other.x,
+            this.y / other.y,
+            this.z / other.z
+        );
+    }
+
+    public distanceTo(other: FVector) { return this.distanceToSquared(other) ** 0.5; }
+    public distanceToSquared(other: FVector) {
+        const dx = this.x - other.x;
+        const dy = this.y - other.y;
+        const dz = this.z - other.z;
+
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    public length() { return this.lengthSq() ** 0.5; }
+    public lengthSq() { return this.x * this.x + this.y * this.y + this.z * this.z; }
+
+    /**
+     * operator ^
+     * @param other 
+     */
+    public cross(other: FVector) {
+        const ax = this.x, ay = this.y, az = this.z;
+        const bx = other.x, by = other.y, bz = other.z;
+
+        const x = ay * bz - az * by;
+        const y = az * bx - ax * bz;
+        const z = ax * by - ay * bx;
+
+        return FVector.make(x, y, z);
+    }
+
+    /**
+     * operator |
+     * @param other 
+     */
+    public dot(other: FVector) { return this.x * other.x + this.y * other.y + this.z * other.z; }
+
+    public fromArray(array: number[] | ArrayLike<number> = [], offset = 0, restoreOrder = false) {
+        const [a, b, c] = restoreOrder ? [0, 2, 1] : [0, 1, 2];
+
+        this.x = array[offset + a];
+        this.y = array[offset + b];
+        this.z = array[offset + c];
+
+        return this;
+    }
+
+    public toArray(array: number[] | ArrayLike<number> = [], offset = 0) {
+
+        (array as number[])[offset] = this.x;
+        (array as number[])[offset + 1] = this.y;
+        (array as number[])[offset + 2] = this.z;
+
+        return array;
+    }
+
+    public normalized() {
+        const lenSq = this.lengthSq();
+
+        if (lenSq < 1e-8)
+            return FVector.make();
+
+        const len = Math.sqrt(lenSq);
+        const scale = 1 / len;
+
+        return FVector.make(
+            this.x * scale,
+            this.y * scale,
+            this.z * scale
+        );
+    }
+
+    public negate() { return this.multiplyScalar(-1); }
+
+    public applyRotator(rotator: GA.FRotator, negate: boolean): FVector {
+        let [qx, qy, qz, qw] = rotator.getQuaternionElements();
+
+        if (negate) qx = -qx, qy = -qy, qz = -qz;
+
+        return this.applyQuaternion(qx, qy, qz, qw);
+    }
+
+    public applyQuaternion(qx: number, qy: number, qz: number, qw: number) {
+        const x = this.x, y = this.y, z = this.z;
+
+        // calculate quat * vector
+
+        const ix = qw * x + qy * z - qz * y;
+        const iy = qw * y + qz * x - qx * z;
+        const iz = qw * z + qx * y - qy * x;
+        const iw = - qx * x - qy * y - qz * z;
+
+        // calculate result * inverse quat
+
+        const nx = ix * qw + iw * - qx + iy * - qz - iz * - qy;
+        const ny = iy * qw + iw * - qy + iz * - qx - ix * - qz;
+        const nz = iz * qw + iw * - qz + ix * - qy - iy * - qx;
+
+        return FVector.make(nx, ny, nz);
+    }
+
+
+    public applyMatrix4(m: GA.FMatrix) {
+        const x = this.x, y = this.y, z = this.z;
+        const e = m.getElements4x4();
+
+        const w = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
+
+        const nx = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w;
+        const ny = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w;
+        const nz = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w;
+
+        return FVector.make(nx, ny, nz);
+    }
+
+    public transformPointBy(coord: GA.FCoords): FVector {
+        const temp = this.sub(coord.origin);
+
+        return FVector.make(temp.dot(coord.xAxis), temp.dot(coord.yAxis), temp.dot(coord.zAxis));
+    }
+
+    public transformVectorBy(coord: GA.FCoords): FVector {
+        return FVector.make(this.dot(coord.xAxis), this.dot(coord.yAxis), this.dot(coord.zAxis));
+    }
+
+    public transformBy(coord: GA.FCoords) {
+        const inVector = this;
+        const outVector = FVector.make();
+
+        let fVar1: number;
+        let fVar2: number;
+        let fVar3: number;
+        let fVar4: number;
+        let fVar5: number;
+        let fVar6: number;
+        let fVar7: number;
+        let fVar8: number;
+        let fVar9: number;
+
+        fVar7 = inVector.x - (coord.origin).x;
+        fVar8 = inVector.y - (coord.origin).y;
+        fVar9 = inVector.z - (coord.origin).z;
+
+        fVar1 = (coord.yAxis).x;
+        fVar2 = (coord.zAxis).x;
+        fVar3 = (coord.yAxis).y;
+        fVar4 = (coord.zAxis).y;
+        fVar5 = (coord.yAxis).z;
+        fVar6 = (coord.zAxis).z;
+
+        outVector.x = fVar9 * (coord.xAxis).z + fVar8 * (coord.xAxis).y + fVar7 * (coord.xAxis).x;
+        outVector.y = fVar9 * fVar5 + fVar8 * fVar3 + fVar7 * fVar1;
+        outVector.z = fVar9 * fVar6 + fVar8 * fVar4 + fVar7 * fVar2;
+
+        return outVector;
+    }
+
+    public clone(): FVector { return FVector.make(this.x, this.y, this.z); }
+
+    public nequals(other: FVector) { return this.x !== other.x || this.y !== other.y || this.z !== other.z; }
+    public equals(other: FVector) { return !this.nequals(other); }
+
+    public toString() { return `Vector=(x=${this.x.toFixed(2)}, y=${this.y.toFixed(2)}, z=${this.z.toFixed(2)})` }
+}
+
+
+export default FVector;
+export { FVector };

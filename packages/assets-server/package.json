@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "convert:geodata": "tsx scripts/convert-l2j-geodata.ts",
+    "convert:maps": "tsx scripts/convert-maps.ts",
     "convert:models": "tsx scripts/convert-unity-models.ts",
     "convert:client-rigs": "tsx scripts/convert-client-rigs.ts",
     "convert:armorgrp": "tsx scripts/convert-armorgrp.ts",
@@ -20,9 +21,12 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@lineage2js/unreal-l2js-objects": "workspace:^",
+    "compression": "^1.8.1",
     "express": "^4.21.0"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/three": "^0.185.1",

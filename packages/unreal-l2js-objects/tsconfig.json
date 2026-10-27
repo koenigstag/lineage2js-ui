@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@native": ["./src/assets/unreal/scripts/un-native-registry.ts"],
+      "@client/*": ["./src/*"],
+      "@unreal/*": ["./src/assets/unreal/*"],
+      // Upstream resolved the core package to its *source* (webpack alias
+      // "@l2js/core" -> "@l2js/core/src"), and l2js-core.d.ts augments that
+      // module with the `make`/`class` statics the mixin installs. Pointing at
+      // the built .d.ts instead makes the augmentation collide with the real
+      // exports and ~290 call sites lose those statics, so keep upstream's
+      // resolution. esbuild resolves the same aliases at build time.
+      "@lineage2js/unreal-l2js-core": ["../unreal-l2js-core/src/index.ts"],
+      "@lineage2js/unreal-l2js-core/src/*": ["../unreal-l2js-core/src/*"],
+      "@lineage2js/unreal-l2js-core/*": ["../unreal-l2js-core/src/*"]
+    },
+    // Vendored third-party source (see README) -- same relaxations as
+    // unreal-l2js-core, for the same reason: this is someone else's code,
+    // written before this repo's strict settings, and it should stay close
+    // enough to upstream that a re-sync is a copy plus the recorded patches.
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    "noImplicitAny": false,
+    // esbuild bundles this package (aliases above are resolved at build time),
+    // so tsc only ever typechecks it.
+    "noEmit": true
+  },
+  "include": [
+    "src/unreal-index.ts",
+    "global.d.ts",
+    "index.d.ts",
+    "l2js-core.d.ts",
+    "three-global.d.ts",
+    "../unreal-l2js-core/global.d.ts",
+    "../unreal-l2js-core/index.d.ts"
+  ]
+}
