@@ -173,7 +173,21 @@ app.use(
     etag: true, // adds ETag from file size+mtime; enables conditional GETs
     lastModified: true,
     setHeaders(res, filePath) {
-      res.setHeader("Cache-Control", `public, max-age=${MAX_AGE_SECONDS}, must-revalidate`);
+      // A manifest -- the table that says which texture a mesh wears, or what
+      // a map contains -- must revalidate every time. `must-revalidate` alone
+      // does not do that: it only applies once max-age has run out, so for an
+      // hour after a conversion the browser answers from its own cache and
+      // never asks. That hour is invisible and reads as a rendering bug:
+      // today a rebuilt meshes.json with 8767 rows sat on disk while the page
+      // kept using the cached 8269-row one, and every mesh the new rows
+      // covered drew untextured. The bodies these tables point at are
+      // content-addressed enough to keep the hour; the tables are not, and a
+      // revalidation of one is a 304 and a few bytes.
+      const isManifest = /[\\/](?:meshes\.json|scene\.json)$/i.test(filePath);
+      res.setHeader(
+        "Cache-Control",
+        isManifest ? "public, max-age=0, must-revalidate" : `public, max-age=${MAX_AGE_SECONDS}, must-revalidate`
+      );
       // .cur isn't in the default mime-db this package's Content-Type
       // sniffing uses, so it would otherwise fall back to
       // application/octet-stream. Browsers apply a CSS `cursor: url(...)`
