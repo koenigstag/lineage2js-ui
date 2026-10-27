@@ -119,8 +119,42 @@ interface ActorInfo {
    * Only on an actor the sun does not reach, and the client's own fallback for
    * exactly that case. Resolved from the actor's own `Region`, which names its
    * zone outright -- no BSP walk, because the editor already did it.
+   *
+   * A zero here is a real answer, and means the actor is lit by nothing but
+   * `lit` below.
    */
   amb?: [number, number, number];
+  /**
+   * What the `Light` actors around this placement add to it, 0..255, averaged
+   * over the mesh.
+   *
+   * The editor's own answer, out of `UStaticMeshInstance.colorStream` -- one
+   * colour per mesh vertex, which is where a torchlit interior gets its
+   * light. Present on 8.7% of placements, and the only thing lighting the
+   * ones whose zone ambient is zero: of 103 such actors on 20_18, 100 have
+   * this and all 103 have the `sceneLights` it was baked from.
+   *
+   * Averaged because a colour per vertex cannot ride on an `InstancedMesh`,
+   * and the spread it gives up is real -- over 20_18's lit instances the
+   * standard deviation within one of them is about the size of its own mean,
+   * so a wall lit from one end comes out evenly lit. See the README.
+   */
+  lit?: [number, number, number];
+}
+
+/**
+ * A `Light` actor: where the light in `ActorInfo.lit` comes from.
+ *
+ * Baked for what reads them next -- nothing draws one yet, and the per-vertex
+ * bake above is the editor's own answer for the static world. The colour is
+ * the engine's `getColor()` with brightness already folded in, and the radius
+ * is `worldLightRadius()`, the client's `25 * (LightRadius + 1)` rather than
+ * the raw property.
+ */
+interface LightInfo {
+  pos: [number, number, number];
+  color: [number, number, number];
+  radius: number;
 }
 
 /** The tail of a tool's output, which is where its complaint is. */
@@ -474,6 +508,66 @@ function readHeightmap(terrain: any): Uint8Array | null {
   return bytes;
 }
 
+/**
+ * The light the editor baked into one placement, averaged over its vertices.
+ *
+ * `colorStream` holds one colour per mesh vertex and is the `Light` actors'
+ * contribution only -- it sits on top of the sun or the zone ambient rather
+ * than replacing either, which is how the client's own shader adds it
+ * (`vLitColor = lighting + staticMeshSunAmbient * sunAffected`). An instance
+ * with nothing near it has a stream of zeroes, which is most of the world.
+ */
+function instanceLight(actor: any): [number, number, number] | null {
+  const stream = actor.instance?.loadSelf?.()?.colorStream;
+  const count = stream?.getElemCount?.() ?? 0;
+  if (!count) return null;
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  for (let index = 0; index < count; index++) {
+    const [cr, cg, cb] = stream.getColor(index);
+    r += cr;
+    g += cg;
+    b += cb;
+  }
+
+  if (!r && !g && !b) return null;
+  return [round(r / count, 1), round(g / count, 1), round(b / count, 1)];
+}
+
+/**
+ * Every `Light` actor on the map. See LightInfo.
+ *
+ * Read off the same `getColor()` the sun uses, so brightness is already in
+ * the colour. A light the editor left at zero brightness is dropped: it
+ * contributes nothing and there are a lot of them.
+ */
+function readLights(pkg: any): LightInfo[] {
+  const lights: LightInfo[] = [];
+
+  for (const entry of pkg.exportGroups["Light"] ?? []) {
+    let light: any;
+    try {
+      light = pkg.fetchObject(entry.index + 1).loadSelf();
+    } catch {
+      continue;
+    }
+    if (!light?.location) continue;
+
+    const [r, g, b] = light.getColor?.() ?? [0, 0, 0];
+    if (!r && !g && !b) continue;
+
+    lights.push({
+      pos: [round(light.location.x, 2), round(light.location.y, 2), round(light.location.z, 2)],
+      color: [round(r, 2), round(g, 2), round(b, 2)],
+      radius: round(light.worldLightRadius?.() ?? 0, 1),
+    });
+  }
+
+  return lights;
+}
+
 function readActors(pkg: any): { meshes: string[]; actors: ActorInfo[]; skipped: number } {
   const meshIds = new Map<string, number>();
   const actors: ActorInfo[] = [];
@@ -539,6 +633,9 @@ function readActors(pkg: any): { meshes: string[]; actors: ActorInfo[]; skipped:
       ];
     }
 
+    const lit = instanceLight(actor);
+    if (lit) record.lit = lit;
+
     actors.push(record);
   }
 
@@ -558,7 +655,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
   // and what tells pickTerrain which TerrainInfo is this map's own ground.
   const worldOrigin: [number, number] = [(mapX - MAP_ZERO_X) * MAP_SIZE, (mapY - MAP_ZERO_Y) * MAP_SIZE];
 
-  const { terrain, heightmap, quads, shadow, environment, lighting, meshes, actors, skipped, pick } = quietly(() => {
+  const { terrain, heightmap, quads, shadow, environment, lighting, lights, meshes, actors, skipped, pick } = quietly(() => {
     // One pick, shared: the transform, the heightmap and the bitmaps have to
     // come from the same terrain or they describe different ground.
     const pick = pickTerrain(pkg, worldOrigin);
@@ -570,6 +667,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
       shadow: readShadowMaps(pick.terrain),
       environment: tolerateInexactReads(() => readEnvironment(pkg)).value,
       lighting: readLighting(pkg),
+      lights: readLights(pkg),
       ...readActors(pkg),
     };
   });
@@ -595,6 +693,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
     terrain: terrain ?? null,
     environment: environment ?? null,
     lighting: lighting ?? null,
+    lights,
     meshes,
     actors,
   };
@@ -616,6 +715,7 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
     `${mapName}: ${actors.length} actors, ${meshes.length} meshes from ${packages.size} packages` +
       `${terrain ? `, terrain ${(terrain.heightmap as any).width}x${(terrain.heightmap as any).height}` : ", no terrain"}` +
       `${shadow ? `, ${shadow.planes.length} shadow planes` : ", no shadow maps"}` +
+      `, ${lights.length} lights, ${actors.filter((a) => a.lit).length} lit placements` +
       `${skipped ? `, ${skipped} skipped` : ""}` +
       `${
         pick.exports > 1

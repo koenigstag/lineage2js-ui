@@ -573,30 +573,54 @@ torches beside them. For scale, the outdoor flat term at noon is 80.2, so an
 interior is authored slightly brighter than open ground -- it has to be,
 with no sun in it.
 
-**So 1178 actors in the world render black**, 0.6% of all 196791 and 2.6% of
-the indoor ones. That is the client's own arithmetic followed to its end, and
-it is left alone rather than floored: what is missing is not the ambient, it
-is the `Light` actors standing next to them, and a fabricated floor would
-hide that instead of showing it.
+An actor whose zone ambient is zero is mostly not left black, though: what
+lights it is the colour stream below, which covers 634 of the world's 1540.
 
-#### What is still not read: the per-instance colour stream
+#### The torches: the per-instance colour stream
 
-`UStaticMeshInstance.colorStream` holds one colour per mesh vertex, which is
-the editor's bake of the `Light` actors reaching that placement. Measured:
+`UStaticMeshInstance.colorStream` holds one colour per mesh vertex, and it is
+the editor's bake of the `Light` actors reaching that placement -- the lights'
+share alone, which the client adds on top of the sun or the zone ambient
+rather than in place of either. Measured over six maps:
 
 ```
-            actors   non-zero stream   uniform   bytes
-20_18          800      121 (15.1%)          0    73 kB
-22_22         2030      144 ( 7.1%)          0   194 kB
-20_19         1112        0 ( 0.0%)          0     0
+            actors   non-zero stream   uniform
+20_18          800      121 (15.1%)          0
+22_22         2030      144 ( 7.1%)          0
+20_19         1112        0 ( 0.0%)          0
+whole world 196791    24490 (12.4%)          0     67232 Light actors
 ```
 
-The length always equals the mesh's vertex count exactly. Two things follow.
-It is worth having -- it is the only thing lighting a torchlit interior, and
-the 101 actors on 20_18 with a zero zone ambient have nothing else. And it
-cannot ride on an `InstancedMesh`, because not one instance is uniform: the
-placements that have it would have to be drawn as their own meshes with their
-own colour attribute. That is 7-15% of a town's actors, and none of a field's.
+This is what lights a torchlit interior, and for the actors whose zone ambient
+is zero it is the only thing that does: of the world's 1540 such actors, 634
+have it. The `Light` actors themselves are baked too -- position, radius and
+`getColor()` -- though nothing draws one yet.
+
+**906 actors are still black**, 0.46% of the world, and the reason is worth
+writing down because it decides what comes next. They are not missing an
+instance and not missing a stream: on 20_21 all 210 of them have `sceneLights`
+listing the lights that reach them, and a colour stream that is **entirely
+zero**. The editor never baked the result. The client does not care, because
+it never reads `colorStream` at all -- `mesh.useVertexColor` is false on all
+797 of 20_18's meshes and all 2030 of 22_22's, so the runtime recomputes from
+`sceneLights` every time. Lighting those last ones means doing the same:
+`sampleIntensity` per `LightEffect` over each vertex, which is the switch in
+the vendored `dynamic-light.ts`. The 24490 placements that do carry a stream
+are then the test for it.
+
+**It is averaged per placement, and that is a real loss.** A colour per vertex
+cannot ride on an `InstancedMesh`, and not one instance of the 24490 is
+uniform: over 20_18's lit instances the standard deviation within one of them
+has a median of 0.99 of its own mean. So a wall lit from one end comes out
+evenly lit. What survives is which placements are lit and how much, which is
+the difference between a black interior and a dim one -- the mean luminance a
+lit placement adds runs p10 2, median 14, p90 42, max 178.
+
+Keeping the gradient means taking those placements out of their
+`InstancedMesh` and giving each its own colour attribute, and that needs a
+vertex mapping this does not have: umodel's glTF re-splits vertices at seams,
+so the counts agree for only 22 of 20_18's 26 lit meshes (106 against 108,
+3946 against 3954, ...). An exact mapping would have to go by position.
 
 ## High Five vs C4
 

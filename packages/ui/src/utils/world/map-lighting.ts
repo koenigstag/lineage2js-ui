@@ -150,18 +150,37 @@ export function resolveLighting(env: WorldEnv | null | undefined, hour: number =
  *
  *     outdoors  ambient.staticMesh/2 + light.staticMesh * 32/255
  *     indoors   the actor's own zone ambient
+ *     either    plus the Light actors around it, from the editor's bake
  *
- * The branch is the client's `if (!this.isSunAffected)`, and both halves of it
- * come off the actor. An indoor actor whose zone ambient is zero really does
- * render black: it is lit by the torches near it, which are `Light` actors
- * this does not read yet.
+ * The branch is the client's `if (!this.isSunAffected)`, and every term comes
+ * off the actor. The last one is what keeps an interior from being black:
+ * where a zone's ambient is zero, the torches are the whole of the light.
  */
 export function meshLightFor(actor: MapActor, lighting: ResolvedLighting, out = new Color()): Color {
   if (actor.sun === 0) {
     const [r, g, b] = actor.amb ?? [0, 0, 0];
-    return out.setRGB((r / 255) * 2, (g / 255) * 2, (b / 255) * 2);
+    out.setRGB(r / 255, g / 255, b / 255);
+  } else {
+    out.copy(lighting.meshAmbient).add(lighting.meshSun);
   }
-  return out.copy(lighting.meshAmbient).add(lighting.meshSun).multiplyScalar(2);
+
+  // The torches, added on top of whichever of the two it was -- the client's
+  // own `lighting + staticMeshSunAmbient * sunAffected`, where `lighting` is
+  // the lights' share and nothing else. It is what rescues the actors whose
+  // zone ambient is zero: 100 of 20_18's 101 of them.
+  if (actor.lit) {
+    out.r += actor.lit[0] / 255;
+    out.g += actor.lit[1] / 255;
+    out.b += actor.lit[2] / 255;
+  }
+
+  // The client clamps the sum before doubling it, not after -- its
+  // `clamp(lighting + staticMeshSunAmbient * sunAffected, 0.0, 1.0)` -- so a
+  // torch cannot push a surface past white and then have MODULATE2X double
+  // that. It rarely bites: the brightest pair measured, a zone ambient of
+  // 116.5 under a light adding 96, comes to 0.83.
+  out.setRGB(Math.min(1, out.r), Math.min(1, out.g), Math.min(1, out.b));
+  return out.multiplyScalar(2);
 }
 
 /**

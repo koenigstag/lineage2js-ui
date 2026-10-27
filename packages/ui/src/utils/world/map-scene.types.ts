@@ -202,10 +202,31 @@ export interface MapActor {
   sun?: 0;
   /**
    * The zone ambient that lights it instead, 0..255. Only on an actor the sun
-   * does not reach; a zero here is a real answer, not a missing one, and
-   * means the actor is lit by nothing but the torches around it.
+   * does not reach; a zero here is a real answer, and means the actor is lit
+   * by nothing but `lit`.
    */
   amb?: [number, number, number];
+  /**
+   * What the `Light` actors around this placement add, 0..255, averaged over
+   * the mesh -- the editor's own bake, added on top of the sun or the zone
+   * ambient rather than replacing either.
+   *
+   * On 8.7% of placements. Averaged because a colour per vertex cannot ride
+   * on an `InstancedMesh`; the spread given up is about the size of the mean,
+   * so a wall lit from one end comes out evenly lit.
+   */
+  lit?: [number, number, number];
+}
+
+/**
+ * A `Light` actor, in L2 world units with the colour's brightness already
+ * folded in. Baked but not drawn yet -- `MapActor.lit` is the editor's own
+ * answer for the static world, and these are where it came from.
+ */
+export interface MapLight {
+  pos: [number, number, number];
+  color: [number, number, number];
+  radius: number;
 }
 
 export interface MapScene {
@@ -216,6 +237,8 @@ export interface MapScene {
   terrain: MapTerrain | null;
   environment: MapEnvironment | null;
   lighting: MapLighting | null;
+  /** Every `Light` actor on the map. See MapLight. */
+  lights?: MapLight[];
   /** Qualified mesh names, `Package.Group.Name`; actors index into this. */
   meshes: string[];
   actors: MapActor[];
