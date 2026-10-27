@@ -184,11 +184,48 @@ function readEnvironment(pkg: any): Record<string, unknown> | null {
   };
 }
 
-function readTerrain(pkg: any): Record<string, unknown> | null {
-  const [entry] = pkg.exportGroups["TerrainInfo"] ?? [];
-  if (!entry) return null;
+/**
+ * The TerrainInfo that is this map's own ground.
+ *
+ * Nearly every map has exactly one -- but not all. 12_24 carries a second at
+ * half the usual quad size and offset 3296 units from the map's own corner: a
+ * piece of set-dressing terrain the level keeps beside the real one. Taking
+ * the first export put that one in the scene file, which placed the map's
+ * ground 11353 units below its neighbours and off the geodata it is supposed
+ * to agree with.
+ *
+ * The map's own terrain is the one whose heightmap sample (0, 0) lands on the
+ * map's minimum corner -- the same arithmetic the scene file's `worldOrigin`
+ * uses. Nothing cheaper separates them: both report the same `mapX`/`mapY`.
+ */
+function pickTerrain(pkg: any, worldOrigin: [number, number]): TerrainPick {
+  const entries = pkg.exportGroups["TerrainInfo"] ?? [];
+  if (!entries.length) return { terrain: null, exports: 0, onOwnCorner: false };
 
-  const terrain = pkg.fetchObject(entry.index + 1).loadSelf();
+  const loaded = entries.map((entry: any) => pkg.fetchObject(entry.index + 1).loadSelf());
+  const own = loaded.find((terrain: any) => {
+    const { origin, xAxis, yAxis } = terrain.toWorld;
+    return (
+      Math.abs(-origin.x * xAxis.x - worldOrigin[0]) <= 1 && Math.abs(-origin.y * yAxis.y - worldOrigin[1]) <= 1
+    );
+  });
+
+  // Reported, not logged: this runs inside `quietly`, which silences log and
+  // warn alike, and a map with more than one terrain is the one thing here
+  // that should never pass unmentioned.
+  return { terrain: own ?? loaded[0], exports: entries.length, onOwnCorner: Boolean(own) };
+}
+
+interface TerrainPick {
+  terrain: any | null;
+  /** How many the map carries; more than one is worth saying out loud. */
+  exports: number;
+  /** Whether the one taken stands on the map's own minimum corner. */
+  onOwnCorner: boolean;
+}
+
+function readTerrain(terrain: any): Record<string, unknown> | null {
+  if (!terrain) return null;
 
   // World -> heightmap index. A layer's texture UV is that index divided by
   // the layer's own scale.
@@ -255,11 +292,9 @@ function readTerrain(pkg: any): Record<string, unknown> | null {
  * Written as one file rather than into the scene JSON: 16kB of bits would be
  * 22kB of base64 in a file that is otherwise 63kB.
  */
-function readQuadBitmaps(pkg: any): Uint8Array | null {
-  const [entry] = pkg.exportGroups["TerrainInfo"] ?? [];
-  if (!entry) return null;
+function readQuadBitmaps(terrain: any): Uint8Array | null {
+  if (!terrain) return null;
 
-  const terrain = pkg.fetchObject(entry.index + 1).loadSelf();
   const visibility = terrain.quadVisibilityBitmapOrig ?? terrain.quadVisibilityBitmap;
   const edgeTurn = terrain.edgeTurnBitmapOrig ?? terrain.edgeTurnBitmap;
   if (!visibility || !edgeTurn) return null;
@@ -278,11 +313,9 @@ function readQuadBitmaps(pkg: any): Uint8Array | null {
 }
 
 /** The heightmap is an ordinary texture object -- in the one format umodel will not export. */
-function readHeightmap(pkg: any): Uint8Array | null {
-  const [entry] = pkg.exportGroups["TerrainInfo"] ?? [];
-  if (!entry) return null;
+function readHeightmap(terrain: any): Uint8Array | null {
+  if (!terrain) return null;
 
-  const terrain = pkg.fetchObject(entry.index + 1).loadSelf();
   const map = terrain.terrainMap?.loadSelf?.();
   const mip = map?.mipmaps?.getElem?.(0) ?? map?.mipmaps?.[0];
   const bytes = mip?.dataArray?.getTypedArray?.() as Uint8Array | undefined;
@@ -359,22 +392,31 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
 
   const pkg = await loader.load(loader.getPackage(mapName, "Level"));
 
-  const { terrain, heightmap, quads, environment, meshes, actors, skipped } = quietly(() => ({
-    terrain: readTerrain(pkg),
-    heightmap: readHeightmap(pkg),
-    quads: readQuadBitmaps(pkg),
-    environment: tolerateInexactReads(() => readEnvironment(pkg)).value,
-    ...readActors(pkg),
-  }));
+  // World coordinates of the map's minimum corner. Region 20_18 starts at
+  // world origin, which is what makes these line up with the geodata tiles --
+  // and what tells pickTerrain which TerrainInfo is this map's own ground.
+  const worldOrigin: [number, number] = [(mapX - MAP_ZERO_X) * MAP_SIZE, (mapY - MAP_ZERO_Y) * MAP_SIZE];
+
+  const { terrain, heightmap, quads, environment, meshes, actors, skipped, pick } = quietly(() => {
+    // One pick, shared: the transform, the heightmap and the bitmaps have to
+    // come from the same terrain or they describe different ground.
+    const pick = pickTerrain(pkg, worldOrigin);
+    return {
+      pick,
+      terrain: readTerrain(pick.terrain),
+      heightmap: readHeightmap(pick.terrain),
+      quads: readQuadBitmaps(pick.terrain),
+      environment: tolerateInexactReads(() => readEnvironment(pkg)).value,
+      ...readActors(pkg),
+    };
+  });
 
   const outDir = path.join(MAPS_OUT, mapName);
   await fs.mkdir(outDir, { recursive: true });
 
   const scene = {
     map: [mapX, mapY],
-    // World coordinates of the map's minimum corner. Region 20_18 starts at
-    // world origin, which is what makes these line up with the geodata tiles.
-    worldOrigin: [(mapX - MAP_ZERO_X) * MAP_SIZE, (mapY - MAP_ZERO_Y) * MAP_SIZE],
+    worldOrigin,
     worldSize: MAP_SIZE,
     terrain: terrain ?? null,
     environment: environment ?? null,
@@ -391,7 +433,14 @@ async function convertMap(loader: ClientLoader, mapName: string): Promise<Set<st
   console.log(
     `${mapName}: ${actors.length} actors, ${meshes.length} meshes from ${packages.size} packages` +
       `${terrain ? `, terrain ${(terrain.heightmap as any).width}x${(terrain.heightmap as any).height}` : ", no terrain"}` +
-      `${skipped ? `, ${skipped} skipped` : ""}`
+      `${skipped ? `, ${skipped} skipped` : ""}` +
+      `${
+        pick.exports > 1
+          ? `, ${pick.exports} TerrainInfo exports (${
+              pick.onOwnCorner ? "took the one on the map's own corner" : "NONE on the map's corner, took the first"
+            })`
+          : ""
+      }`
   );
 
   return packages;

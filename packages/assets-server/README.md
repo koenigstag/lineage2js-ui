@@ -162,6 +162,43 @@ worldZ = (h - toWorld.origin.z) * toWorld.zAxis.z
 Sanity check: `h = 32768` gives `Z = 160.95`, and `TerrainInfo.Location.z` is
 `160.65`. `toHeightMap` is the exact inverse (`1/128`, `1/0.296875`).
 
+That relation is exact rather than approximate, and holds across the client:
+
+```
+toWorld.origin.z = 32767 - TerrainInfo.Location.z / 0.296875
+```
+
+checked on maps whose actor sits at `+160.65` (most of them), `-160.65`
+(twelve) and `+353.65` (two). The FCoords already carries the terrain actor's
+height, so nothing here adds it back.
+
+That also settles something that looks like a bug and is not. Twelve maps --
+16_10, 16_13, 16_26, 17_13, 17_18, 18_13, 18_26, 19_12, 19_17, 20_12, 21_12,
+22_12 -- have their actor at `-160.65` and so sit **321 units below** their
+neighbours, although their raw heightmaps agree with those neighbours to the
+unit. The step is authored in the client, not introduced by this converter, and
+it is almost never visible: of the 33 borders where the raw heights agree and
+the world Z does not, 31 have flat filler on both sides, and the two carrying
+real relief step by 57 and 58 units. 62 of the 203 maps are a single height end
+to end -- open sea and out-of-bounds -- which is why so many borders are filler
+meeting filler.
+
+### A map can carry more than one TerrainInfo
+
+`12_24` has two: its own ground, and a second at half the quad size whose
+corner sits 3296 units inside the map. Both report the same `mapX`/`mapY`, so
+only the transform separates them -- **the map's own terrain is the one whose
+heightmap sample `(0, 0)` lands on the map's minimum corner**, the same
+arithmetic `scene.json`'s `worldOrigin` uses.
+
+Taking the first export, which is what the converter did until this was
+measured, put the wrong terrain in that map's scene file: its ground came out
+11353 units below its neighbours, at the wrong scale, and off the geodata it is
+meant to agree with. `convert:maps` now picks by that corner, and says so in
+the map's line when a map has more than one. 12_24 is the only one in the
+client that does, and after the fix no map's terrain starts anywhere but on its
+own corner.
+
 ### Terrain is ~32 units below the geodata
 
 Sampling `20_18`'s heightmap every 4th vertex and comparing each world Z
