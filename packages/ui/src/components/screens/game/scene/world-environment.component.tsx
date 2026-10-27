@@ -83,28 +83,26 @@ export function WorldEnvironment({ scenes, worldX, worldY, hour = DEFAULT_HOUR }
 
   return (
     <>
-      {/* The static-mesh half of the client's lighting, the same pair the
-          terrain shader is given for the ground -- see resolveLighting.
+      {/* These light the creatures and the player, and nothing else.
 
-          The intensity carries two factors and no taste. `2` is
-          D3DTOP_MODULATE2X, which the client applies to a mesh's lighting
-          exactly as it does to the terrain's. `PI` reconciles the two paths:
-          the terrain shader multiplies its colour in directly, while three's
-          materials run the same quantity through BRDF_Lambert, which is
-          `diffuse / PI`. Left at 1 the meshes come out pi times darker than
-          the ground they stand on -- which is the complaint this work started
-          from, just inverted. */}
+          The scenery used to be lit here too, and no longer is: a static mesh
+          is drawn unlit and multiplied by its own instance colour, which is
+          what the client does with it -- see toUnlit and meshLightFor. That
+          also retired the directional light's old job, which was to stand in
+          for a bake we did not have.
+
+          What is left is a character, and the client lights one from its own
+          pair of curves (`ActorAmbient` / `HSVActorLight`, both in env.json)
+          by a path nothing here has traced yet. Until it is, a character is
+          lit as a static mesh would be, split into an ambient and a sun so it
+          keeps some shape rather than reading flat.
+
+          The intensity carries two factors and no taste: `2` is
+          D3DTOP_MODULATE2X, and `PI` is because three's materials run the
+          colour through BRDF_Lambert, which is `diffuse / PI`, while the
+          terrain shader multiplies it in directly. */}
       <ambientLight color={meshAmbient} intensity={2 * Math.PI} />
-      {/* The client gives a static mesh no directional term at all: its sun is
-          a flat addition, because the editor baked the shape of the light into
-          the mesh's own vertex colours. Nothing extracts those yet, so the
-          sun's share of that flat total is spent here as a directional light
-          instead -- a stand-in for the bake, which keeps a trunk from reading
-          as a cardboard cut-out. It is a quarter of a mesh's light at noon,
-          so the difference between this and the client's flat version is
-          small, and it goes away the day the vertex colours are read.
-
-          A directional light takes only its direction from the position, so
+      {/* A directional light takes only its direction from the position, so
           this can sit at the origin's own scale and still light a character
           standing 60000 units away. */}
       <directionalLight

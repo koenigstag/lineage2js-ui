@@ -107,6 +107,20 @@ interface ActorInfo {
   pos: [number, number, number];
   rot?: [number, number, number];
   scale?: [number, number, number];
+  /**
+   * `bSunAffect = false`: this actor is indoors and the sun does not reach it.
+   * Present only when false, which is the minority -- 312 of 800 actors on
+   * 20_18, none at all on an open field map.
+   */
+  sun?: 0;
+  /**
+   * What lights it instead: its zone's `AmbientVector`, 0..255.
+   *
+   * Only on an actor the sun does not reach, and the client's own fallback for
+   * exactly that case. Resolved from the actor's own `Region`, which names its
+   * zone outright -- no BSP walk, because the editor already did it.
+   */
+  amb?: [number, number, number];
 }
 
 /** The tail of a tool's output, which is where its complaint is. */
@@ -509,6 +523,21 @@ function readActors(pkg: any): { meshes: string[]; actors: ActorInfo[]; skipped:
     const sy = round((s?.y ?? 1) * drawScale, 5);
     const sz = round((s?.z ?? 1) * drawScale, 5);
     if (sx !== 1 || sy !== 1 || sz !== 1) record.scale = [sx, sy, sz];
+
+    // Indoors, the sun is simply switched off for this actor and its zone's
+    // ambient takes over -- the client's own branch, see UStaticMeshActor's
+    // `if (!this.isSunAffected)`. Both halves have to travel: without the
+    // ambient the actor would be black, and a zero ambient is a real answer
+    // (103 actors on 20_18), not a missing one.
+    if (actor.isSunAffected === false) {
+      record.sun = 0;
+      const ambient = actor.getZone?.()?.loadSelf?.()?.ambientVector;
+      record.amb = [
+        round((ambient?.x ?? 0) * 255, 1),
+        round((ambient?.y ?? 0) * 255, 1),
+        round((ambient?.z ?? 0) * 255, 1),
+      ];
+    }
 
     actors.push(record);
   }

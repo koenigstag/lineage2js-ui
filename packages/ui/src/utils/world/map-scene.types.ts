@@ -194,6 +194,18 @@ export interface MapActor {
   rot?: [number, number, number];
   /** Absent when the actor is at its mesh's own scale. */
   scale?: [number, number, number];
+  /**
+   * `bSunAffect = false`: the sun does not reach this actor, so it is lit by
+   * `amb` instead of by the world's light. Present only when false -- 312 of
+   * 800 actors on 20_18, none at all on an open field map.
+   */
+  sun?: 0;
+  /**
+   * The zone ambient that lights it instead, 0..255. Only on an actor the sun
+   * does not reach; a zero here is a real answer, not a missing one, and
+   * means the actor is lit by nothing but the torches around it.
+   */
+  amb?: [number, number, number];
 }
 
 export interface MapScene {

@@ -530,6 +530,74 @@ keeps a sky-coloured halo no matter what is really behind it. Opaque geometry
 is drawn before the transparent pass, so trunks, ground and hillsides still
 show through the fringe correctly.
 
+### A static mesh is a texture times a light
+
+There is no surface model. The client's static mesh shader ends
+
+```glsl
+vLitColor = clamp(lighting + staticMeshSunAmbient * sunAffected, 0.0, 1.0);
+...
+reflectedLight.indirectDiffuse += vLitColor * 2.0;
+```
+
+and that is all of it -- no normal, no roughness, no diffuse term. Which means
+a renderer should draw these **unlit** and multiply, not hand them to a PBR
+material and hope the lights come out right.
+
+`sunAffected` is the actor's `bSunAffect`, and it is off far more often than
+you would guess: **312 of 800 actors on 20_18, 419 of 2030 on 22_22, 0 of
+1112 on an open field map**. Switching the sun off is only half the branch,
+though -- the client then lights the actor from its zone's `AmbientVector`:
+
+```js
+// UStaticMeshActor, the vendored reader
+if (!this.isSunAffected) {
+    for (const leaf of leaves) { ...max of each leaf zone's ambientVector... }
+    else [ambX, ambY, ambZ] = this.getZone().ambientVector.getElements();
+}
+```
+
+**That zone needs no BSP walk.** An actor's `Region` names its zone outright,
+because the editor already resolved it, and `actor.getZone().ambientVector`
+answers for every one of them -- 312 of 312 on 20_18, 419 of 419 on 22_22,
+nothing thrown. So `convert:maps` bakes `sun: 0` and `amb` per actor, and the
+renderer needs no zone machinery at all:
+
+```
+20_18   (100.7)x208   (0)x101   (70.7)x1
+22_22   (116.5)x174   (57.4)x82   (100.7)x71   (90.8)x39 ...
+```
+
+A zero there is a real answer, not a missing one: those actors are lit by the
+torches beside them. For scale, the outdoor flat term at noon is 80.2, so an
+interior is authored slightly brighter than open ground -- it has to be,
+with no sun in it.
+
+**So 1178 actors in the world render black**, 0.6% of all 196791 and 2.6% of
+the indoor ones. That is the client's own arithmetic followed to its end, and
+it is left alone rather than floored: what is missing is not the ambient, it
+is the `Light` actors standing next to them, and a fabricated floor would
+hide that instead of showing it.
+
+#### What is still not read: the per-instance colour stream
+
+`UStaticMeshInstance.colorStream` holds one colour per mesh vertex, which is
+the editor's bake of the `Light` actors reaching that placement. Measured:
+
+```
+            actors   non-zero stream   uniform   bytes
+20_18          800      121 (15.1%)          0    73 kB
+22_22         2030      144 ( 7.1%)          0   194 kB
+20_19         1112        0 ( 0.0%)          0     0
+```
+
+The length always equals the mesh's vertex count exactly. Two things follow.
+It is worth having -- it is the only thing lighting a torchlit interior, and
+the 101 actors on 20_18 with a zero zone ambient have nothing else. And it
+cannot ride on an `InstancedMesh`, because not one instance is uniform: the
+placements that have it would have to be drawn as their own meshes with their
+own colour attribute. That is 7-15% of a town's actors, and none of a field's.
+
 ## High Five vs C4
 
 Deltas found so far against Lineage2JS's readers, which were written for C4:

@@ -4,6 +4,7 @@ import {
   ClampToEdgeWrapping,
   Material,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
@@ -171,7 +172,7 @@ const textures = new Map<string, Promise<unknown>>();
  * `OB_Masked` additionally discards fully transparent texels
  * (`glAlphaFunc(GL_GREATER, 0)`).
  */
-function applyBlend(material: MeshStandardMaterial, blend: SlotBlend | null | undefined): void {
+function applyBlend(material: MeshBasicMaterial, blend: SlotBlend | null | undefined): void {
   // No Shader at all, or OB_Normal without an Opacity: the engine turns
   // blending off, so leave the material exactly as the glTF built it.
   if (!blend || (blend.mode === "normal" && !blend.opacity)) return;
@@ -219,7 +220,7 @@ async function applyTextures(meshName: string, parts: StaticMeshPart[]): Promise
   if (!slots) return;
 
   for (const part of parts) {
-    applyBlend(part.material as MeshStandardMaterial, info?.blends?.[part.slot]);
+    applyBlend(part.material as MeshBasicMaterial, info?.blends?.[part.slot]);
     const textureName = slots[part.slot];
     const url = textureName ? getStaticMeshTextureUrl(textureName) : undefined;
     if (!url) continue;
@@ -246,7 +247,7 @@ async function applyTextures(meshName: string, parts: StaticMeshPart[]): Promise
     const clamp = info?.clamps?.[part.slot];
     texture.wrapS = clamp?.[0] ? ClampToEdgeWrapping : RepeatWrapping;
     texture.wrapT = clamp?.[1] ? ClampToEdgeWrapping : RepeatWrapping;
-    const material = part.material as MeshStandardMaterial;
+    const material = part.material as MeshBasicMaterial;
     material.map = texture as never;
     // umodel writes a flat placeholder colour into every material it exports;
     // left in place it would tint the real texture.
@@ -265,6 +266,47 @@ async function applyTextures(meshName: string, parts: StaticMeshPart[]): Promise
  * InstancedMesh has to carry, which is what makes the placement arithmetic
  * readable.
  */
+/**
+ * The glTF's PBR material as the client would draw it: a texture multiplied by
+ * a light, and nothing else.
+ *
+ * The client has no surface model for a static mesh. Its shader is
+ * `reflectedLight.indirectDiffuse += vLitColor * 2.0` over the texture -- no
+ * normal, no roughness, no diffuse term, because the editor's bake and the
+ * environment curves already say how bright every mesh is. Leaving these as
+ * `MeshStandardMaterial` meant the scene's lights decided instead, which is
+ * why the sun had to be faked as a directional light to stop every trunk
+ * reading as a cut-out.
+ *
+ * Unlit, the per-actor light goes in as the instance colour, which three
+ * multiplies into exactly this spot -- see meshLightFor. It is also a good
+ * deal cheaper across fifteen thousand instances.
+ */
+function toUnlit(source: Material): Material {
+  const from = source as MeshStandardMaterial;
+  const material = new MeshBasicMaterial({
+    map: from.map,
+    color: from.color,
+    transparent: from.transparent,
+    opacity: from.opacity,
+    alphaTest: from.alphaTest,
+    side: from.side,
+    depthWrite: from.depthWrite,
+    blending: from.blending,
+    toneMapped: from.toneMapped,
+    // Left as the glTF had it -- which is off, since umodel exports no
+    // COLOR_0. An instance colour does not need it: three's *fragment* prefix
+    // defines USE_COLOR from `vertexColors || instancingColor`, even though
+    // the vertex prefix defines it from `vertexColors` alone, so the varying
+    // is declared on both sides and setColorAt lands. Turning it on here
+    // without also giving every geometry a colour attribute would paint the
+    // world black, an unbound attribute reading as (0,0,0,1).
+    vertexColors: from.vertexColors,
+  });
+  material.name = from.name;
+  return material;
+}
+
 function collectParts(root: Object3D): StaticMeshPart[] {
   const parts: StaticMeshPart[] = [];
 
@@ -286,13 +328,13 @@ function collectParts(root: Object3D): StaticMeshPart[] {
         const slice = geometry.clone();
         slice.clearGroups();
         slice.setDrawRange(group.start, group.count);
-        parts.push({ geometry: slice, material: materials[slot], slot });
+        parts.push({ geometry: slice, material: toUnlit(materials[slot]), slot });
       }
       geometry.dispose();
       return;
     }
 
-    parts.push({ geometry, material: materials[0], slot: parts.length });
+    parts.push({ geometry, material: toUnlit(materials[0]), slot: parts.length });
   });
 
   return parts;

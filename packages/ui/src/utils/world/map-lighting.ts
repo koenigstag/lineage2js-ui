@@ -1,5 +1,5 @@
 import { Color } from "three";
-import type { WorldEnv, WorldEnvColor, WorldEnvLight } from "./map-scene.types";
+import type { MapActor, WorldEnv, WorldEnvColor, WorldEnvLight } from "./map-scene.types";
 
 /**
  * How bright the world is, resolved once and handed to everything that lights
@@ -138,6 +138,30 @@ export function resolveLighting(env: WorldEnv | null | undefined, hour: number =
     meshAmbient: sampleColor(cycle.ambient.staticMesh, at, 0.5),
     meshSun: sampleLight(cycle.light.staticMesh, at, 32 / 255),
   };
+}
+
+/**
+ * What one static mesh is multiplied by, ready to go into an instance colour.
+ *
+ * The whole of the client's static-mesh lighting in one colour, the
+ * MODULATE2X doubling included, because that is how the client treats a mesh:
+ * a texture multiplied by a light, with no diffuse term and no surface model.
+ * Which is why the scenery is drawn unlit here -- see toUnlit.
+ *
+ *     outdoors  ambient.staticMesh/2 + light.staticMesh * 32/255
+ *     indoors   the actor's own zone ambient
+ *
+ * The branch is the client's `if (!this.isSunAffected)`, and both halves of it
+ * come off the actor. An indoor actor whose zone ambient is zero really does
+ * render black: it is lit by the torches near it, which are `Light` actors
+ * this does not read yet.
+ */
+export function meshLightFor(actor: MapActor, lighting: ResolvedLighting, out = new Color()): Color {
+  if (actor.sun === 0) {
+    const [r, g, b] = actor.amb ?? [0, 0, 0];
+    return out.setRGB((r / 255) * 2, (g / 255) * 2, (b / 255) * 2);
+  }
+  return out.copy(lighting.meshAmbient).add(lighting.meshSun).multiplyScalar(2);
 }
 
 /**

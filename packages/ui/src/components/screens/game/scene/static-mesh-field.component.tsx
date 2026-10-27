@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Matrix4, Vector3 } from "three";
+import { Color, Matrix4, Vector3 } from "three";
 import { L2_TO_THREE_SCALE } from "../../../../utils/coords";
 import { actorMatrix } from "../../../../utils/world/actor-transform";
 import {
@@ -11,11 +11,15 @@ import {
   type MeshInfo,
   type StaticMeshPart,
 } from "../../../../utils/world/static-mesh-cache";
+import { DEFAULT_HOUR, meshLightFor, resolveLighting, type ResolvedLighting } from "../../../../utils/world/map-lighting";
 import type { LoadedMapScene } from "../../../../utils/world/use-map-scenes";
+import { useWorldEnv } from "../../../../utils/world/use-world-env";
 import type { MapActor } from "../../../../utils/world/map-scene.types";
 
 interface StaticMeshFieldProps {
   scenes: LoadedMapScene[];
+  /** Game hour, 0..24. Picks the point on the world's light curves. */
+  hour?: number;
 }
 
 /**
@@ -78,11 +82,17 @@ interface ActorEntry {
  * mesh resolves to nothing and the field renders empty, exactly as the world
  * looked before it existed.
  */
-export function StaticMeshField({ scenes }: StaticMeshFieldProps) {
+export function StaticMeshField({ scenes, hour = DEFAULT_HOUR }: StaticMeshFieldProps) {
   // KTX2 has to be told what the GPU can decode before it can transcode
   // anything, and only the renderer knows.
   const renderer = useThree((state) => state.gl);
   useEffect(() => initStaticMeshTextures(renderer), [renderer]);
+
+  // The world's own light at this hour. Every placement is multiplied by it,
+  // except the ones the sun does not reach, which carry their own -- see
+  // meshLightFor.
+  const env = useWorldEnv();
+  const lighting = useMemo(() => resolveLighting(env, hour), [env, hour]);
 
   const [table, setTable] = useState<Record<string, MeshInfo>>({});
   useEffect(() => {
@@ -144,7 +154,7 @@ export function StaticMeshField({ scenes }: StaticMeshFieldProps) {
   return (
     <>
       {placements.map(({ name, actors }) => (
-        <InstancedStaticMesh key={name} name={name} actors={actors} />
+        <InstancedStaticMesh key={name} name={name} actors={actors} lighting={lighting} />
       ))}
     </>
   );
@@ -162,7 +172,7 @@ function lodFor(name: string, info: MeshInfo | undefined, distance: number, radi
   return name;
 }
 
-function InstancedStaticMesh({ name, actors }: Placement) {
+function InstancedStaticMesh({ name, actors, lighting }: Placement & { lighting: ResolvedLighting }) {
   const [parts, setParts] = useState<StaticMeshPart[] | null>(() => getCachedStaticMesh(name) ?? null);
 
   useEffect(() => {
@@ -180,6 +190,14 @@ function InstancedStaticMesh({ name, actors }: Placement) {
   // themselves never move.
   const matrices = useMemo(() => actors.map((actor) => actorMatrix(actor, new Matrix4())), [actors]);
 
+  // What each placement is multiplied by. The materials are unlit (see
+  // toUnlit), so this colour is the whole of the actor's lighting -- outdoors
+  // the world's, indoors its own zone's.
+  const colors = useMemo(
+    () => actors.map((actor) => meshLightFor(actor, lighting, new Color())),
+    [actors, lighting]
+  );
+
   if (!parts) return null;
 
   return (
@@ -193,8 +211,10 @@ function InstancedStaticMesh({ name, actors }: Placement) {
             if (!mesh) return;
             for (let i = 0; i < matrices.length; i++) {
               mesh.setMatrixAt(i, matrices[i]);
+              mesh.setColorAt(i, colors[i]);
             }
             mesh.instanceMatrix.needsUpdate = true;
+            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
             // The bounding box three computes for an InstancedMesh comes from
             // the geometry alone, not the instances, so leaving frustum
             // culling on would cull the whole draw the moment the origin left
