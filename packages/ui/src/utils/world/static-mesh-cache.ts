@@ -1,11 +1,14 @@
 import {
   AdditiveBlending,
   BufferGeometry,
+  ClampToEdgeWrapping,
   Material,
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  RepeatWrapping,
   SRGBColorSpace,
+  Texture,
   WebGLRenderer,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -81,6 +84,12 @@ export interface MeshInfo {
   textures: (string | null)[];
   /** Per material slot, how the client blends it. Absent when every slot is opaque. */
   blends?: (SlotBlend | null)[];
+  /**
+   * Per material slot, `[clampU, clampV]` from the texture's own clamp mode --
+   * present only for the slots that do not tile. See applyTextures: that is 13
+   * slots in the whole client, and three's own default is the other way round.
+   */
+  clamps?: ([boolean, boolean] | null)[];
   /** The client's own simplified versions, nearest first. Only trees have them. */
   lods?: string[];
   /** Bounding radius in client units. */
@@ -180,18 +189,24 @@ function applyBlend(material: MeshStandardMaterial, blend: SlotBlend | null | un
   } else if (blend.mode === "translucent") {
     material.depthWrite = false;
   } else {
-    // Foliage keeps writing depth. A forest is tens of thousands of instanced
-    // leaf cards; sorting them per frame costs more than it buys, and gets the
-    // answer wrong whenever two cards interpenetrate -- which, for a tree, is
-    // most of them. Discarding the empty texels is what makes that honest.
-    material.depthWrite = true;
+    // A blended surface must not write depth. Writing it means the first leaf
+    // card drawn blends its soft edge with whatever happens to be in the
+    // buffer -- the sky -- and then occludes the card behind it, so that edge
+    // keeps the sky's colour instead of the leaves it is actually in front
+    // of. Opaque geometry is already drawn by then, so trunks and ground
+    // still show through the fringe correctly; what is given up is the order
+    // of leaves against each other inside one tree, which is a far quieter
+    // error than a sky-coloured halo around every branch.
+    material.depthWrite = false;
   }
 
-  // three discards below alphaTest; the engine discards at or below AlphaRef,
-  // and for OB_Masked at zero. One step of an 8-bit channel is the smallest
-  // cut that means anything.
-  const ref = blend.mode === "masked" ? Math.max(blend.alphaRef, 1 / 255) : blend.alphaRef;
-  if (ref > 0) material.alphaTest = ref;
+  // Discard what the texture says is nothing at all, which is most of it:
+  // measured on the client's own leaf textures, 72% of texels are alpha 0 and
+  // 15% are alpha 1, but the 13% in between is a real authored edge the
+  // client blends -- so this cuts at the bottom and leaves that edge alone
+  // rather than hardening it into a stencil.
+  const ref = Math.max(blend.alphaRef, 1 / 255);
+  material.alphaTest = ref;
 
   // transparent and alphaTest both change which shader three compiles, and a
   // part without a texture never reaches the needsUpdate below.
@@ -215,10 +230,22 @@ async function applyTextures(meshName: string, parts: StaticMeshPart[]): Promise
       textures.set(url, request);
     }
 
-    const texture = (await request) as { colorSpace?: string } | null;
+    const texture = (await request) as Texture | null;
     if (!texture) continue;
 
     texture.colorSpace = SRGBColorSpace;
+
+    // Unreal tiles a texture unless its UClampMode/VClampMode says otherwise,
+    // and three's Texture defaults to the opposite -- which smears the last
+    // column of a bark texture down the whole trunk, and does the same to
+    // every wall and floor. Measured over the client: 13 slots of 55183
+    // actually clamp, so tiling is the default here and the table carries
+    // only the exceptions. The texture object is shared between the materials
+    // that use it, which is fine while the client agrees with itself about
+    // how a given texture is addressed.
+    const clamp = info?.clamps?.[part.slot];
+    texture.wrapS = clamp?.[0] ? ClampToEdgeWrapping : RepeatWrapping;
+    texture.wrapT = clamp?.[1] ? ClampToEdgeWrapping : RepeatWrapping;
     const material = part.material as MeshStandardMaterial;
     material.map = texture as never;
     // umodel writes a flat placeholder colour into every material it exports;

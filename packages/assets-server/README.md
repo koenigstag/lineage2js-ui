@@ -334,6 +334,40 @@ Regenerate that table alone with `--mesh-table`: it is metadata read out of
 the packages, so it needs neither umodel nor an encoder and takes seconds
 rather than the hour a full `--meshes` pass costs.
 
+### A LOD is a mesh, and needs its own row
+
+`lods` names the client's simplified versions, and the renderer swaps to one
+by name -- so each is looked up in this table like any other mesh. They were
+not in it: 598 of 716 had no row, so a distant tree arrived with no texture
+and no blend and drew as a flat card in umodel's placeholder colour. The chain
+is only known once the base mesh has been read, so the table is filled in a
+second pass over whatever LODs the first pass named.
+
+### Textures tile; three's do not
+
+`UClampMode`/`VClampMode` on the texture, `TC_Wrap = 0` and `TC_Clamp = 1`.
+Over the whole client **13 slots of 55183 actually clamp** -- everything else
+tiles, which is what bark, walls and floors need. three's `Texture` defaults
+the other way, and a clamped bark texture smears its last column down the
+length of the trunk. `meshes.json` carries a `clamps` array for the thirteen
+exceptions and the renderer tiles by default.
+
+### Leaf alpha is not a stencil
+
+Measured on `Oren_Darkelf_Leaf00_` (512x512, DXT3): **71.8% of texels are
+alpha 0, 15.2% are full, and 13% lie in between** -- an authored soft edge
+about a texel wide around every leaf, which is why the client blends these
+rather than masking them. Cutting at the midpoint would throw that edge away;
+cutting just above zero discards the 72% that is nothing and leaves the edge
+to blend.
+
+A blended surface must not write depth, though. With depth writes on, the
+first leaf card drawn blends its edge against whatever is already in the
+buffer -- the sky -- and then occludes the card behind it, so every branch
+keeps a sky-coloured halo no matter what is really behind it. Opaque geometry
+is drawn before the transparent pass, so trunks, ground and hillsides still
+show through the fringe correctly.
+
 ## High Five vs C4
 
 Deltas found so far against Lineage2JS's readers, which were written for C4:

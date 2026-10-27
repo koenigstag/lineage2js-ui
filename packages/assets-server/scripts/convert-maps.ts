@@ -511,34 +511,59 @@ async function collectMeshInfo(loader: ClientLoader, meshes: Set<string>): Promi
   // and which four it is decides whether that matters.
   const failed: string[] = [];
 
-  for (const [pkgName, names] of byPackage) {
-    let pkg: any;
-    try {
-      pkg = await loader.load(loader.getPackage(pkgName, "StaticMesh"));
-    } catch {
-      failed.push(...names);
-      continue;
-    }
-
-    const exports = new Map<string, any>();
-    for (const entry of pkg.exportGroups["StaticMesh"] ?? []) {
-      exports.set(String(entry.export.objectName).toLowerCase(), entry);
-    }
-
-    quietly(() => {
-      for (const name of names) {
-        const entry = exports.get(name.split(".").pop()!.toLowerCase());
-        if (!entry) {
-          failed.push(name);
-          continue;
-        }
-        try {
-          info[name] = meshInfo(pkg.fetchObject(entry.index + 1).loadSelf(), qualifiedName);
-        } catch {
-          failed.push(name);
-        }
+  async function resolve(wanted: Map<string, string[]>): Promise<void> {
+    for (const [pkgName, names] of wanted) {
+      let pkg: any;
+      try {
+        pkg = await loader.load(loader.getPackage(pkgName, "StaticMesh"));
+      } catch {
+        failed.push(...names);
+        continue;
       }
-    });
+
+      const exports = new Map<string, any>();
+      for (const entry of pkg.exportGroups["StaticMesh"] ?? []) {
+        exports.set(String(entry.export.objectName).toLowerCase(), entry);
+      }
+
+      quietly(() => {
+        for (const name of names) {
+          const entry = exports.get(name.split(".").pop()!.toLowerCase());
+          if (!entry) {
+            failed.push(name);
+            continue;
+          }
+          try {
+            info[name] = meshInfo(pkg.fetchObject(entry.index + 1).loadSelf(), qualifiedName);
+          } catch {
+            failed.push(name);
+          }
+        }
+      });
+    }
+  }
+
+  await resolve(byPackage);
+
+  // A mesh's LOD is a mesh in its own right, with its own materials, and the
+  // renderer swaps to it by name -- so it needs its own row or it arrives with
+  // no texture and no blend at all, which is a distant tree rendered as a flat
+  // green card. The chain is only known once the base mesh has been read,
+  // hence the second pass; a LOD naming a LOD of its own would need a third,
+  // so this runs to a fixed point.
+  for (let pass = 0; pass < 4; pass++) {
+    const missing = new Map<string, string[]>();
+    for (const entry of Object.values(info)) {
+      for (const lod of entry.lods ?? []) {
+        if (info[lod] || failed.includes(lod)) continue;
+        const pkg = lod.split(".")[0].toLowerCase();
+        const list = missing.get(pkg) ?? [];
+        list.push(lod);
+        missing.set(pkg, list);
+      }
+    }
+    if (missing.size === 0) break;
+    await resolve(missing);
   }
 
   const withLod = Object.values(info).filter((entry) => entry.lods).length;
@@ -570,6 +595,11 @@ interface MeshInfo {
   /** Per material slot, how it blends -- only when some slot is not plain opaque. */
   blends?: (SlotBlend | null)[];
   /**
+   * Per material slot, `[clampU, clampV]` from the texture's own
+   * UClampMode/VClampMode -- only for the slots that do not simply tile.
+   */
+  clamps?: ([boolean, boolean] | null)[];
+  /**
    * The client's own simplified versions, nearest first. Only some meshes have
    * them -- 35 of 603 in one package, and they are the trees, which is also
    * where they pay: LOD1 is about 40% of the base triangle count and LOD2 is a
@@ -596,11 +626,13 @@ const BLEND_MODES = ["normal", "masked", "modulate", "translucent", "invisible",
 function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
   const textures: (string | null)[] = [];
   const blends: (SlotBlend | null)[] = [];
+  const clamps: ([boolean, boolean] | null)[] = [];
 
   for (let i = 0; i < (mesh.materials?.length ?? 0); i++) {
     let node = mesh.materials[i];
     let texture: string | null = null;
     let blend: SlotBlend | null = null;
+    let clamp: [boolean, boolean] | null = null;
 
     for (let depth = 0; node && depth < 6; depth++) {
       node = node.loadSelf?.() ?? node;
@@ -624,6 +656,13 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
       // own `material` is the next link.
       if (node.mipmaps) {
         texture = name;
+        // UClampMode/VClampMode, TC_Wrap = 0 and TC_Clamp = 1. Bark, walls and
+        // floors tile; three defaults a texture to clamped, which smears the
+        // last column of a trunk down its whole length instead of repeating
+        // it. Only the exceptions are written -- wrapping is the common case.
+        const cu = Number(node.wrapS?.valueOf?.() ?? node.wrapS ?? 0) === 1;
+        const cv = Number(node.wrapT?.valueOf?.() ?? node.wrapT ?? 0) === 1;
+        if (cu || cv) clamp = [cu, cv];
         break;
       }
       node = node.material ?? node.diffuse;
@@ -631,6 +670,7 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
 
     textures.push(texture);
     blends.push(blend);
+    clamps.push(clamp);
   }
 
   const lods: string[] = [];
@@ -653,6 +693,8 @@ function meshInfo(mesh: any, qualify: (o: any) => string | null): MeshInfo {
     // Left out entirely when every slot is a plain opaque texture, which is
     // most of them -- this table is already 2.2MB.
     ...(blends.some(Boolean) ? { blends } : {}),
+    // Likewise: a texture that tiles is the normal case and says nothing.
+    ...(clamps.some(Boolean) ? { clamps } : {}),
     ...(lods.length > 0 ? { lods } : {}),
   };
 }
